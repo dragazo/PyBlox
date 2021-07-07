@@ -124,6 +124,15 @@ class Client:
                 self._message_handlers[msg_type] = handlers
             handlers.append(handler)
 
+    @staticmethod
+    def _prep_send(val):
+        t = type(val)
+        if t == list or t == tuple:
+            return [Client._prep_send(v) for v in val]
+        elif t == dict:
+            return [[Client._prep_send(k), Client._prep_send(v)] for k,v in val.items()]
+        else:
+            return val
     def _call(self, service, rpc, payload):
         state = f'uuid={self._client_id}&projectId={self._project_id}&roleId={self._role_id}&t={round(time.time() * 1000)}'
         url = f'{self._base_url}/services/{service}/{rpc}?{state}'
@@ -196,9 +205,9 @@ class Client:
                         if i < len(args) and pyname in kwargs:
                             raise InvokeError(f'argument \'{pyname}\' was specified multiple times')
                         elif i < len(args):
-                            payload[rawname] = args[i]
+                            payload[rawname] = Client._prep_send(args[i])
                         elif pyname in kwargs:
-                            payload[rawname] = kwargs[pyname]
+                            payload[rawname] = Client._prep_send(kwargs[pyname])
                             del kwargs[pyname]
                         elif not expect['optional']:
                             raise InvokeError(f'required argument \'{pyname}\' was not specified')
@@ -222,7 +231,7 @@ class Client:
             return obj
 
 if __name__ == '__main__':
-    client = Client(run_forever=True)
+    client = Client()
     phoneiot = client.get_service('PhoneIoT')
     public_roles = client.get_service('PublicRoles')
 
@@ -241,3 +250,14 @@ if __name__ == '__main__':
 
     assert public_roles is client.get_service('PublicRoles')
     assert public_roles.get_public_role_id() == client.get_public_role_id()
+
+    assert Client._prep_send(12) == 12
+    assert Client._prep_send(12.5) == 12.5
+    assert Client._prep_send([1, 2, 3]) == [1, 2, 3]
+    assert Client._prep_send((1, 2, 3)) == [1, 2, 3]
+    assert Client._prep_send({ 'key': 'value' }) == [['key', 'value']]
+    assert Client._prep_send({ 'key': { 'more': 'stuff' } }) == [[ 'key', [[ 'more', 'stuff' ]] ]]
+    assert Client._prep_send([{ 'a': 1 }, { 'b': 2 }]) == [ [[ 'a', 1 ]], [[ 'b', 2 ]] ]
+    assert Client._prep_send(({ 'a': 1 }, { 'b': 2 })) == [ [[ 'a', 1 ]], [[ 'b', 2 ]] ]
+    assert Client._prep_send({ (1, 2, 3): 4 }) == [[ [1, 2, 3], 4 ]]
+
