@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
-import time
-import websocket
-import threading
-import requests
-import json
-import re
 import collections
+import threading
+import time
+import json
 import sys
+import re
+
+import websocket
+import requests
 
 websocket.enableTrace(False) # disable auto-outputting of socket events
 
@@ -133,6 +134,12 @@ class Client:
             return [[Client._prep_send(k), Client._prep_send(v)] for k,v in val.items()]
         else:
             return val
+    @staticmethod
+    def _clean_name(name):
+        name = re.sub('[^\w]+', '', name) # remove characters that make symbols invalid
+        name = re.sub('([A-Z]+)', lambda m: f'_{m.group(1).lower()}', name) # convert cammel case to snake case
+        return name
+
     def _call(self, service, rpc, payload):
         state = f'uuid={self._client_id}&projectId={self._project_id}&roleId={self._role_id}&t={round(time.time() * 1000)}'
         url = f'{self._base_url}/services/{service}/{rpc}?{state}'
@@ -178,20 +185,16 @@ class Client:
             obj['get_name'] = lambda self: self._name
             obj['get_desc'] = lambda self: self._meta['description']
 
-            def clean_name(name):
-                name = re.sub('[^\w]+', '', name) # remove characters that make symbols invalid
-                name = re.sub('([A-Z]+)', lambda m: f'_{m.group(1).lower()}', name) # convert cammel case to snake case
-                return name
             for rpc_name, meta in obj['_meta']['rpcs'].items():
                 rpc_obj = {}
                 rpc_obj['_client'] = self
                 rpc_obj['_meta'] = meta
                 rpc_obj['_service'] = service
                 rpc_obj['_name'] = rpc_name
-                rpc_obj['_clean_name'] = clean_name(rpc_name)
+                rpc_obj['_clean_name'] = Client._clean_name(rpc_name)
 
                 for arg_meta in meta['args']:
-                    arg_meta['clean_name'] = clean_name(arg_meta['name'])
+                    arg_meta['clean_name'] = Client._clean_name(arg_meta['name'])
 
                 rpc_obj['get_name'] = lambda self: self._name
                 rpc_obj['get_desc'] = lambda self: self._meta['description']
@@ -229,35 +232,3 @@ class Client:
             obj = type(service, (object,), obj)()
             self._services[service] = obj
             return obj
-
-if __name__ == '__main__':
-    client = Client()
-    phoneiot = client.get_service('PhoneIoT')
-    public_roles = client.get_service('PublicRoles')
-
-    assert phoneiot is client.get_service('PhoneIoT')
-    assert phoneiot.get_name() == 'PhoneIoT'
-    assert type(phoneiot.get_desc()) == str
-
-    assert type(phoneiot.get_sensors()) == list
-    assert phoneiot.get_sensors.get_name() == 'getSensors'
-    assert type(phoneiot.get_sensors.get_desc()) == str
-
-    assert phoneiot.get_color(12, 34, 54, 34) == 571220534
-    assert phoneiot.get_color(12, 34, 54) == -15982026
-    assert phoneiot.get_color(12, 34, blue=54) == -15982026
-    assert phoneiot.get_color(12, blue=54, green=34) == -15982026
-
-    assert public_roles is client.get_service('PublicRoles')
-    assert public_roles.get_public_role_id() == client.get_public_role_id()
-
-    assert Client._prep_send(12) == 12
-    assert Client._prep_send(12.5) == 12.5
-    assert Client._prep_send([1, 2, 3]) == [1, 2, 3]
-    assert Client._prep_send((1, 2, 3)) == [1, 2, 3]
-    assert Client._prep_send({ 'key': 'value' }) == [['key', 'value']]
-    assert Client._prep_send({ 'key': { 'more': 'stuff' } }) == [[ 'key', [[ 'more', 'stuff' ]] ]]
-    assert Client._prep_send([{ 'a': 1 }, { 'b': 2 }]) == [ [[ 'a', 1 ]], [[ 'b', 2 ]] ]
-    assert Client._prep_send(({ 'a': 1 }, { 'b': 2 })) == [ [[ 'a', 1 ]], [[ 'b', 2 ]] ]
-    assert Client._prep_send({ (1, 2, 3): 4 }) == [[ [1, 2, 3], 4 ]]
-

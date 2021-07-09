@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 
-import sys, os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+import netsblox
 
-from pyblox import pyblox
-
-client = pyblox.Client(run_forever = True)
+client = netsblox.Client(run_forever = True)
 phoneiot = client.get_service('PhoneIoT')
 
 printing = False
