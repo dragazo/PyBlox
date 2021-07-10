@@ -2,6 +2,7 @@
 
 import collections
 import threading
+import inspect
 import time
 import json
 import sys
@@ -88,8 +89,6 @@ class Client:
 
             if ty == 'connected': # currently unused
                 return
-            elif ty == 'room-roles': # currenly unused
-                return
             elif ty == 'ping':
                 with self._ws_lock:
                     ws.send(small_json({ 'type': 'pong' }))
@@ -100,7 +99,30 @@ class Client:
                     self._message_cv.notify()
         except:
             pass
+    
+    def send_message(self, msg_type, **args):
+        with self._ws_lock:
+            self._ws.send(small_json({
+                'type': 'message', 'msgType': msg_type, 'content': args,
+                'dstId': 'everyone in room', 'srcId': self.get_public_role_id()
+            }))
 
+    @staticmethod
+    def _check_handler(handler, content):
+        argspec = inspect.getfullargspec(handler)
+        params = set(content.keys())
+        for arg in argspec.args + argspec.kwonlyargs:
+            if arg not in content:
+                return f'    unknown param: \'{arg}\' typo?\n    available params: {list(content.keys())}'
+            params.remove(arg)
+        if params and argspec.varkw is None:
+            items = argspec.args[:]
+            if argspec.kwonlyargs:
+                items.append('*')
+                items += argspec.kwonlyargs
+            items.append('**extra')
+            return f'    unused params: {params}\n    you can discard these by using ({", ".join(items)})'
+        return None
     def _message_router(self):
         while True:
             try:
@@ -111,10 +133,19 @@ class Client:
                         self._message_cv.wait()
                     message = self._message_queue.popleft()
                     handlers = self._message_handlers.get(message['msgType'])
+                    handlers = handlers[:] if handlers is not None else [] # iteration without mutex needs a (shallow) copy
 
-                if handlers is not None:
-                    for handler in handlers:
-                        handler(**message['content'])
+                content = message['content']
+                for handler in handlers: # without mutex lock so we don't block new ws messages or on_message()
+                    err = Client._check_handler(handler, content)
+                    if err is not None:
+                        print(f'\'{message["msgType"]}\' message handler error:\n{err}', file=sys.stderr)
+                        continue
+
+                    try:
+                        handler(**content) # could be arbitrarily long and is fallible
+                    except:
+                        pass
             except:
                 pass
     def on_message(self, msg_type, handler):
