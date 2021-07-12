@@ -22,10 +22,14 @@ class InvokeError(Exception):
 class ServerError(Exception):
     pass
 
-def small_json(obj):
+def _small_json(obj):
     return json.dumps(obj, separators=(',', ':'))
 
 class Client:
+    '''
+    Holds all the information and plumbing required to connect to netsblox, exchange messages, and call RPCs.
+    '''
+
     def __init__(self, *, run_forever = False, host = 'https://editor.netsblox.org'):
         '''
         Opens a new client connection to NetsBlox, allowing you to access any of the NetsBlox services from python.
@@ -59,7 +63,7 @@ class Client:
         self._message_thread.start()
 
         res = requests.post(f'{self._base_url}/api/newProject',
-            small_json({ 'clientId': self._client_id, 'name': None }),
+            _small_json({ 'clientId': self._client_id, 'name': None }),
             headers = { 'Content-Type': 'application/json' })
         res = json.loads(res.text)
         self._project_id = res['projectId']
@@ -75,7 +79,7 @@ class Client:
     
     def _ws_open(self, ws):
         with self._ws_lock:
-            ws.send(small_json({ 'type': 'set-uuid', 'clientId': self._client_id }))
+            ws.send(_small_json({ 'type': 'set-uuid', 'clientId': self._client_id }))
 
     def _ws_close(self, ws, status, message):
         print('ws close', file=sys.stderr)
@@ -91,7 +95,7 @@ class Client:
                 return
             elif ty == 'ping':
                 with self._ws_lock:
-                    ws.send(small_json({ 'type': 'pong' }))
+                    ws.send(_small_json({ 'type': 'pong' }))
                     return
             elif ty == 'message':
                 with self._message_cv:
@@ -102,7 +106,7 @@ class Client:
     
     def send_message(self, msg_type, **args):
         with self._ws_lock:
-            self._ws.send(small_json({
+            self._ws.send(_small_json({
                 'type': 'message', 'msgType': msg_type, 'content': args,
                 'dstId': 'everyone in room', 'srcId': self.get_public_role_id()
             }))
@@ -175,7 +179,7 @@ class Client:
         state = f'uuid={self._client_id}&projectId={self._project_id}&roleId={self._role_id}&t={round(time.time() * 1000)}'
         url = f'{self._base_url}/services/{service}/{rpc}?{state}'
         res = requests.post(url,
-            small_json(payload), # if the json has unnecessary white space, request on the server will hang for some reason
+            _small_json(payload), # if the json has unnecessary white space, request on the server will hang for some reason
             headers = { 'Content-Type': 'application/json' })
 
         if res.status_code == 200:
@@ -212,9 +216,7 @@ class Client:
             obj['_client'] = self
             obj['_meta'] = json.loads(requests.get(f'{self._base_url}/services/{service}').text)
             obj['_name'] = service
-
-            obj['get_name'] = lambda self: self._name
-            obj['get_desc'] = lambda self: self._meta['description']
+            obj['__doc__'] = obj['_meta'].get('description', '')
 
             for rpc_name, meta in obj['_meta']['rpcs'].items():
                 rpc_obj = {}
@@ -224,11 +226,17 @@ class Client:
                 rpc_obj['_name'] = rpc_name
                 rpc_obj['_clean_name'] = Client._clean_name(rpc_name)
 
-                for arg_meta in meta['args']:
+                for arg_meta in meta.get('args', []):
                     arg_meta['clean_name'] = Client._clean_name(arg_meta['name'])
 
-                rpc_obj['get_name'] = lambda self: self._name
-                rpc_obj['get_desc'] = lambda self: self._meta['description']
+                docstr = meta.get('description', '')
+                if meta.get('args'):
+                    docstr += '\n\nArguments:\n'
+                    for arg in meta['args']:
+                        docstr += f'\n:{arg["clean_name"]}: {arg.get("description", "")}'
+                if meta.get('returns'):
+                    docstr += f'\n\nreturns: {meta["returns"].get("description", "")}'
+                rpc_obj['__doc__'] = docstr
 
                 def invoke(self, *args, **kwargs):
                     payload = {}

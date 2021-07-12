@@ -7,20 +7,15 @@ phoneiot = client.get_service('PhoneIoT')
 public_roles = client.get_service('PublicRoles')
 
 assert phoneiot is client.get_service('PhoneIoT')
-assert phoneiot.get_name() == 'PhoneIoT'
-assert type(phoneiot.get_desc()) == str
+assert public_roles is client.get_service('PublicRoles')
 
 assert type(phoneiot.get_sensors()) == list
-assert phoneiot.get_sensors.get_name() == 'getSensors'
-assert type(phoneiot.get_sensors.get_desc()) == str
+assert public_roles.get_public_role_id() == client.get_public_role_id()
 
 assert phoneiot.get_color(12, 34, 54, 34) == 571220534
 assert phoneiot.get_color(12, 34, 54) == -15982026
 assert phoneiot.get_color(12, 34, blue=54) == -15982026
 assert phoneiot.get_color(12, blue=54, green=34) == -15982026
-
-assert public_roles is client.get_service('PublicRoles')
-assert public_roles.get_public_role_id() == client.get_public_role_id()
 
 assert Client._prep_send(12) == 12
 assert Client._prep_send(12.5) == 12.5
