@@ -114,19 +114,12 @@ class Client:
     @staticmethod
     def _check_handler(handler, content):
         argspec = inspect.getfullargspec(handler)
-        params = set(content.keys())
+        unused_params = set(content.keys())
         for arg in argspec.args + argspec.kwonlyargs:
             if arg not in content:
                 return f'    unknown param: \'{arg}\' typo?\n    available params: {list(content.keys())}'
-            params.remove(arg)
-        if params and argspec.varkw is None:
-            items = argspec.args[:]
-            if argspec.kwonlyargs:
-                items.append('*')
-                items += argspec.kwonlyargs
-            items.append('**extra')
-            return f'    unused params: {params}\n    you can discard these by using ({", ".join(items)})'
-        return None
+            unused_params.remove(arg)
+        return { k: content[k] for k in content.keys() if k not in unused_params } if unused_params and argspec.varkw is None else content
     def _message_router(self):
         while True:
             try:
@@ -141,13 +134,13 @@ class Client:
 
                 content = message['content']
                 for handler in handlers: # without mutex lock so we don't block new ws messages or on_message()
-                    err = Client._check_handler(handler, content)
-                    if err is not None:
-                        print(f'\'{message["msgType"]}\' message handler error:\n{err}', file=sys.stderr)
+                    packet = Client._check_handler(handler, content)
+                    if type(packet) == str:
+                        print(f'\'{message["msgType"]}\' message handler error:\n{packet}', file=sys.stderr)
                         continue
 
                     try:
-                        handler(**content) # could be arbitrarily long and is fallible
+                        handler(**packet) # the handler could be arbitrarily long and is fallible
                     except:
                         pass
             except:
