@@ -145,14 +145,35 @@ class Client:
                         pass
             except:
                 pass
-    def on_message(self, msg_type, handler):
+    
+    def _on_message(self, msg_type, handler):
         with self._message_cv:
             handlers = self._message_handlers.get(msg_type)
             if handlers is None:
                 handlers = []
                 self._message_handlers[msg_type] = handlers
             handlers.append(handler)
+    def on_message(self, msg_type, handler=None):
+        '''
+        Adds a new message handler for incoming messages of the given type.
+        If :handler: is specified, it is used as the message handler.
+        Otherwise, this returns an annotation type that can be applied to a function definition.
+        For example, the following would cause on_start to be called on every incoming 'start' message.
 
+        client = Client()
+
+        @client.on_message('start')
+        def on_start():
+            print('started')
+        '''
+        if handler is not None:
+            self._on_message(msg_type, handler)
+        else:
+            def wrapper(f):
+                self._on_message(msg_type, f)
+                return f
+            return wrapper
+        
     @staticmethod
     def _prep_send(val):
         t = type(val)

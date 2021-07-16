@@ -7,14 +7,14 @@ client = netsblox.Client()
 
 total_a,total_b = 0,0
 
+@client.on_message('tick')
 def foo(ticks):
     global total_a
     total_a += ticks
+@client.on_message('tick')
 def bar(ticks):
     global total_b
     total_b += ticks
-client.on_message('tick', foo)
-client.on_message('tick', bar)
 
 for i in range(1,11):
     client.send_message('tick', ticks = i)
