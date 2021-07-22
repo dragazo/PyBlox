@@ -3,11 +3,11 @@
 import netsblox
 import time
 
-client = netsblox.Client()
+editor = netsblox.Editor()
 
 def foo(msgg):
     print(msgg)
-client.on_message('message', foo)
+editor.on_message('message', foo)
 
-client.send_message('message', msg='hello')
+editor.send_message('message', msg='hello')
 time.sleep(0.5)

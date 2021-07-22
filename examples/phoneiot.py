@@ -2,34 +2,33 @@
 
 import netsblox
 
-client = netsblox.Client(run_forever = True)
-phoneiot = client.get_service('PhoneIoT')
+editor = netsblox.Editor(run_forever = True)
+phone_iot = editor.phone_iot
 
 printing = False
-def start(**extra):
+@editor.on_message('start')
+def start():
     global printing
     printing = True
-def stop(**extra):
+@editor.on_message('stop')
+def stop():
     global printing
     printing = False
-client.on_message('start', start)
-client.on_message('stop', stop)
 
-def accel_handler(x, y, z, **extra):
+@editor.on_message('accelerometer')
+def accel_handler(x, y, z):
     if printing:
         print(f'accel: {x:.1f} {y:.1f} {z:.1f}')
 
-client.on_message('accelerometer', accel_handler)
-
 device = input('device id: ')
-phoneiot.set_credentials(device, input('password: '))
+phone_iot.set_credentials(device, input('password: '))
 
-phoneiot.listen_to_sensors(device, { 'accelerometer': 500 })
+phone_iot.listen_to_sensors(device, { 'accelerometer': 500 })
 
-green = phoneiot.get_color(14, 138, 26)
-red = phoneiot.get_color(219, 13, 13)
+green = phone_iot.get_color(14, 138, 26)
+red = phone_iot.get_color(219, 13, 13)
 
-phoneiot.clear_controls(device)
-phoneiot.listen_to_gui(device)
-phoneiot.add_button(device, 16.666, 5, 66.666, 42.5, 'start', { 'event': 'start', 'fontSize': 3, 'style': 'circle', 'color': green })
-phoneiot.add_button(device, 16.666, 50, 66.666, 42.5, 'stop', { 'event': 'stop', 'fontSize': 3, 'style': 'circle', 'color': red })
+phone_iot.clear_controls(device)
+phone_iot.listen_to_gui(device)
+phone_iot.add_button(device, 16.666, 5, 66.666, 42.5, 'start', { 'event': 'start', 'fontSize': 3, 'style': 'circle', 'color': green })
+phone_iot.add_button(device, 16.666, 50, 66.666, 42.5, 'stop', { 'event': 'stop', 'fontSize': 3, 'style': 'circle', 'color': red })

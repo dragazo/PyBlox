@@ -2,7 +2,8 @@
 A python client for accessing NetsBlox
 '''
 
-from .client import *
+from .editor import * # we import editor into global scope
+from . import dev # users can access dev explicitly if they want
 
 from pkg_resources import get_distribution
 
