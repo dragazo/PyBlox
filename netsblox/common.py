@@ -24,3 +24,6 @@ def prep_send(val):
         return [[prep_send(k), prep_send(v)] for k,v in val.items()]
     else:
         return val
+
+def vectorize(f):
+    return lambda v: [f(x) for x in v]

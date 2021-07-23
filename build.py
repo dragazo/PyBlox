@@ -56,40 +56,45 @@ FIXED_TYPES = {
     'dict': { 'object' },
 }
 
-def parse_type(t) -> str:
+# returns type name, type parser
+def parse_type(t):
     if t is None:
-        return 'Any'
+        return 'Any', ''
 
     name = (t['name'] if type(t) == dict else t).lower()
-    res = 'Any'
-    
     if name == 'array':
         if type(t) != dict:
-            res = 'list'
-        else:
-            params = t.get('params') or []
-            if len(params) == 0 or len(params) > 1: # non-homogenous is ill-formed - just default to generic list
-                res = 'list'
-            else:
-                inner = parse_type(params[0].get('type') if type(params[0]) == dict else params[0])
-                res = f'List[{inner}]' if inner != 'Any' else 'list'
-    else:
-        for k,v in FIXED_TYPES.items():
-            if name in v:
-                res = k
-                break
+            return 'list', ''
+        params = t.get('params') or []
+        if len(params) == 0 or len(params) > 1: # non-homogenous is ill-formed - just default to generic list
+            return 'list', ''
 
-    return f'Optional[{res[0]}]' if type(t) == dict and t.get('optional') else res
+        inner_t, inner_parse = parse_type(params[0].get('type') if type(params[0]) == dict else params[0])
+        inner_t = f'List[{inner_t}]' if inner_t != 'Any' else 'list'
+        inner_parse = f'vectorize({inner_parse})' if inner_parse else ''
+        return inner_t, inner_parse
 
+    for k,v in FIXED_TYPES.items():
+        if name in v:
+            return k, k
+
+    return 'Any', ''
+
+# returns arg meta, type name, description, type parser
 def parse_arg(arg_meta, override_name: str = None):
     if arg_meta is None:
-        return (arg_meta, 'Any', '')
-    t = parse_type(arg_meta.get('type'))
+        return arg_meta, 'Any', '', ''
+
+    t, t_parser = parse_type(arg_meta.get('type'))
+    if arg_meta.get('optional'):
+        t = f'Optional[{t}]'
+
     desc = [f':{override_name or clean_fn_name(arg_meta["name"])}: {arg_meta.get("description") or ""}']
     if (arg_meta.get('type') or {}).get('name') == 'Object':
         for param_meta in arg_meta['type'].get('params') or []:
-            desc.append(f'  - :{clean_fn_name(param_meta["name"])}: ({parse_type(param_meta.get("type"))}) {param_meta.get("description") or ""}')
-    return (arg_meta, t, '\n'.join(desc))
+            desc.append(f'  - :{clean_fn_name(param_meta["name"])}: ({parse_type(param_meta.get("type"))[0]}) {param_meta.get("description") or ""}')
+
+    return arg_meta, t, '\n'.join(desc), t_parser
 
 # returns either a string containing a class definition for the given service, or None if it should be omitted
 async def generate_service(session, base_url, service_name):
@@ -107,17 +112,20 @@ async def generate_service(session, base_url, service_name):
             for arg_meta in rpc_meta['args']:
                 (non_required if 'optional' in arg_meta and arg_meta['optional'] else required).append(parse_arg(arg_meta))
 
-            ret_type = parse_arg(rpc_meta.get('returns'), 'returns')
+            ret_info = parse_arg(rpc_meta.get('returns'), 'returns')
             args = ['self'] + [f'{clean_fn_name(x[0]["name"])}: {x[1]}' for x in required] + [f'{clean_fn_name(x[0]["name"])}: {x[1]} = None' for x in non_required]
             payloads = [f"'{x[0]['name']}': {clean_fn_name(x[0]['name'])}" for x in required + non_required]
             
-            desc = ([rpc_meta['description']] if rpc_meta.get('description') else []) + [x[2] for x in required + non_required] + ([ret_type[2]] if 'returns' in rpc_meta else [])
+            desc = ([rpc_meta['description']] if rpc_meta.get('description') else []) + [x[2] for x in required + non_required] + ([ret_info[2]] if 'returns' in rpc_meta else [])
             desc = '\n\n'.join(desc)
             desc = indent(f"'''\n{desc}\n'''", 8)
             
+            code = f"self._client._call('{service_name}', '{rpc_name}', {{ {', '.join(payloads)} }})"
+            code = f'res = {code}\nreturn {ret_info[3]}(res)' if ret_info[3] else f'return {code}'
+
             fn_name = clean_fn_name(rpc_name)
-            ret_str = f' -> {ret_type[1]}' if 'returns' in rpc_meta else ''
-            rpcs.append((fn_name, f"    def {fn_name}({', '.join(args)}){ret_str}:\n{desc}\n        return self._client._call('{service_name}', '{rpc_name}', {{ {', '.join(payloads)} }})"))
+            ret_str = f' -> {ret_info[1]}' if 'returns' in rpc_meta else ''
+            rpcs.append((fn_name, f"    def {fn_name}({', '.join(args)}){ret_str}:\n{desc}\n{indent(code, 8)}"))
 
         rpcs = [x[1] for x in sorted(rpcs)] # sort rpcs so they'll be in alphabetical order by name
         service_desc = indent(f"'''\n{meta['description']}\n'''", 4) if 'description' in meta and meta['description'] else ''

@@ -5,7 +5,7 @@ import time
 import json
 import sys
 
-from typing import Any, List
+from typing import Optional, Any, List
 
 import websocket
 import requests
