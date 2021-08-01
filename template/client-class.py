@@ -25,6 +25,8 @@ class $client_name:
 
         :run_forever: prevents the python program from terminating even after the end of your script.
         This is useful if you have long-running programs that are based on message-passing rather than looping.
+        Note: this does not stop the main thread of execution from terminating, which could be a problem in environments like Google Colab;
+        instead, you can explicitly call wait_till_disconnect() at the end of your program.
         '''
 
         self._client_id = f'_pyblox{round(time.time() * 1000)}'
@@ -34,6 +36,7 @@ class $client_name:
         self._message_cv = threading.Condition(threading.Lock())
         self._message_queue = collections.deque()
         self._message_handlers = {}
+        self._message_stream_stopped = False
 
         # create a websocket and start it before anything non-essential (has some warmup communication)
         self._ws_lock = threading.Lock()
@@ -86,11 +89,25 @@ $service_instances
         except:
             pass
     
-    def send_message(self, msg_type, **args):
+    def get_public_role_id(self):
+        '''
+        Returns the public role id, which can be used as a target for send_message() to send a message directly to yourself.
+        This can be given to another client so that they can send messages directly to you.
+        '''
+        return f'{self._role_name}@{self._project_name}@{self._client_id}'
+    def send_message(self, msg_type, target='everyone in room', **values):
+        '''
+        Sends a message of the given type to the target, which might represent multiple recipients.
+        The default value for target, 'everyone in room', will send the message to everyone connected to this project (including yourself).
+        You can receive messages by registering a receiver with on_message().
+        '''
         with self._ws_lock:
             self._ws.send(small_json({
-                'type': 'message', 'msgType': msg_type, 'content': args,
-                'dstId': 'everyone in room', 'srcId': self.get_public_role_id()
+                'type': 'message',
+                'msgType': msg_type,
+                'content': values,
+                'dstId': target,
+                'srcId': self.get_public_role_id()
             }))
 
     @staticmethod
@@ -108,8 +125,16 @@ $service_instances
                 message = None
                 handlers = None
                 with self._message_cv:
-                    while not self._message_queue:
+                    # if no more messages and stream has stopped, kill the thread
+                    if not self._message_queue and self._message_stream_stopped:
+                        return
+                    # wait for a message or kill signal
+                    while not self._message_queue and not self._message_stream_stopped:
                         self._message_cv.wait()
+                    # if we didn't get a message, kill the thread
+                    if not self._message_queue:
+                        return
+
                     message = self._message_queue.popleft()
                     handlers = self._message_handlers.get(message['msgType'])
                     handlers = handlers[:] if handlers is not None else [] # iteration without mutex needs a (shallow) copy
@@ -142,6 +167,8 @@ $service_instances
         Otherwise, this returns an annotation type that can be applied to a function definition.
         For example, the following would cause on_start to be called on every incoming 'start' message.
 
+        client = $client_name()
+        
         @client.on_message('start')
         def on_start():
             print('started')
@@ -177,12 +204,22 @@ $service_instances
     def disconnect(self):
         '''
         Disconnects the client from the NetsBlox server.
-        If the client was created with :run_forever:, this will allow the program to terminate.
+        If the client was created with run_forever, this will allow the program to terminate.
         '''
         with self._ws_lock:
-            self._ws.close() # closing the websocket will kill the deamon thread
+            self._ws.close() # closing the websocket will kill the ws thread
+        with self._message_cv:
+            self._message_stream_stopped = True # send the kill signal
+            self._message_cv.notify()
+    def wait_till_disconnect(self):
+        '''
+        This function waits until the client is disconnected and all queued messages have been handled.
+        Other (non-waiting) code can call disconnect() to trigger this manually.
+        This is useful if you have long-running code using messaging, e.g., a server.
 
-    def get_public_role_id(self):
-        return f'{self._role_name}@{self._project_name}@{self._client_id}'
+        Note that calling this function is not equivalent to setting the run_forever option when creating the client, as that does not block the main thread.
+        This can be used in place of run_forever, and is needed if other code waits for the main thread to finish (e.g., Google Colab).
+        '''
+        self._message_thread.join()
 
 $service_classes

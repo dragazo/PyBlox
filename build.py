@@ -51,7 +51,8 @@ def indent(input: str, spaces: int) -> str:
 
 FIXED_TYPES = {
     'float': { 'number', 'boundednumber', 'latitude', 'longitude' },
-    'str': { 'string', 'boundedstring' },
+    'int': { 'integer', 'boundedinteger' },
+    'str': { 'string', 'boundedstring', 'date', 'enum' },
     'bool': { 'boolean' },
     'dict': { 'object' },
 }
