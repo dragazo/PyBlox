@@ -23,7 +23,7 @@ class $client_name:
         '''
         Opens a new client connection to NetsBlox, allowing you to access any of the NetsBlox services from python.
 
-        :run_forever: prevents the python program from terminating even after the end of your script.
+        run_forever prevents the python program from terminating even after the end of your script.
         This is useful if you have long-running programs that are based on message-passing rather than looping.
         Note: this does not stop the main thread of execution from terminating, which could be a problem in environments like Google Colab;
         instead, you can explicitly call wait_till_disconnect() at the end of your program.
@@ -31,6 +31,9 @@ class $client_name:
 
         self._client_id = f'_pyblox{round(time.time() * 1000)}'
         self._base_url = '$base_url'
+
+        self._signal_cv = threading.Condition(threading.Lock())
+        self._signal = False
 
         # set these up before the websocket since it might send us messages
         self._message_cv = threading.Condition(threading.Lock())
@@ -163,7 +166,7 @@ $service_instances
     def on_message(self, msg_type, handler=None):
         '''
         Adds a new message handler for incoming messages of the given type.
-        If :handler: is specified, it is used as the message handler.
+        If handler is specified, it is used as the message handler.
         Otherwise, this returns an annotation type that can be applied to a function definition.
         For example, the following would cause on_start to be called on every incoming 'start' message.
 
@@ -217,9 +220,54 @@ $service_instances
         Other (non-waiting) code can call disconnect() to trigger this manually.
         This is useful if you have long-running code using messaging, e.g., a server.
 
+        If you want this same behavior without having to actually disconnect the client, you can use wait_for_signal() instead.
+
         Note that calling this function is not equivalent to setting the run_forever option when creating the client, as that does not block the main thread.
         This can be used in place of run_forever, and is needed if other code waits for the main thread to finish (e.g., Google Colab).
+
+        Note: you should not call this from a message handler (or any function that a message handler calls),
+        as that will suspend the thread that handles messages, and since this waits until all messages have been handled, it will end up waiting forever.
         '''
         self._message_thread.join()
+
+    def reset_signal(self):
+        '''
+        Resets the signal used by wait_for_signal() to the not sent state.
+
+        This can be called before starting long-running message passing code,
+        so that at the end of the main thread you can call wait_for_signal() to wait until completion.
+
+        This is especially useful in environments like Google Colab where the main thread terminating marks the end of program execution.
+        '''
+        with self._signal_cv:
+            self._signal = False
+    def signal(self):
+        '''
+        Sends the signal to continue execution.
+        See wait_for_signal().
+        '''
+        with self._signal_cv:
+            self._signal = True
+            self._signal_cv.notify_all()
+    def wait_for_signal(self):
+        '''
+        Waits until someone sends the signal to continue by calling signal().
+        If the signal has already been sent, this returns immediately.
+        You can reset the signal to the not sent state with reset_signal().
+
+        This is especially useful in environments like Google Colab where the main thread terminating marks the end of program execution.
+
+        This can be used in place of wait_till_disconnect() if you want the same behavior without actually having to disconnect the client.
+
+        Note that wait_till_disconnect() also waits until all queued messages have been handled,
+        while this function returns immediately when the signal is sent.
+
+        Note: you should avoid calling this from a message handler (or any function a message handler calls),
+        as that would suspend the thread that handles messages.
+        This is not as big of an issue as doing the same with wait_till_disconnect(), but it is probably not the desired behavior.
+        '''
+        with self._signal_cv:
+            while not self._signal:
+                self._signal_cv.wait()
 
 $service_classes
