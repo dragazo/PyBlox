@@ -36,6 +36,7 @@ class $client_name:
         self._message_cv = threading.Condition(threading.Lock())
         self._message_queue = collections.deque()
         self._message_handlers = {}
+        self._message_last = {} # maps msg type to {received_count, last_content, waiters (count)}
         self._message_stream_stopped = False
 
         # create a websocket and start it before anything non-essential (has some warmup communication)
@@ -119,6 +120,10 @@ $service_instances
                 return f'    unknown param: \'{arg}\' typo?\n    available params: {list(content.keys())}'
             unused_params.remove(arg)
         return { k: content[k] for k in content.keys() if k not in unused_params } if unused_params and argspec.varkw is None else content
+    def _message_get_last_assume_locked(self, msg_type):
+        if msg_type not in self._message_last:
+            self._message_last[msg_type] = { 'received_count': 0, 'last_content': {}, 'waiters': 0 }
+        return self._message_last[msg_type]
     def _message_router(self):
         while True:
             try:
@@ -139,6 +144,13 @@ $service_instances
                     handlers = self._message_handlers.get(message['msgType'])
                     handlers = handlers[:] if handlers is not None else [] # iteration without mutex needs a (shallow) copy
 
+                    last = self._message_get_last_assume_locked(message['msgType'])
+                    last['received_count'] += 1
+                    last['last_content'] = message['content']
+                    if last['waiters'] > 0:
+                        last['waiters'] = 0
+                        self._message_cv.notify_all()
+
                 content = message['content']
                 for handler in handlers: # without mutex lock so we don't block new ws messages or on_message()
                     packet = $client_name._check_handler(handler, content)
@@ -153,7 +165,22 @@ $service_instances
             except:
                 pass
     
-    def _on_message(self, msg_type, handler):
+    def wait_for_message(self, msg_type: str) -> dict:
+        '''
+        Waits until we receive the next message of the given type.
+        Returns the received message upon resuming.
+
+        You can trigger this manually by sending a message to yourself.
+        '''
+        with self._message_cv:
+            last = self._message_get_last_assume_locked(msg_type)
+            last['waiters'] += 1
+            v = last['received_count']
+            while last['received_count'] <= v:
+                self._message_cv.wait()
+            return last['last_content']
+
+    def _on_message(self, msg_type: str, handler):
         with self._message_cv:
             handlers = self._message_handlers.get(msg_type)
             if handlers is None:

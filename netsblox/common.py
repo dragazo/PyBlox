@@ -69,3 +69,28 @@ class Signal:
         with self._cv:
             while not self._signal:
                 self._cv.wait()
+
+class StepSignal:
+    '''
+    A StepSignal is similar to Signal except that it only steps forward (cannot be reset).
+    When you wait() for a StepSignal, you will be resume after the next step().
+    '''
+    def __init__(self):
+        self._cv = threading.Condition(threading.Lock())
+        self._value = 0
+
+    def step(self):
+        '''
+        Step forward and resume anyone who was waiting for the previous step to finish.
+        '''
+        with self._cv:
+            self._value += 1
+            self._cv.notify_all()
+    def wait(self):
+        '''
+        Wait until the next step().
+        '''
+        with self._cv:
+            v = self._value
+            while self._value <= v:
+                self._cv.wait()
