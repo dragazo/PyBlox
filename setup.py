@@ -19,8 +19,9 @@ setup(
     license='Apache 2.0',
     packages = [ 'netsblox' ],
     install_requires = [
-        'websocket-client', # client.py
-        'requests', # client.py
+        'websocket-client',
+        'requests',
+        'turtle',
     ],
     classifiers = [
         'Development Status :: 1 - Planning',

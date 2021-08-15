@@ -2,7 +2,7 @@
 
 import netsblox
 
-client = netsblox.Editor()   # create a new connection to NetsBlox
+client = netsblox.Client() # create a new connection to NetsBlox
 phone_iot = client.phone_iot # we can alias services for convenience
 
 printing = False
@@ -14,9 +14,6 @@ def start():
 def stop():
     global printing
     printing = False
-@client.on_message('terminate')
-def terminate():
-    client.disconnect() # kill switch to terminate the program (see call to wait_till_disconnect() below)
 
 @client.on_message('accelerometer')
 def accel_handler(x, y, z):
@@ -39,4 +36,4 @@ phone_iot.add_button(device, 30, 5, 40, 40, 'start', { 'event': 'start', 'fontSi
 phone_iot.add_button(device, 30, 40, 40, 40, 'stop', { 'event': 'stop', 'fontSize': 3, 'style': 'circle', 'color': red })
 phone_iot.add_button(device, 12.5, 75, 75, 20, 'terminate', { 'event': 'terminate', 'fontSize': 3, 'style': 'ellipse', 'color': black, 'textColor': white })
 
-client.wait_till_disconnect() # wait till the client is disconnected (by pressing the terminate button)
+client.wait_for_message('terminate') # wait till the terinate button sends us a message
