@@ -4,15 +4,16 @@ import turtle as _turtle
 import threading
 import inspect
 import queue
+import math
 
 _action_queue = queue.Queue(4)
 
-def start_sim():
+def run_turtles():
     while not _action_queue.empty():
         fn, args = _action_queue.get()
         fn(*args)
 
-    turtle.Screen().ontimer(start_sim, 33)
+    _turtle.Screen().ontimer(run_turtles, 33)
 
 def _qinvoke(fn, *args):
     _action_queue.put((fn, args))
@@ -21,46 +22,52 @@ class Turtle:
     def __init__(self):
         self.__turtle = _turtle.Turtle()
         self.__turtle.speed('fastest')
+        self.__x = 0.0
+        self.__y = 0.0
+        self.__rot = 0.25 # angle [0, 1)
+        self.__degrees = 360.0
 
     def goto(self, x, y = None):
-        _qinvoke(self.__turtle.goto, x, y)
+        if y is None:
+            x, y = y
+        self.__x = float(x)
+        self.__y = float(y)
+        _qinvoke(self.__turtle.goto, self.__x, self.__y)
     setposition = goto
     setpos = goto
 
+    def setheading(self, to_angle):
+        self.__rot = (float(to_angle) / self.__degrees) % 1.0
+        _qinvoke(self.__turtle.setheading, self.__rot * 360.0) # raw turtle is always in degrees mode
+    seth = setheading
+
     def setx(self, x):
-        _qinvoke(self.__turtle.setx, x)
+        self.goto(float(x), self.__y)
     def sety(self, y):
-        _qinvoke(self.__turtle.sety, y)
+        self.goto(self.__x, float(y))
 
     def forward(self, distance):
-        _qinvoke(self.__turtle.forward, distance)
+        distance = float(distance)
+        h = self.__rot * 2 * math.pi
+        self.goto(self.__x + math.sin(h) * distance, self.__y + math.cos(h) * distance)
     fd = forward
 
     def back(self, distance):
-        _qinvoke(self.__turtle.back, distance)
+        self.forward(-float(distance))
     backward = back
     bk = back
 
-    def setheading(self, to_angle):
-        _qinvoke(self.__turtle.setheading, to_angle)
-    seth = setheading
-
-    def right(self, angle):
-        _qinvoke(self.__turtle.right, angle)
-    rt = right
-
     def left(self, angle):
-        _qinvoke(self.__turtle.left, angle)
+        self.setheading(self.heading() - float(angle))
     lt = left
 
-    def home(self):
-        _qinvoke(self.__turtle.home)
-    
-    def reset(self):
-        _qinvoke(self.__turtle.reset)
+    def right(self, angle):
+        self.setheading(self.heading() + float(angle))
+    rt = right
 
-    def circle(self, radius, extent = None, steps = None):
-        _qinvoke(self.__turtle.circle, radius, extent, steps)
+    def home(self):
+        self.setpos(0, 0)
+        self.setheading(0)
     
     def dot(self, radius = None, *color):
         _qinvoke(self.__turtle.dot, radius, *color)
@@ -89,29 +96,29 @@ class Turtle:
         return self.__turtle.isvisible()
 
     def position(self):
-        return self.__turtle.position()
+        return self.__x, self.__y
     pos = position
 
     def towards(self, x, y = None):
         return self.__turtle.towards(x, y)
     
     def xcor(self):
-        return self.__turtle.xcor()
+        return self.__x
     
     def ycor(self):
-        return self.__turtle.ycor()
+        return self.__y
     
     def heading(self):
-        return self.__turtle.heading()
+        return self.__rot * self.__degrees
     
     def distance(self, x, y = None):
         return self.__turtle.distance(x, y)
 
     def degrees(self, fullcircle = 360.0):
-        self.__turtle.degrees(fullcircle)
+        self.__degrees = float(fullcircle)
     
     def radians(self):
-        self.__turtle.radians()
+        self.__degrees = 2 * math.pi
 
     def pendown(self):
         self.__turtle.pendown()

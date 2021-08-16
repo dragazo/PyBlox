@@ -18,4 +18,4 @@ class MyTurtle:
 
 turtles = [MyTurtle(50, 5) for _ in range(100)]
 
-start_sim()
+run_turtles()
