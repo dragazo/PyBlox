@@ -6,22 +6,70 @@ import inspect
 import queue
 import math
 
+class GameStateError(Exception):
+    pass
+
 _action_queue = queue.Queue(4)
+_action_queue_interval = 16 / 1000 # seconds
+_game_running = False
 
-def run_turtles():
-    while not _action_queue.empty():
-        fn, args = _action_queue.get()
-        fn(*args)
+def _process_queue():
+    while _game_running:
+        try:
+            fn, args = _action_queue.get(timeout = _action_queue_interval)
+            fn(*args)
+        except queue.Empty:
+            pass
 
-    _turtle.Screen().ontimer(run_turtles, 33)
+def run_game():
+    '''
+    Run turtle game logic.
+    Turtles begin running as soon as they are created,
+    but you must call this function for them to start moving around and interacting.
+    This must be called from the main thread (global scope), not from within a turtle.
+
+    This function only returns when the game is over,
+    which can be manually triggered by calling stop_game() (e.g., from a turtle).
+
+    Trying to start a game that is already running results in a GameStateError.
+    '''
+    global _game_running
+    if _game_running:
+        raise GameStateError('run_game() was called when the game was already running')
+    _game_running = True
+    _process_queue()
+
+def stop_game():
+    '''
+    Stops a game that was previously started by run_game().
+
+    Multiple calls to stop_game() are allowed.
+    '''
+    global _game_running
+    _game_running = False
 
 def _qinvoke(fn, *args):
     _action_queue.put((fn, args))
 
-class Turtle:
+class TurtleBase:
+    f'''
+    The base class for any custom turtle.
+    This type should not be used directly; instead, you should create a custom turtle with the @turtle decorator.
+
+    ```
+    @turtle
+    class MyTurtle:
+        @onstart
+        def start(self):
+            self.forward(75)
+
+    t = MyTurtle() # create an instance of MyTurtle - start() is executed automatically
+    ```
+    '''
     def __init__(self):
         self.__turtle = _turtle.Turtle()
         self.__turtle.speed('fastest')
+        self.__turtle.penup()
         self.__x = 0.0
         self.__y = 0.0
         self.__rot = 0.25 # angle [0, 1)
@@ -141,9 +189,23 @@ class Turtle:
         return self.__turtle.isdown()
 
 def turtle(cls):
-    class Derived(Turtle, cls):
+    '''
+    The `@turtle` decorator for a class creates a new type of turtle.
+    You can use the `@onstart` annotation on any method definition to make it run when a turtle of this type is created.
+
+    ```
+    @turtle
+    class MyTurtle:
+        @onstart
+        def start(self):
+            self.forward(75)
+
+    t = MyTurtle() # create an instance of MyTurtle - start() is executed automatically
+    ```
+    '''
+    class Derived(TurtleBase, cls):
         def __init__(self, *args, **kwargs):
-            Turtle.__init__(self)
+            TurtleBase.__init__(self)
             cls.__init__(self, *args, **kwargs)
 
             start_scripts = inspect.getmembers(self, predicate = lambda x: inspect.ismethod(x) and hasattr(x, '__run_on_start'))
@@ -154,5 +216,19 @@ def turtle(cls):
     return Derived
 
 def onstart(f):
+    '''
+    The `@onstart` decorator can be applied to a method definition inside a custom turtle
+    to make that function run whenever an instance of the custom turtle type is created.
+
+    ```
+    @turtle
+    class MyTurtle:
+        @onstart
+        def start(self):
+            self.forward(75)
+
+    t = MyTurtle() # create an instance of MyTurtle - start() is executed automatically
+    ```
+    '''
     setattr(f, '__run_on_start', True)
     return f
