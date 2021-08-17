@@ -9,9 +9,14 @@ import math
 class GameStateError(Exception):
     pass
 
-_action_queue = queue.Queue(4)
+_action_queue = queue.Queue(1) # max size is equal to max total exec imbalance, so keep it low
 _action_queue_interval = 16 / 1000 # seconds
 _game_running = False
+
+# filling up the queue before we start can help mitigate total starting exec imbalance by up to maxsize steps
+# effective max starting error decreases by 1, so if max size is 1, this is perfect
+for i in range(_action_queue.maxsize):
+    _action_queue.put((lambda *_: None, tuple()))
 
 def _process_queue():
     while _game_running:
@@ -37,6 +42,8 @@ def run_game():
     if _game_running:
         raise GameStateError('run_game() was called when the game was already running')
     _game_running = True
+
+    _turtle.delay(0)
     _process_queue()
 
 def stop_game():
@@ -52,7 +59,7 @@ def _qinvoke(fn, *args):
     _action_queue.put((fn, args))
 
 class TurtleBase:
-    f'''
+    '''
     The base class for any custom turtle.
     This type should not be used directly; instead, you should create a custom turtle with the @turtle decorator.
 
@@ -70,6 +77,7 @@ class TurtleBase:
         self.__turtle = _turtle.Turtle()
         self.__turtle.speed('fastest')
         self.__turtle.penup()
+        self.__drawing = False
         self.__x = 0.0
         self.__y = 0.0
         self.__rot = 0.25 # angle [0, 1)
@@ -86,7 +94,7 @@ class TurtleBase:
 
     def setheading(self, to_angle):
         self.__rot = (float(to_angle) / self.__degrees) % 1.0
-        _qinvoke(self.__turtle.setheading, self.__rot * 360.0) # raw turtle is always in degrees mode
+        _qinvoke(self.__turtle.setheading, (0.25 - self.__rot) % 1.0 * 360.0) # raw turtle is always in degrees mode
     seth = setheading
 
     def setx(self, x):
@@ -134,14 +142,28 @@ class TurtleBase:
 
     def showturtle(self):
         _qinvoke(self.__turtle.showturtle)
+    show = showturtle
     st = showturtle
 
     def hideturtle(self):
         _qinvoke(self.__turtle.hideturtle)
+    hide = hideturtle
     ht = hideturtle
 
     def isvisible(self):
         return self.__turtle.isvisible()
+
+    def pendown(self):
+        self.__drawing = True
+        _qinvoke(self.__turtle.pendown)
+    down = pendown
+    pd = pendown
+
+    def penup(self):
+        self.__drawing = False
+        _qinvoke(self.__turtle.penup)
+    up = penup
+    pu = penup
 
     def position(self):
         return self.__x, self.__y
@@ -168,16 +190,6 @@ class TurtleBase:
     def radians(self):
         self.__degrees = 2 * math.pi
 
-    def pendown(self):
-        self.__turtle.pendown()
-    down = pendown
-    pd = pendown
-
-    def penup(self):
-        self.__turtle.penup()
-    up = penup
-    pu = penup
-
     def pensize(self, width=None):
         return self.__turtle.pensize(width)
     width = pensize
@@ -186,7 +198,7 @@ class TurtleBase:
         return self.__turtle.pen(pen, **pendict)
 
     def isdown(self):
-        return self.__turtle.isdown()
+        return self.__drawing
 
 def turtle(cls):
     '''
