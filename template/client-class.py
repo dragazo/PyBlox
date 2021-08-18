@@ -152,17 +152,22 @@ $service_instances
                         last['waiters'] = 0
                         self._message_cv.notify_all()
 
-                content = message['content']
-                for handler in handlers: # without mutex lock so we don't block new ws messages or on_message()
+                def invoker(handler, content):
                     packet = $client_name._check_handler(handler, content)
                     if type(packet) == str:
                         print(f'\'{message["msgType"]}\' message handler error:\n{packet}', file=sys.stderr)
-                        continue
+                        return
 
                     try:
                         handler(**packet) # the handler could be arbitrarily long and is fallible
                     except:
                         traceback.print_exc(file = sys.stderr)
+                
+                content = message['content']
+                for handler in handlers: # without mutex lock so we don't block new ws messages or on_message()
+                    t = threading.Thread(target = invoker, args = (handler, content))
+                    t.setDaemon(True)
+                    t.start()
             except:
                 traceback.print_exc(file = sys.stderr)
     
