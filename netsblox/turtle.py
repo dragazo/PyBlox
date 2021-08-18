@@ -6,12 +6,30 @@ import inspect
 import queue
 import math
 
+_key_events = {} # maps key to [raw handler, event[]]
+def _add_key_event(key, event):
+    if key not in _key_events:
+        entry = [None, []]
+        def raw_handler():
+            for handler in entry[1]:
+                t = threading.Thread(target = handler)
+                t.setDaemon(True)
+                t.start()
+        entry[0] = raw_handler
+
+        _key_events[key] = entry
+        _turtle.onkeypress(entry[0], key)
+
+    _key_events[key][1].append(event)
+
 class GameStateError(Exception):
     pass
 
 _action_queue = queue.Queue(1) # max size is equal to max total exec imbalance, so keep it low
-_action_queue_interval = 16 / 1000 # seconds
+_action_queue_interval = 16 # ms between control slices
+_action_max_per_slice = 16 # max number of actions to perform during a control slice
 _game_running = False
+_game_stopped = False # different than not running due to 3-state system
 
 # filling up the queue before we start can help mitigate total starting exec imbalance by up to maxsize steps
 # effective max starting error decreases by 1, so if max size is 1, this is perfect
@@ -19,12 +37,14 @@ for i in range(_action_queue.maxsize):
     _action_queue.put((lambda *_: None, tuple()))
 
 def _process_queue():
-    while _game_running:
-        try:
-            fn, args = _action_queue.get(timeout = _action_queue_interval)
+    if _game_running:
+        for _ in range(_action_max_per_slice):
+            if _action_queue.qsize() == 0:
+                break
+            fn, args = _action_queue.get()
             fn(*args)
-        except queue.Empty:
-            pass
+
+        _turtle.Screen().ontimer(_process_queue, _action_queue_interval)
 
 def run_game():
     '''
@@ -33,18 +53,21 @@ def run_game():
     but you must call this function for them to start moving around and interacting.
     This must be called from the main thread (global scope), not from within a turtle.
 
-    This function only returns when the game is over,
-    which can be manually triggered by calling stop_game() (e.g., from a turtle).
+    The game can manually be stopped by calling stop_game() (e.g., from a turtle).
 
     Trying to start a game that is already running results in a GameStateError.
     '''
-    global _game_running
+    global _game_running, _game_stopped
     if _game_running:
         raise GameStateError('run_game() was called when the game was already running')
+    if _game_stopped:
+        raise GameStateError('run_game() was called when the game had previously been stopped')
     _game_running = True
 
     _turtle.delay(0)
-    _process_queue()
+    _turtle.listen()
+    _turtle.Screen().ontimer(_process_queue, _action_queue_interval)
+    _turtle.done()
 
 def stop_game():
     '''
@@ -52,11 +75,15 @@ def stop_game():
 
     Multiple calls to stop_game() are allowed.
     '''
-    global _game_running
+    global _game_running, _game_stopped
     _game_running = False
+    _game_stopped = True
+
+    _turtle.Screen().ontimer(_turtle.bye, 1000)
 
 def _qinvoke(fn, *args):
-    _action_queue.put((fn, args))
+    if not _game_stopped:
+        _action_queue.put((fn, args))
 
 class TurtleBase:
     '''
@@ -225,6 +252,11 @@ def turtle(cls):
                 thread = threading.Thread(target = start_script)
                 thread.setDaemon(True)
                 thread.start()
+
+            key_scripts = inspect.getmembers(self, predicate = lambda x: inspect.ismethod(x) and hasattr(x, '__run_on_key'))
+            for _, key_script in key_scripts:
+                _add_key_event(getattr(key_script, '__run_on_key'), key_script)
+    
     return Derived
 
 def onstart(f):
@@ -244,3 +276,21 @@ def onstart(f):
     '''
     setattr(f, '__run_on_start', True)
     return f
+
+def onkey(key):
+    '''
+    The `@onkey` decorator can be applied to a method definition inside a custom turtle
+    to make that function run whenever the user presses a key on the keyboard.
+
+    ```
+    @turtle
+    class MyTurtle:
+        @onkey('w')
+        def w_key_pressed(self):
+            self.forward(50)
+    ```
+    '''
+    def wrapper(f):
+        setattr(f, '__run_on_key', key)
+        return f
+    return wrapper
