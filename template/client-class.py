@@ -222,7 +222,9 @@ $service_instances
             def wrapper(f):
                 info = inspect.getfullargspec(f)
                 if len(info.args) != 0 and info.args[0] == 'self':
-                    setattr(f, '__run_on_message', lambda x: self._on_message(msg_type, x)) # mark it for the constructor to handle when an instance is created
+                    if not hasattr(f, '__run_on_message'):
+                        setattr(f, '__run_on_message', [])
+                    getattr(f, '__run_on_message').append(lambda x: self._on_message(msg_type, x)) # mark it for the constructor to handle when an instance is created
                 else:
                     self._on_message(msg_type, f)
                 

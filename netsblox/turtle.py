@@ -255,11 +255,13 @@ def turtle(cls):
 
             key_scripts = inspect.getmembers(self, predicate = lambda x: inspect.ismethod(x) and hasattr(x, '__run_on_key'))
             for _, key_script in key_scripts:
-                _add_key_event(getattr(key_script, '__run_on_key'), key_script)
+                for key in getattr(key_script, '__run_on_key'):
+                    _add_key_event(key, key_script)
 
             msg_scripts = inspect.getmembers(self, predicate = lambda x: inspect.ismethod(x) and hasattr(x, '__run_on_message'))
             for _, msg_script in msg_scripts:
-                getattr(msg_script, '__run_on_message')(msg_script) # client gave us an insertion function
+                for inserter in getattr(msg_script, '__run_on_message'): # client gave us a list of convenient insertion functions
+                    inserter(msg_script)
     
     return Derived
 
@@ -295,6 +297,8 @@ def onkey(key):
     ```
     '''
     def wrapper(f):
-        setattr(f, '__run_on_key', key)
+        if not hasattr(f, '__run_on_key'):
+            setattr(f, '__run_on_key', [])
+        getattr(f, '__run_on_key').append(key)
         return f
     return wrapper
