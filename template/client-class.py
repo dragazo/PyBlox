@@ -1,5 +1,6 @@
 import collections
 import threading
+import traceback
 import inspect
 import time
 import json
@@ -116,9 +117,9 @@ $service_instances
         argspec = inspect.getfullargspec(handler)
         unused_params = set(content.keys())
         for arg in argspec.args + argspec.kwonlyargs:
-            if arg not in content:
+            if arg not in content and arg != 'self':
                 return f'    unknown param: \'{arg}\' typo?\n    available params: {list(content.keys())}'
-            unused_params.remove(arg)
+            unused_params.discard(arg)
         return { k: content[k] for k in content.keys() if k not in unused_params } if unused_params and argspec.varkw is None else content
     def _message_get_last_assume_locked(self, msg_type):
         if msg_type not in self._message_last:
@@ -161,9 +162,9 @@ $service_instances
                     try:
                         handler(**packet) # the handler could be arbitrarily long and is fallible
                     except:
-                        pass
+                        traceback.print_exc(file = sys.stderr)
             except:
-                pass
+                traceback.print_exc(file = sys.stderr)
     
     def wait_for_message(self, msg_type: str) -> dict:
         '''
@@ -194,17 +195,37 @@ $service_instances
         Otherwise, this returns an annotation type that can be applied to a function definition.
         For example, the following would cause on_start to be called on every incoming 'start' message.
 
+        ```
         client = $client_name()
         
         @client.on_message('start')
         def on_start():
             print('started')
+        ```
+
+        This can also be used on a method definition inside a custom turtle class,
+        in which case every turtle of the given type will perform the action each time a message is received.
+
+        ```
+        client = $client_name()
+
+        @turtle
+        class MyTurtle:
+            @client.on_message('start')
+            def on_start(self):
+                print('started')
+        ```
         '''
         if handler is not None:
             self._on_message(msg_type, handler)
         else:
             def wrapper(f):
-                self._on_message(msg_type, f)
+                info = inspect.getfullargspec(f)
+                if len(info.args) != 0 and info.args[0] == 'self':
+                    setattr(f, '__run_on_message', lambda x: self._on_message(msg_type, x)) # mark it for the constructor to handle when an instance is created
+                else:
+                    self._on_message(msg_type, f)
+                
                 return f
             return wrapper
     

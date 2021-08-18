@@ -256,6 +256,10 @@ def turtle(cls):
             key_scripts = inspect.getmembers(self, predicate = lambda x: inspect.ismethod(x) and hasattr(x, '__run_on_key'))
             for _, key_script in key_scripts:
                 _add_key_event(getattr(key_script, '__run_on_key'), key_script)
+
+            msg_scripts = inspect.getmembers(self, predicate = lambda x: inspect.ismethod(x) and hasattr(x, '__run_on_message'))
+            for _, msg_script in msg_scripts:
+                getattr(msg_script, '__run_on_message')(msg_script) # client gave us an insertion function
     
     return Derived
 
