@@ -52,6 +52,10 @@ class MyTurtle:
     def press_right(self):
         self.right(15)
 
+@onkey('space')
+def press_space():
+    stop_game()
+
 for x in range(-5, 5 + 1):
     for y in range(-5, 5 + 1):
         MyTurtle(x, y)

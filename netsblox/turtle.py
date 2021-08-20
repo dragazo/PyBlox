@@ -285,10 +285,15 @@ def onstart(f):
 
 def onkey(key):
     '''
-    The `@onkey` decorator can be applied to a method definition inside a custom turtle
+    The `@onkey` decorator can be applied to a function at global scope
+    or to a method definition inside a custom turtle
     to make that function run whenever the user presses a key on the keyboard.
 
     ```
+    @onkey('space')
+    def space_key_pressed():
+        stop_game()
+
     @turtle
     class MyTurtle:
         @onkey('w')
@@ -297,8 +302,14 @@ def onkey(key):
     ```
     '''
     def wrapper(f):
-        if not hasattr(f, '__run_on_key'):
-            setattr(f, '__run_on_key', [])
-        getattr(f, '__run_on_key').append(key)
+        info = inspect.getfullargspec(f)
+        if len(info.args) != 0 and info.args[0] == 'self':
+            if not hasattr(f, '__run_on_key'):
+                setattr(f, '__run_on_key', [])
+            getattr(f, '__run_on_key').append(key)
+        else:
+            _add_key_event(key, f)
+
         return f
+        
     return wrapper
