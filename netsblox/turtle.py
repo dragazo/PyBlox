@@ -76,10 +76,11 @@ def stop_game():
     Multiple calls to stop_game() are allowed.
     '''
     global _game_running, _game_stopped
-    _game_running = False
-    _game_stopped = True
+    if _game_running:
+        _game_running = False
+        _game_stopped = True
 
-    _turtle.Screen().ontimer(_turtle.bye, 1000)
+        _turtle.Screen().ontimer(_turtle.bye, 1000)
 
 def _qinvoke(fn, *args):
     if not _game_stopped:
@@ -227,24 +228,10 @@ class TurtleBase:
     def isdown(self):
         return self.__drawing
 
-def turtle(cls):
-    '''
-    The `@turtle` decorator for a class creates a new type of turtle.
-    You can use the `@onstart` annotation on any method definition to make it run when a turtle of this type is created.
-
-    ```
-    @turtle
-    class MyTurtle:
-        @onstart
-        def start(self):
-            self.forward(75)
-
-    t = MyTurtle() # create an instance of MyTurtle - start() is executed automatically
-    ```
-    '''
-    class Derived(TurtleBase, cls):
+def _derive(base, cls):
+    class Derived(base, cls):
         def __init__(self, *args, **kwargs):
-            TurtleBase.__init__(self)
+            base.__init__(self)
             cls.__init__(self, *args, **kwargs)
 
             start_scripts = inspect.getmembers(self, predicate = lambda x: inspect.ismethod(x) and hasattr(x, '__run_on_start'))
@@ -264,6 +251,39 @@ def turtle(cls):
                     inserter(msg_script)
     
     return Derived
+
+def turtle(cls):
+    '''
+    The `@turtle` decorator for a class creates a new type of turtle.
+    You can use the `@onstart` annotation on any method definition to make it run when a turtle of this type is created.
+
+    ```
+    @turtle
+    class MyTurtle:
+        @onstart
+        def start(self):
+            self.forward(75)
+
+    t = MyTurtle() # create an instance of MyTurtle - start() is executed automatically
+    ```
+    '''
+    return _derive(TurtleBase, cls)
+
+def stage(cls):
+    '''
+    The `@stage` decorator for a class creates a new type of stage.
+    Stages function much like the stage in NetsBlox - equivalent to a sprite/turtle except with no movement controls.
+    Unlike in NetsBlox, you may create multiple instances of a stage, or even multiple types of stages.
+
+    ```
+    @stage
+    class MyStage:
+        @onstart
+        def start(self):
+            print('stage starting')
+    ```
+    '''
+    return _derive(object, cls)
 
 def onstart(f):
     '''
