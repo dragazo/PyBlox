@@ -54,9 +54,9 @@ class MyTurtle:
 
 @onkey('space')
 def press_space():
-    stop_game()
+    stop_project()
 
 for x in range(-5, 5 + 1):
     for y in range(-5, 5 + 1):
         MyTurtle(x, y)
-run_game()
+start_project()

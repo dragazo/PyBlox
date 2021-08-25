@@ -17,7 +17,7 @@ class MyTurtle:
         
         self.hideturtle()
         time.sleep(2) # give time to appreciate the artwork
-        stop_game()
+        stop_project()
 
 MyTurtle()
-run_game()
+start_project()

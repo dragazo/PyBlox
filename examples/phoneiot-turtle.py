@@ -51,7 +51,7 @@ class MyTurtle:
 
 @client.on_message('terminate')
 def terminate():
-    stop_game()
+    stop_project()
 
 MyTurtle()
-run_game()
+start_project()

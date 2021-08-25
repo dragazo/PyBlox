@@ -46,22 +46,28 @@ def _process_queue():
 
         _turtle.Screen().ontimer(_process_queue, _action_queue_interval)
 
-def run_game():
+# this should only be used internally, not by user code
+def _new_game():
+    global _game_running, _game_stopped
+    _game_running = False
+    _game_stopped = False
+
+def start_project():
     '''
     Run turtle game logic.
     Turtles begin running as soon as they are created,
     but you must call this function for them to start moving around and interacting.
     This must be called from the main thread (global scope), not from within a turtle.
 
-    The game can manually be stopped by calling stop_game() (e.g., from a turtle).
+    The game can manually be stopped by calling stop_project() (e.g., from a turtle).
 
     Trying to start a game that is already running results in a GameStateError.
     '''
     global _game_running, _game_stopped
     if _game_running:
-        raise GameStateError('run_game() was called when the game was already running')
+        raise GameStateError('start_project() was called when the game was already running')
     if _game_stopped:
-        raise GameStateError('run_game() was called when the game had previously been stopped')
+        raise GameStateError('start_project() was called when the game had previously been stopped')
     _game_running = True
 
     _turtle.delay(0)
@@ -69,11 +75,11 @@ def run_game():
     _turtle.Screen().ontimer(_process_queue, _action_queue_interval)
     _turtle.done()
 
-def stop_game():
+def stop_project():
     '''
-    Stops a game that was previously started by run_game().
+    Stops a game that was previously started by start_project().
 
-    Multiple calls to stop_game() are allowed.
+    Multiple calls to stop_project() are allowed.
     '''
     global _game_running, _game_stopped
     if _game_running:
@@ -104,8 +110,7 @@ class TurtleBase:
     def __init__(self):
         self.__turtle = _turtle.Turtle()
         self.__turtle.speed('fastest')
-        self.__turtle.penup()
-        self.__drawing = False
+        self.__drawing = True # turtles default to pendown
         self.__x = 0.0
         self.__y = 0.0
         self.__rot = 0.25 # angle [0, 1)
@@ -228,10 +233,11 @@ class TurtleBase:
     def isdown(self):
         return self.__drawing
 
-def _derive(base, cls):
-    class Derived(base, cls):
+def _derive(bases, cls):
+    class Derived(*bases, cls):
         def __init__(self, *args, **kwargs):
-            base.__init__(self)
+            for base in bases:
+                base.__init__(self)
             cls.__init__(self, *args, **kwargs)
 
             start_scripts = inspect.getmembers(self, predicate = lambda x: inspect.ismethod(x) and hasattr(x, '__run_on_start'))
@@ -267,7 +273,7 @@ def turtle(cls):
     t = MyTurtle() # create an instance of MyTurtle - start() is executed automatically
     ```
     '''
-    return _derive(TurtleBase, cls)
+    return _derive([TurtleBase], cls)
 
 def stage(cls):
     '''
@@ -283,7 +289,7 @@ def stage(cls):
             print('stage starting')
     ```
     '''
-    return _derive(object, cls)
+    return _derive([], cls)
 
 def onstart(f):
     '''
@@ -312,7 +318,7 @@ def onkey(key):
     ```
     @onkey('space')
     def space_key_pressed():
-        stop_game()
+        stop_project()
 
     @turtle
     class MyTurtle:

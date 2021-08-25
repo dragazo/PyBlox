@@ -23,4 +23,4 @@ class MyTurtle:
 num_turtles = 50
 for i in range(num_turtles):
     MyTurtle(i * 360 / num_turtles)
-run_game()
+start_project()

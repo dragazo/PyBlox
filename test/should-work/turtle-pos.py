@@ -19,7 +19,7 @@ class MyTurtle:
         if (0, 0) in pos_set:
             print('(0, 0) should not be possible', file = sys.stderr)
             assert False
-        stop_game()
+        stop_project()
 
 MyTurtle()
-run_game()
+start_project()
