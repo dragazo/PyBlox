@@ -2,19 +2,17 @@
 
 import tkinter as tk
 from tkinter import ttk
-import turtle as _turtle # so user can import turtle
-import queue as _queue
-import sys as _sys
+import multiprocessing as mproc
+import turtle
+import sys
 
-import netsblox
-import netsblox.turtle as _nbturtle
-from netsblox.turtle import *
+import netsblox.turtle as nbturtle
 
 root = None
 toolbar = None
 content = None
 
-_print_queue = _queue.Queue(maxsize = 256)
+_print_queue = mproc.Queue(maxsize = 256)
 _print_batchsize = 256
 _print_targets = []
 def _process_print_queue():
@@ -32,31 +30,51 @@ def _process_print_queue():
 def indent(txt: str):
     return '\n'.join([ f'    {x}' for x in txt.splitlines() ])
 
-def exec_user_code():
+_exec_process = None
+def play_button():
+    global _exec_process
+
+    # if already running, just kill it - the only locks they can have were made by them, so no deadlocking issues
+    # the messaging pipe is broken, but we won't be using it anymore
+    if _exec_process is not None:
+        _exec_process.terminate()
+        _exec_process = None
+        toolbar.run_button.show_play()
+        return
+
+    toolbar.run_button.show_stop()
+
     # wipe whatever was on the display
     content.display.turtle_disp.screen.clear()
     content.display.terminal.text.set_text('')
-    _nbturtle._new_game()
+    nbturtle._new_game()
 
     # the first turtle on a blank screen for some reason clears click/key events,
     # so make an invisible turtle and then reset the click events
-    _turtle.RawTurtle(content.display.turtle_disp.canvas, visible = False)
+    turtle.RawTurtle(content.display.turtle_disp.canvas, visible = False)
     content.display.turtle_disp.screen.onclick(content.display.turtle_disp.screen.listen)
 
     code = content.project.get_full_script()
-    try:
-        exec(code)
-    except _turtle.Terminator:
-        print('\ngot exception\n')
-        pass
+    _exec_process = mproc.Process(target = exec, args = (code,), daemon = True)
+    _exec_process.start()
 
 class Toolbar(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.pack(side = tk.TOP, fill = tk.X)
 
-        self.run_button = tk.Button(self, text = '▶', width = 5, command = exec_user_code, bg = '#2d9e29', fg = 'white')
+        self.run_button = StartStopButton(self, command = play_button)
         self.run_button.pack()
+
+class StartStopButton(tk.Button):
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, width = 5, **kwargs)
+        self.show_play()
+
+    def show_play(self):
+        self.config(text = '▶', bg = '#2d9e29', fg = 'white')
+    def show_stop(self):
+        self.config(text = '■', bg = '#b31515', fg = 'white')
 
 class Content(tk.Frame):
     def __init__(self, parent):
@@ -82,13 +100,17 @@ class ProjectEditor(tk.Frame):
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill = tk.BOTH, expand = True)
 
+        editor = GlobalEditor(self.notebook)
+        self.notebook.add(editor, text = 'global')
+        self.editors['global'] = editor
+
         editor = StageEditor(self.notebook, 'stage')
         self.notebook.add(editor, text = editor.name)
         self.editors[editor.name] = editor
 
-        self.new_turtle('turtle')
+        self.newturtle('turtle')
 
-    def new_turtle(self, name = None):
+    def newturtle(self, name = None):
         if name is None:
             self.turtle_index += 1
             name = f'turtle{self.turtle_index}'
@@ -206,6 +228,31 @@ class CodeEditor(ScrolledText):
     def __init__(self, parent):
         super().__init__(parent, linenumbers = True)
 
+class GlobalEditor(CodeEditor):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.set_text('''
+import netsblox
+from netsblox.turtle import *
+
+import time as tryt
+import numpy
+print(tryt.time())
+print(numpy.zeros([2, 4]))
+
+someval = 'hello world' # create a global variable
+
+i = 1
+while True:
+    print(i, i**2)
+    tryt.sleep(1)
+    i += 1
+'''.strip())
+
+    def get_script(self):
+        return self.text.get('1.0', 'end-1c')
+
 class StageEditor(CodeEditor):
     def __init__(self, parent, name):
         super().__init__(parent)
@@ -273,7 +320,7 @@ class TerminalOutput(tk.Frame):
         self.text.pack(side = tk.TOP, fill = tk.BOTH, expand = True)
         style(self.text.text)
 
-    def tee_stdio(self):
+    def wrap_stdio(self, *, tee: bool):
         _print_targets.append(self)
 
         class TeeWriter:
@@ -284,8 +331,9 @@ class TerminalOutput(tk.Frame):
 
             def write(self, data):
                 data = str(data)
-                self.old.write(data)
-                self.old.flush()
+                if self.old is not None:
+                    self.old.write(data)
+                    self.old.flush()
                 _print_queue.put(data)
             
             def flush(self):
@@ -293,8 +341,8 @@ class TerminalOutput(tk.Frame):
             def __len__(self):
                 return 0
 
-        _sys.stdout = TeeWriter(_sys.stdout)
-        _sys.stderr = TeeWriter(_sys.stderr)
+        sys.stdout = TeeWriter(sys.stdout if tee else None)
+        sys.stderr = TeeWriter(sys.stderr if tee else None)
     
     def write(self, txt):
         self.text.text.insert('end', str(txt))
@@ -306,10 +354,10 @@ class TurtleDisplay(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
 
-        self.canvas = _turtle.ScrolledCanvas(self)
+        self.canvas = turtle.ScrolledCanvas(self)
         self.canvas.pack(fill = tk.BOTH, expand = True)
 
-        self.screen = _turtle.TurtleScreen(self.canvas)
+        self.screen = turtle.TurtleScreen(self.canvas)
 
         # ScrolledCanvas has better behavior, but we dont actually want scrollbars, so always match display size
         self.canvas.bind('<Configure>', lambda e: self.screen.screensize(canvwidth = e.width, canvheight = e.height))
@@ -321,11 +369,12 @@ def main():
     root.geometry('1200x600')
     root.minsize(width = 800, height = 400)
     root.title('NetsBlox - Python')
+    ttk.Style().theme_use('clam')
 
     toolbar = Toolbar(root)
     content = Content(root)
 
-    content.display.terminal.tee_stdio() # from here on stdio goes to the terminal
+    content.display.terminal.wrap_stdio(tee = False)
 
     _process_print_queue()
     root.mainloop()
