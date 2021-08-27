@@ -5,6 +5,7 @@ import threading
 import inspect
 import queue
 import math
+from typing import Any
 
 _key_events = {} # maps key to [raw handler, event[]]
 def _add_key_event(key, event):
@@ -25,9 +26,16 @@ def _add_key_event(key, event):
 class GameStateError(Exception):
     pass
 
+_action_queue_thread_id = threading.get_ident()
+
+_action_queue_ret_cv = threading.Condition(threading.Lock())
+_action_queue_ret_id = 0
+_action_queue_ret_vals = {}
+
 _action_queue = queue.Queue(1) # max size is equal to max total exec imbalance, so keep it low
-_action_queue_interval = 16 # ms between control slices
-_action_max_per_slice = 16 # max number of actions to perform during a control slice
+_action_queue_interval = 16    # ms between control slices
+_action_max_per_slice = 16     # max number of actions to perform during a control slice
+
 _game_running = False
 _game_stopped = False # different than not running due to 3-state system
 
@@ -41,8 +49,19 @@ def _process_queue():
         for _ in range(_action_max_per_slice):
             if _action_queue.qsize() == 0:
                 break
-            fn, args = _action_queue.get()
-            fn(*args)
+            val = _action_queue.get()
+            if len(val) == 2:
+                val[0](*val[1])
+            else:
+                ret = None
+                try:
+                    ret = val[0](*val[1])
+                except Exception as e:
+                    ret = e
+
+                with _action_queue_ret_cv:
+                    _action_queue_ret_vals[val[2]] = ret
+                    _action_queue_ret_cv.notify_all()
 
         _turtle.Screen().ontimer(_process_queue, _action_queue_interval)
 
@@ -88,9 +107,43 @@ def stop_project():
 
         _turtle.Screen().ontimer(_turtle.bye, 1000)
 
-def _qinvoke(fn, *args):
+def _qinvoke(fn, *args) -> None:
+    # if we're running on the action queue thread, we can just do it directly
+    if _action_queue_thread_id == threading.current_thread().ident:
+        fn(*args)
+        return
+
     if not _game_stopped:
         _action_queue.put((fn, args))
+
+def _qinvoke_wait(fn, *args) -> Any:
+    global _action_queue_ret_id
+
+    # if we're running on the action queue thread, we can just do it directly
+    if _action_queue_thread_id == threading.current_thread().ident:
+        return fn(*args)
+
+    ret_id = None
+    with _action_queue_ret_cv:
+        ret_id = _action_queue_ret_id
+        _action_queue_ret_id += 1
+
+    ret_val = None
+    _action_queue.put((fn, args, ret_id))
+    while True:
+        with _action_queue_ret_cv:
+            if id in _action_queue_ret_vals:
+                ret_val = _action_queue_ret_vals[id]
+                del _action_queue_ret_vals[id]
+                break
+            _action_queue_ret_cv.wait()
+
+    if isinstance(ret_val, Exception):
+        raise ret_val
+    return ret_val
+
+# if set to non-none, will use RawTurtle with this as its TurtleScreen parent
+_raw_turtle_target = None
 
 class TurtleBase:
     '''
@@ -108,7 +161,11 @@ class TurtleBase:
     ```
     '''
     def __init__(self):
-        self.__turtle = _turtle.Turtle()
+        if _raw_turtle_target is None:
+            self.__turtle = _qinvoke_wait(_turtle.Turtle)
+        else:
+            self.__turtle = _qinvoke_wait(_turtle.RawTurtle, _raw_turtle_target)
+
         self.__turtle.speed('fastest')
         self.__drawing = True # turtles default to pendown
         self.__x = 0.0

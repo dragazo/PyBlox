@@ -3,8 +3,12 @@
 import tkinter as tk
 from tkinter import ttk
 import multiprocessing as mproc
+import subprocess
+import threading
+import traceback
 import turtle
 import sys
+import io
 
 import netsblox.turtle as nbturtle
 
@@ -30,12 +34,18 @@ def _process_print_queue():
 def indent(txt: str):
     return '\n'.join([ f'    {x}' for x in txt.splitlines() ])
 
+def exec_wrapper(*args):
+    try:
+        exec(*args)
+    except:
+        print(traceback.format_exc(), file = sys.stderr) # print out directly so that the stdio wrappers are used
+
 _exec_process = None
 def play_button():
     global _exec_process
 
-    # if already running, just kill it - the only locks they can have were made by them, so no deadlocking issues
-    # the messaging pipe is broken, but we won't be using it anymore
+    # if already running, just kill it - the only locks they can have were made by them, so no deadlocking issues.
+    # the messaging pipe is broken, but we won't be using it anymore.
     if _exec_process is not None:
         _exec_process.terminate()
         _exec_process = None
@@ -54,9 +64,18 @@ def play_button():
     turtle.RawTurtle(content.display.turtle_disp.canvas, visible = False)
     content.display.turtle_disp.screen.onclick(content.display.turtle_disp.screen.listen)
 
+    def file_piper(src, dst):
+        src = io.TextIOWrapper(src)
+        for c in iter(lambda: src.read(1), ''):
+            dst.write(c)
+            dst.flush()
+
     code = content.project.get_full_script()
-    _exec_process = mproc.Process(target = exec, args = (code,), daemon = True)
-    _exec_process.start()
+    _exec_process = subprocess.Popen([sys.executable, '-uc', code], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    
+    # reading the pipes is blocking so do in another thread for each stream - they will exit when process is killed
+    threading.Thread(target = file_piper, args = (_exec_process.stdout, sys.stdout), daemon = True).start()
+    threading.Thread(target = file_piper, args = (_exec_process.stderr, sys.stderr), daemon = True).start()
 
 class Toolbar(tk.Frame):
     def __init__(self, parent):
@@ -242,12 +261,6 @@ print(tryt.time())
 print(numpy.zeros([2, 4]))
 
 someval = 'hello world' # create a global variable
-
-i = 1
-while True:
-    print(i, i**2)
-    tryt.sleep(1)
-    i += 1
 '''.strip())
 
     def get_script(self):
@@ -282,7 +295,7 @@ class TurtleEditor(CodeEditor):
 def start(self):
     self.myvar = 40 # create a sprite variable
 
-    for i in range(4):
+    for i in range(400):
         self.forward(self.myvar) # access sprite variable
         self.right(90)
 '''.strip())
@@ -374,7 +387,7 @@ def main():
     toolbar = Toolbar(root)
     content = Content(root)
 
-    content.display.terminal.wrap_stdio(tee = False)
+    content.display.terminal.wrap_stdio(tee = True)
 
     _process_print_queue()
     root.mainloop()
