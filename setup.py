@@ -22,6 +22,8 @@ setup(
         'websocket-client',
         'requests',
         'turtle',
+        'parso',
+        'unittest',
     ],
     classifiers = [
         'Development Status :: 1 - Planning',
