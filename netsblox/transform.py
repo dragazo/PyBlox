@@ -18,28 +18,22 @@ def get_indent(line: str) -> str:
 
 def inclusive_splitlines(src: str) -> List[str]:
     res = src.splitlines()
-    if src[-1] == '\n':
+    if src and src[-1] == '\n':
         res.append('')
     return res
 
 def add_to_pos(lines: List[str], res: List[str], res_pos: List[int], target_pos: int) -> None:
     assert target_pos >= res_pos[0]
     for i in range(res_pos[0], target_pos):
-        if i >= len(lines):
-            break
         res.append(lines[i])
     res_pos[0] = target_pos
 
 def trim_newline_nodes(nodes: List[Any]) -> List[Any]:
     i = 0
-    while i < len(nodes):
-        if nodes[i].type != 'newline':
-            break
+    while i < len(nodes) and nodes[i].type == 'newline':
         i += 1
     j = len(nodes)
-    while j > i:
-        if nodes[j - 1].type != 'newline':
-            break
+    while j > i and nodes[j - 1].type == 'newline':
         j -= 1
     return nodes[i:j]
 
