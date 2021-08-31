@@ -155,8 +155,7 @@ async def generate_client_save(base_url, client_name, save_path):
         f.write(content)
 async def main():
     args = [
-        # ('https://editor.netsblox.org', 'Client', 'netsblox/editor.py'),
-        ('https://dev.netsblox.org', 'Client', 'netsblox/editor.py'),
+        ('https://editor.netsblox.org', 'Client', 'netsblox/editor.py'),
         ('https://dev.netsblox.org', 'Client', 'netsblox/dev.py'),
         
         # ('http://localhost:8080', 'LocalHost', 'netsblox/localhost.py'), # for dev purposes only

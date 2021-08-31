@@ -2,7 +2,7 @@
 
 from typing import Tuple, Any, List
 
-import parso # docs: https://parso.readthedocs.io/en/latest/docs/parser-tree.html
+import parso # docs: https://parso.readthedocs.io/_/downloads/en/latest/pdf/
 import unittest
 
 def remove_new_line(line: str):
@@ -43,6 +43,11 @@ def trim_newline_nodes(nodes: List[Any]) -> List[Any]:
         j -= 1
     return nodes[i:j]
 
+def line_span(node):
+    start_line = node.start_pos[0]
+    end_line = node.end_pos[0] - 1 if node.end_pos[1] == 0 else node.end_pos[0]
+    return start_line, end_line
+
 def add_breaks_recursive(node: Any, lines: List[str], line_indents: List[str], res: List[str], res_pos: List[int], added_lines: List[int]) -> None:
     if hasattr(node, 'children'):
         for child in node.children:
@@ -50,14 +55,11 @@ def add_breaks_recursive(node: Any, lines: List[str], line_indents: List[str], r
 
     if node.type in ['while_stmt', 'for_stmt']:
         stmts = trim_newline_nodes(node.children[-1].children)
-        last = stmts[-1]
+        last_begin, last_end = line_span(stmts[-1])
 
-        start_line = last.start_pos[0]
-        end_line = last.end_pos[0] - 1 if last.end_pos[1] == 0 else last.end_pos[0]
-
-        add_to_pos(lines, res, res_pos, end_line)
-        res.append(f'{line_indents[start_line - 1]}time.sleep(0)')
-        added_lines.append(end_line + 1)
+        add_to_pos(lines, res, res_pos, last_end)
+        res.append(f'{line_indents[last_begin - 1]}time.sleep(0)')
+        added_lines.append(last_end + 1)
 
 def add_breaks(code: str) -> Tuple[str, List[int]]:
     root = parso.parse(code)
@@ -155,6 +157,7 @@ for i in range(10):
         res, added = add_breaks('''
 for i in range(10):
 
+        # some comment
 
     print(x)
 for i in range(10):
@@ -168,6 +171,7 @@ for i in range(10):
         self.assertEqual(res, '''
 for i in range(10):
 
+        # some comment
 
     print(x)
     time.sleep(0)
@@ -181,7 +185,31 @@ for i in range(10):
     time.sleep(0)
 
 ''')
-        self.assertEqual(added, [6, 8, 12])
+        self.assertEqual(added, [7, 9, 13])
+
+    def test_ws_comment(self):
+        res, added = add_breaks('''
+for i in range(10):
+
+  # something
+
+    pass
+
+      # else thing
+
+''')
+        self.assertEqual(res, '''
+for i in range(10):
+
+  # something
+
+    pass
+    time.sleep(0)
+
+      # else thing
+
+''')
+        self.assertEqual(added, [7])
 
     def test_multi_line_last_stmt(self):
         res, added = add_breaks('''
@@ -228,6 +256,17 @@ for i in range(10):
 ''')
         self.assertEqual(added, [])
     
+    def test_loop_error_2(self):
+        res, added = add_breaks('''
+for i in range(10):
+    # merp derp
+''')
+        self.assertEqual(res, '''
+for i in range(10):
+    # merp derp
+''')
+        self.assertEqual(added, [])
+    
     def test_expr_loop_end(self):
         res, added = add_breaks('''
 for i in range(10):
@@ -257,7 +296,7 @@ for i in range(10):
     pass
 for j in range(10):
     for k in range(6):
-        pass
+        pass # hello world
 for x in range(10):
     pass
 '''.strip())
@@ -267,7 +306,7 @@ for i in range(10):
     time.sleep(0)
 for j in range(10):
     for k in range(6):
-        pass
+        pass # hello world
         time.sleep(0)
     time.sleep(0)
 for x in range(10):
