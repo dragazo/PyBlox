@@ -11,6 +11,7 @@ import sys
 import io
 
 import netsblox.turtle as nbturtle
+import netsblox.transform as transform
 
 root = None
 toolbar = None
@@ -72,7 +73,7 @@ def play_button():
 
     code = content.project.get_full_script()
     _exec_process = subprocess.Popen([sys.executable, '-uc', code], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
-    
+
     # reading the pipes is blocking so do in another thread for each stream - they will exit when process is killed
     threading.Thread(target = file_piper, args = (_exec_process.stdout, sys.stdout), daemon = True).start()
     threading.Thread(target = file_piper, args = (_exec_process.stderr, sys.stderr), daemon = True).start()
@@ -114,18 +115,25 @@ class ProjectEditor(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.turtle_index = 0
-        self.editors = {}
+        self.editors = []
 
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill = tk.BOTH, expand = True)
 
+        def on_change(e):
+            tab = e.widget.tab('current')['text']
+            editors = [x[1] for x in self.editors if x[0] == tab]
+            assert len(editors) == 1
+            editors[0].on_content_change(e)
+        self.notebook.bind('<<NotebookTabChanged>>', on_change)
+
         editor = GlobalEditor(self.notebook)
         self.notebook.add(editor, text = 'global')
-        self.editors['global'] = editor
+        self.editors.append(('global', editor))
 
         editor = StageEditor(self.notebook, 'stage')
         self.notebook.add(editor, text = editor.name)
-        self.editors[editor.name] = editor
+        self.editors.append((editor.name, editor))
 
         self.newturtle('turtle')
 
@@ -133,19 +141,19 @@ class ProjectEditor(tk.Frame):
         if name is None:
             self.turtle_index += 1
             name = f'turtle{self.turtle_index}'
-
-        if name not in self.editors:
+        
+        if not any(x[0] == name for x in self.editors):
             editor = TurtleEditor(self.notebook, name)
             self.notebook.add(editor, text = name)
-            self.editors[name] = editor
+            self.editors.append((name, editor))
     
     def get_full_script(self):
-        script = ''
-        for editor in self.editors.values():
-            partial = editor.get_script()
-            script += f'\n{partial}\n'
-        script += '\nstart_project()\n'
-        return script
+        scripts = []
+        for _, editor in self.editors:
+            scripts.append(editor.get_script())
+            scripts.append('\n\n')
+        scripts.append('start_project()')
+        return ''.join(scripts)
 
 # source: https://stackoverflow.com/questions/16369470/tkinter-adding-line-number-to-text-widget
 class TextLineNumbers(tk.Canvas):
@@ -153,6 +161,7 @@ class TextLineNumbers(tk.Canvas):
         super().__init__(parent, width = width)
         self.width = width
         self.textwidget = target
+        self.line_num_offset = 0
 
     def redraw(self):
         self.delete('all')
@@ -164,8 +173,8 @@ class TextLineNumbers(tk.Canvas):
                 break
 
             y = dline[1]
-            linenum = str(i).split('.')[0]
-            self.create_text(self.width - 2, y, anchor = 'ne', text = linenum)
+            linenum = int(str(i).split('.')[0]) + self.line_num_offset
+            self.create_text(self.width - 2, y, anchor = 'ne', text = str(linenum))
             i = self.textwidget.index(f'{i}+1line')
 
 # source: https://stackoverflow.com/questions/16369470/tkinter-adding-line-number-to-text-widget
@@ -203,11 +212,15 @@ class ScrolledText(tk.Frame):
         self.text = ChangedText(self, yscrollcommand = self.scrollbar.set)
         self.scrollbar.config(command = self.text.yview)
 
+        self.custom_on_change = []
+
         def on_select_all(e):
             self.text.tag_add(tk.SEL, '1.0', tk.END)
             return 'break'
         self.text.bind('<Control-Key-a>', on_select_all)
         self.text.bind('<Control-Key-A>', on_select_all)
+
+        self.linenumbers = None # default to none - conditionally created
 
         if readonly:
             # make text readonly be ignoring all (default) keystrokes
@@ -228,17 +241,20 @@ class ScrolledText(tk.Frame):
         
         if linenumbers:
             self.linenumbers = TextLineNumbers(self, target = self.text, width = 30)
-
-            def on_change(e):
-                self.linenumbers.redraw()
-            self.text.bind('<<Change>>', on_change)
-            self.text.bind('<Configure>', on_change)
+            self.text.bind('<<Change>>', self.on_content_change)
+            self.text.bind('<Configure>', self.on_content_change)
         
         self.scrollbar.pack(side = tk.RIGHT, fill = tk.Y)
         if linenumbers:
             self.linenumbers.pack(side = tk.LEFT, fill = tk.Y)
         self.text.pack(side = tk.RIGHT, fill = tk.BOTH, expand = True)
     
+    def on_content_change(self, e):
+        for handler in self.custom_on_change:
+            handler(e)
+        if self.linenumbers is not None:
+            self.linenumbers.redraw()
+
     def set_text(self, txt):
         self.text.delete('1.0', 'end')
         self.text.insert('1.0', txt)
@@ -246,27 +262,52 @@ class ScrolledText(tk.Frame):
 class CodeEditor(ScrolledText):
     def __init__(self, parent):
         super().__init__(parent, linenumbers = True)
+        self.__line_count = None
+
+        def on_change(e):
+            self.__line_count = None
+            if content is not None:
+                total = 0
+                for _, editor in content.project.editors:
+                    if editor is self:
+                        total += editor.prefix_lines
+                        break
+                    total += editor.line_count() + 1
+                self.linenumbers.line_num_offset = total
+        self.custom_on_change.append(on_change)
+
+    def line_count(self):
+        if self.__line_count:
+            return self.__line_count
+        content = self.get_script() # defined by base classes
+        self.__line_count = content.count('\n') + 1
+        return self.__line_count
 
 class GlobalEditor(CodeEditor):
+    prefix = '''
+import netsblox
+from netsblox.turtle import *
+import time
+def _yield_(x):
+    time.sleep(0)
+    return x
+
+'''.lstrip()
+    prefix_lines = 7
+
     def __init__(self, parent):
         super().__init__(parent)
 
         self.set_text('''
-import netsblox
-from netsblox.turtle import *
-
-import time as tryt
-import numpy
-print(tryt.time())
-print(numpy.zeros([2, 4]))
-
 someval = 'hello world' # create a global variable
 '''.strip())
 
     def get_script(self):
-        return self.text.get('1.0', 'end-1c')
+        return transform.add_yields(self.prefix + self.text.get('1.0', 'end-1c'))
 
 class StageEditor(CodeEditor):
+    prefix_lines = 2
+
     def __init__(self, parent, name):
         super().__init__(parent)
         self.name = name
@@ -283,9 +324,11 @@ def start(self):
 
     def get_script(self):
         raw = self.text.get('1.0', 'end-1c')
-        return f'@stage\nclass {self.name}:\n{indent(raw)}\n{self.name} = {self.name}()'
+        return transform.add_yields(f'@stage\nclass {self.name}:\n{indent(raw)}\n{self.name} = {self.name}()')
 
 class TurtleEditor(CodeEditor):
+    prefix_lines = 2
+
     def __init__(self, parent, name):
         super().__init__(parent)
         self.name = name
@@ -302,7 +345,7 @@ def start(self):
 
     def get_script(self):
         raw = self.text.get('1.0', 'end-1c')
-        return f'@turtle\nclass {self.name}:\n{indent(raw)}\n{self.name} = {self.name}()'
+        return transform.add_yields(f'@turtle\nclass {self.name}:\n{indent(raw)}\n{self.name} = {self.name}()')
 
 class Display(tk.Frame):
     def __init__(self, parent):
