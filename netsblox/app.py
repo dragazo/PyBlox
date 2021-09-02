@@ -325,13 +325,15 @@ class GlobalEditor(CodeEditor):
     prefix = '''
 import netsblox
 from netsblox.turtle import *
+from netsblox.concurrency import *
+setup_yielding()
 import time
 def _yield_(x):
     time.sleep(0)
     return x
 
 '''.lstrip()
-    prefix_lines = 7
+    prefix_lines = 9
 
     def __init__(self, parent):
         super().__init__(parent)
