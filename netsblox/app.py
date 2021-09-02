@@ -203,7 +203,13 @@ class ChangedText(tk.Text):
     def _proxy(self, *args):
         # let the actual widget perform the requested action
         cmd = (self._orig, *args)
-        result = self.tk.call(cmd)
+        result = None
+        try:
+            result = self.tk.call(cmd)
+        except Exception as e:
+            # for some reason our proxying breaks undo/redo if the stacks are empty, so just catch and ignore
+            if cmd[1:] not in [('edit', 'undo'), ('edit', 'redo')]:
+                raise e
 
         # generate an event if something was added or deleted, or the cursor position changed
         changed = args[0] in ('insert', 'replace', 'delete') or \
@@ -220,9 +226,10 @@ class ChangedText(tk.Text):
 class ScrolledText(tk.Frame):
     def __init__(self, parent, *, readonly = False, linenumbers = False):
         super().__init__(parent)
+        undo_args = { 'undo': True, 'maxundo': -1, 'autoseparators': True }
 
         self.scrollbar = tk.Scrollbar(self)
-        self.text = ChangedText(self, yscrollcommand = self.scrollbar.set)
+        self.text = ChangedText(self, yscrollcommand = self.scrollbar.set, **({} if readonly else undo_args))
         self.scrollbar.config(command = self.text.yview)
 
         self.custom_on_change = []
@@ -251,6 +258,12 @@ class ScrolledText(tk.Frame):
                 self.text.insert(tk.INSERT, '    ')
                 return 'break'
             self.text.bind('<Tab>', on_tab)
+
+            def on_redo(e):
+                self.text.edit_redo()
+                return 'break'
+            self.text.bind('<Control-Key-y>', on_redo)
+            self.text.bind('<Control-Key-Y>', on_redo)
         
         if linenumbers:
             self.linenumbers = TextLineNumbers(self, target = self.text, width = 30)
@@ -261,7 +274,7 @@ class ScrolledText(tk.Frame):
         if linenumbers:
             self.linenumbers.pack(side = tk.LEFT, fill = tk.Y)
         self.text.pack(side = tk.RIGHT, fill = tk.BOTH, expand = True)
-    
+
     def on_content_change(self, e):
         for handler in self.custom_on_change:
             handler(e)
