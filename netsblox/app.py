@@ -11,8 +11,8 @@ import sys
 import io
 import re
 
-import netsblox.turtle as nbturtle
-import netsblox.transform as transform
+from . import turtle as nbturtle
+from . import transform
 
 color_enabled = False
 try:
