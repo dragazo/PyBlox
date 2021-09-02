@@ -11,6 +11,8 @@ import sys
 import io
 import re
 
+import netsblox
+
 from . import turtle as nbturtle
 from . import transform
 
@@ -88,6 +90,10 @@ def play_button():
     threading.Thread(target = file_piper, args = (_exec_process.stdout, sys.stdout), daemon = True).start()
     threading.Thread(target = file_piper, args = (_exec_process.stderr, sys.stderr), daemon = True).start()
 
+_package_dir = netsblox.__path__[0]
+def module_path(path: str) -> str:
+    return f'{_package_dir}/{path}'
+
 class Toolbar(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
@@ -120,6 +126,36 @@ class Content(tk.Frame):
         self.grid_columnconfigure(0, weight = 1, uniform = 'content')
         self.grid_columnconfigure(1, weight = 1, uniform = 'content')
         self.grid_rowconfigure(0, weight = 1)
+
+class BlocksList(tk.Frame):
+    def __init__(self, parent, blocks, text_target):
+        super().__init__(parent)
+
+        self.scrollbar = tk.Scrollbar(self)
+        self.text = tk.Text(self, wrap = tk.NONE, width = 16, yscrollcommand = self.scrollbar.set)
+        self.scrollbar.configure(command = self.text.yview)
+
+        self.scrollbar.pack(side = tk.RIGHT, fill = tk.Y)
+        self.text.pack(side = tk.LEFT, fill = tk.Y, expand = True)
+
+        def make_on_click(code):
+            def on_click(e):
+                text_target.insert('end', f'\n{code}\n')
+                return 'break'
+            return on_click
+
+        self.imgs = [] # for some reason we need to keep a reference to the image or they disappear
+        for img_path, code in blocks:
+            img = tk.PhotoImage(file = module_path(img_path))
+            label = tk.Label(self, image = img)
+
+            self.text.window_create('end', window = label)
+            self.text.insert('end', '\n')
+            self.imgs.append(img)
+
+            label.bind('<Button-1>', make_on_click(code))
+
+        self.text.configure(state = tk.DISABLED)
 
 class ProjectEditor(tk.Frame):
     def __init__(self, parent):
@@ -224,7 +260,7 @@ class ChangedText(tk.Text):
         return result # return what the actual widget returned
 
 class ScrolledText(tk.Frame):
-    def __init__(self, parent, *, readonly = False, linenumbers = False):
+    def __init__(self, parent, *, readonly = False, linenumbers = False, blocks = []):
         super().__init__(parent)
         undo_args = { 'undo': True, 'maxundo': -1, 'autoseparators': True }
 
@@ -241,6 +277,7 @@ class ScrolledText(tk.Frame):
         self.text.bind('<Control-Key-A>', on_select_all)
 
         self.linenumbers = None # default to none - conditionally created
+        self.blocks = None
 
         if readonly:
             # make text readonly be ignoring all (default) keystrokes
@@ -270,7 +307,14 @@ class ScrolledText(tk.Frame):
             self.text.bind('<<Change>>', self.on_content_change)
             self.text.bind('<Configure>', self.on_content_change)
         
+        if len(blocks) > 0:
+            self.blocks = BlocksList(self, blocks, self.text)
+
+        # -----------------------------------------------------
+
         self.scrollbar.pack(side = tk.RIGHT, fill = tk.Y)
+        if len(blocks) > 0:
+            self.blocks.pack(side = tk.LEFT, fill = tk.Y)
         if linenumbers:
             self.linenumbers.pack(side = tk.LEFT, fill = tk.Y)
         self.text.pack(side = tk.RIGHT, fill = tk.BOTH, expand = True)
@@ -286,10 +330,10 @@ class ScrolledText(tk.Frame):
         self.text.insert('1.0', txt)
 
 class CodeEditor(ScrolledText):
-    def __init__(self, parent):
+    def __init__(self, parent, **kwargs):
         global color_enabled
         
-        super().__init__(parent, linenumbers = True)
+        super().__init__(parent, linenumbers = True, **kwargs)
         self.__line_count = None
 
         if color_enabled:
@@ -348,8 +392,13 @@ def _yield_(x):
 '''.lstrip()
     prefix_lines = 9
 
+    blocks = [
+        ('img/onstart.png', '@onstart\ndef function_name():\n    pass'),
+        ('img/sleep.png', 'time.sleep(1)'),
+    ]
+
     def __init__(self, parent):
-        super().__init__(parent)
+        super().__init__(parent, blocks = GlobalEditor.blocks)
 
         self.set_text('''
 someval = 'hello world' # create a global variable
