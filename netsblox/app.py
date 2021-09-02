@@ -9,9 +9,19 @@ import traceback
 import turtle
 import sys
 import io
+import re
 
 import netsblox.turtle as nbturtle
 import netsblox.transform as transform
+
+color_enabled = False
+try:
+    # idle gives us syntax highlighting, but we don't require it otherwise
+    import idlelib.colorizer as colorizer
+    import idlelib.percolator as percolator
+    color_enabled = True
+except:
+    pass
 
 root = None
 toolbar = None
@@ -179,11 +189,14 @@ class TextLineNumbers(tk.Canvas):
 
 # source: https://stackoverflow.com/questions/16369470/tkinter-adding-line-number-to-text-widget
 class ChangedText(tk.Text):
+    __name_id = 0
+
     def __init__(self, parent, **kwargs):
         super().__init__(parent, **kwargs)
 
         # create a proxy for the underlying widget
-        self._orig = self._w + '_orig'
+        ChangedText.__name_id += 1
+        self._orig = self._w + f'_orig_{ChangedText.__name_id}'
         self.tk.call('rename', self._w, self._orig)
         self.tk.createcommand(self._w, self._proxy)
 
@@ -261,8 +274,33 @@ class ScrolledText(tk.Frame):
 
 class CodeEditor(ScrolledText):
     def __init__(self, parent):
+        global color_enabled
+        
         super().__init__(parent, linenumbers = True)
         self.__line_count = None
+
+        if color_enabled:
+            # source: https://stackoverflow.com/questions/38594978/tkinter-syntax-highlighting-for-text-widget
+            cdg = colorizer.ColorDelegator()
+
+            patterns = [
+                r'(?P<MYDECO>@\w+)\b',
+                r'\b(?P<MYSELF>self)\b',
+                r'\b(?P<MYNUMBER>(\d+\.?|\.\d)\d*(e[-+]?\d+)?)\b',
+                colorizer.make_pat(),
+            ]
+            cdg.prog = re.compile('|'.join(patterns))
+
+            cdg.tagdefs['COMMENT']    = {'foreground': '#a3a3a3', 'background': '#ffffff'}
+            cdg.tagdefs['MYNUMBER']   = {'foreground': '#c26910', 'background': '#ffffff'}
+            cdg.tagdefs['MYSELF']     = {'foreground': '#a023a6', 'background': '#ffffff'}
+            cdg.tagdefs['BUILTIN']    = {'foreground': '#6414b5', 'background': '#ffffff'}
+            cdg.tagdefs['DEFINITION'] = {'foreground': '#6414b5', 'background': '#ffffff'}
+            cdg.tagdefs['MYDECO']     = {'foreground': '#6414b5', 'background': '#ffffff'}
+            cdg.tagdefs['KEYWORD']    = {'foreground': '#0d15b8', 'background': '#ffffff'}
+            cdg.tagdefs['STRING']     = {'foreground': '#961a1a', 'background': '#ffffff'}
+
+            percolator.Percolator(self.text).insertfilter(cdg)
 
         def on_change(e):
             self.__line_count = None
