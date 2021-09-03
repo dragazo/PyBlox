@@ -11,6 +11,8 @@ import sys
 import io
 import re
 
+from typing import List
+
 import netsblox
 
 from . import turtle as nbturtle
@@ -127,6 +129,40 @@ class Content(tk.Frame):
         self.grid_columnconfigure(1, weight = 1, uniform = 'content')
         self.grid_rowconfigure(0, weight = 1)
 
+class DndTarget:
+    def __init__(self, widget, on_start, on_stop, on_drop):
+        self.widget = widget
+        self.on_start = on_start
+        self.on_stop = on_stop
+        self.on_drop = on_drop
+
+class DndManager:
+    def __init__(self, widget, targets: List[DndTarget]):
+        self.targets = targets
+
+        widget.bind('<ButtonPress-1>', self.on_start)
+        widget.bind('<B1-Motion>', self.on_drag)
+        widget.bind('<ButtonRelease-1>', self.on_drop)
+        widget.configure(cursor = 'hand1')
+    
+    def on_start(self, e):
+        for target in self.targets:
+            target.on_start(e)
+
+    def on_drag(self, e):
+        pass
+
+    def on_drop(self, e):
+        for target in self.targets:
+            target.on_stop(e)
+
+        x, y = e.widget.winfo_pointerxy()
+        dest_widget = e.widget.winfo_containing(x, y)
+        for target in self.targets:
+            if dest_widget is target.widget:
+                target.on_drop(e)
+                break
+
 class BlocksList(tk.Frame):
     def __init__(self, parent, blocks, text_target):
         super().__init__(parent)
@@ -138,13 +174,28 @@ class BlocksList(tk.Frame):
         self.scrollbar.pack(side = tk.RIGHT, fill = tk.Y)
         self.text.pack(side = tk.LEFT, fill = tk.Y, expand = True)
 
-        def make_on_click(code):
-            def on_click(e):
-                text_target.insert('end', f'\n{code}\n')
-                return 'break'
-            return on_click
+        orig_bcolor = text_target.cget('background')
+        def make_dnd_manager(widget, code):
+            def on_start(e):
+                text_target.configure(highlightbackground = 'red')
+                pass
+            def on_stop(e):
+                text_target.configure(highlightbackground = orig_bcolor)
+                pass
+            def on_drop(e):
+                x, y = text_target.winfo_pointerxy()
+                x -= text_target.winfo_rootx()
+                y -= text_target.winfo_rooty()
 
-        self.imgs = [] # for some reason we need to keep a reference to the image or they disappear
+                pos = text_target.index(f'@{x},{y}')
+                text_target.insert(f'{pos} linestart', f'{code}\n')
+                text_target.edit_separator() # so multiple drag and drops aren't undone as one
+
+                return 'break'
+
+            return DndManager(widget, [DndTarget(text_target, on_start, on_stop, on_drop)])
+
+        self.imgs = [] # for some reason we need to keep a reference to the images or they disappear
         for img_path, code in blocks:
             img = tk.PhotoImage(file = module_path(img_path))
             label = tk.Label(self, image = img)
@@ -153,7 +204,7 @@ class BlocksList(tk.Frame):
             self.text.insert('end', '\n')
             self.imgs.append(img)
 
-            label.bind('<Button-1>', make_on_click(code))
+            make_dnd_manager(label, code)
 
         self.text.configure(state = tk.DISABLED)
 
