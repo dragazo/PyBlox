@@ -5,6 +5,9 @@ import inspect
 import time
 import json
 import sys
+import io
+
+from PIL import Image
 
 from typing import Optional, Any, List
 
@@ -235,7 +238,7 @@ $service_instances
                 
                 return f
             return wrapper
-    
+
     def _call(self, service, rpc, payload):
         payload = { k: prep_send(v) for k,v in payload.items() }
         state = f'uuid={self._client_id}&projectId={self._project_id}&roleId={self._role_id}&t={round(time.time() * 1000)}'
@@ -246,6 +249,10 @@ $service_instances
 
         if res.status_code == 200:
             try:
+                if 'Content-Type' in res.headers:
+                    ty = res.headers['Content-Type']
+                    if ty.startswith('image/'):
+                        return Image.open(io.BytesIO(res.content))
                 return json.loads(res.text)
             except:
                 return res.text # strings are returned unquoted, so they'll fail to parse as json

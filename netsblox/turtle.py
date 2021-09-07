@@ -5,7 +5,9 @@ import threading
 import inspect
 import queue
 import math
-from typing import Any
+from typing import Any, Union
+
+from PIL import Image, ImageTk
 
 _key_events = {} # maps key to [raw handler, event[]]
 def _add_key_event(key, event):
@@ -142,8 +144,62 @@ def _qinvoke_wait(fn, *args) -> Any:
         raise ret_val
     return ret_val
 
+class _ImgWrapper:
+    _type = 'image'
+    def __init__(self, img):
+        self._data = ImageTk.PhotoImage(img)
+
+_blank_img = Image.new('RGBA', (10, 10))
+def _setcostume(t, tid, costume: Union[None, str, Any]):
+    def batcher():
+        if costume is not None:
+            name = f'custom-costume-{tid}'
+            _turtle.register_shape(name, costume if type(costume) == str else _ImgWrapper(costume))
+            t.shape(name)
+        else:
+            _turtle.register_shape('blank', _ImgWrapper(_blank_img))
+            t.shape('blank')
+    return _qinvoke(batcher)
+
 # if set to non-none, will use RawTurtle with this as its TurtleScreen parent
 _raw_turtle_target = None
+_turtle_count = 0
+def _make_turtle(extra_fn = None):
+    def batcher():
+        global _turtle_count
+        id = _turtle_count
+        _turtle_count += 1
+
+        t = _turtle.Turtle() if _raw_turtle_target is None else _turtle.RawTurtle(_raw_turtle_target)
+        t.speed('fastest')
+        t.penup()
+
+        if extra_fn is not None:
+            extra_fn(t, id)
+
+        return t, id
+    return _qinvoke_wait(batcher)
+
+class StageBase:
+    '''
+    The base class for any custom stage.
+    This type should not be used directly; instead, you should create a custom stage with the @stage decorator.
+
+    ```
+    @stage
+    class MyStage:
+        @onstart
+        def start(self):
+            pass
+
+    stage = MyStage() # create an instance of MyStage - start() is executed automatically
+    ```
+    '''
+    def __init__(self):
+        self.__turtle, self.__id = _make_turtle(lambda t, id: _setcostume(t, id, None)) # default to blank costume
+
+    def setcostume(self, costume):
+        _setcostume(self.__turtle, self.__id, costume)
 
 class TurtleBase:
     '''
@@ -161,17 +217,15 @@ class TurtleBase:
     ```
     '''
     def __init__(self):
-        if _raw_turtle_target is None:
-            self.__turtle = _qinvoke_wait(_turtle.Turtle)
-        else:
-            self.__turtle = _qinvoke_wait(_turtle.RawTurtle, _raw_turtle_target)
-
-        self.__turtle.speed('fastest')
-        self.__drawing = True # turtles default to pendown
+        self.__turtle, self.__id = _make_turtle()
+        self.__drawing = False # turtles default to pendown
         self.__x = 0.0
         self.__y = 0.0
         self.__rot = 0.25 # angle [0, 1)
         self.__degrees = 360.0
+
+    def setcostume(self, costume):
+        _setcostume(self.__turtle, self.__id, costume)
 
     def goto(self, x, y = None):
         if y is None:
@@ -346,7 +400,7 @@ def stage(cls):
             print('stage starting')
     ```
     '''
-    return _derive([], cls)
+    return _derive([StageBase], cls)
 
 def onstart(f):
     '''

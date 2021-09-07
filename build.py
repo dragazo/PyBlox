@@ -16,6 +16,7 @@ with open('template/client-class.py', 'r') as f:
 
 FN_NAME_SPECIAL_RULES = {
     'PhoneIoT': 'phone_iot',
+    'ThisXDoesNotExist': 'this_x_does_not_exist',
 }
 FN_NAME_KEYWORD_FIXES = {
     'from': '_from',
