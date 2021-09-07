@@ -27,6 +27,13 @@ try:
 except:
     pass
 
+autocomplete_enabled = False
+try:
+    import idlelib.autocomplete as autocomplete
+    autocomplete_enabled = True
+except:
+    pass
+
 root = None
 toolbar = None
 content = None
@@ -409,6 +416,25 @@ class CodeEditor(ScrolledText):
             cdg.tagdefs['STRING']     = {'foreground': '#961a1a', 'background': '#ffffff'}
 
             percolator.Percolator(self.text).insertfilter(cdg)
+
+        if autocomplete_enabled:
+            class DummyEditwin:
+                def __init__(self, root, text):
+                    self.root = root
+                    self.text = text
+                    self.indentwidth = 4
+                    self.tabwidth = 4
+                    self.prompt_last_line = '>>>'  # Currently not used by autocomplete.
+            self.ac_edit_window = DummyEditwin(root, self.text)
+            self.ac = autocomplete.AutoComplete(self.ac_edit_window)
+            
+            def passive_suggest(e):
+                self.ac.try_open_completions_event(e)
+            self.custom_on_change.append(passive_suggest)
+
+            def active_suggest(e):
+                self.ac.force_open_completions_event(e)
+            self.text.bind('<Control-Key-space>', active_suggest)
 
         def on_change(e):
             self.__line_count = None
