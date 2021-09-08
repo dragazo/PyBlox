@@ -27,10 +27,10 @@ try:
 except:
     pass
 
-autocomplete_enabled = False
+force_enabled = False
 try:
-    import idlelib.autocomplete as autocomplete
-    autocomplete_enabled = True
+    import jedi
+    force_enabled = True
 except:
     pass
 
@@ -388,11 +388,13 @@ class ScrolledText(tk.Frame):
         self.text.insert('1.0', txt)
 
 class CodeEditor(ScrolledText):
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent, *, column_offset = 0, **kwargs):
         global color_enabled
         
         super().__init__(parent, linenumbers = True, **kwargs)
         self.__line_count = None
+
+        self.column_offset = column_offset
 
         if color_enabled:
             # source: https://stackoverflow.com/questions/38594978/tkinter-syntax-highlighting-for-text-widget
@@ -417,23 +419,26 @@ class CodeEditor(ScrolledText):
 
             percolator.Percolator(self.text).insertfilter(cdg)
 
-        if autocomplete_enabled:
-            class DummyEditwin:
-                def __init__(self, root, text):
-                    self.root = root
-                    self.text = text
-                    self.indentwidth = 4
-                    self.tabwidth = 4
-                    self.prompt_last_line = '>>>'  # Currently not used by autocomplete.
-            self.ac_edit_window = DummyEditwin(root, self.text)
-            self.ac = autocomplete.AutoComplete(self.ac_edit_window)
+        if force_enabled:
+            def update_highlighting():
+                if content is None or content.project is None:
+                    return
+
+                script = jedi.Script(content.project.get_full_script())
+
+                self.text.tag_delete('jedi-syntax-err')
+                for err in script.get_syntax_errors():
+                    start = f'{err.line       - self.linenumbers.line_num_offset}.{err.column       - self.column_offset}'
+                    stop  = f'{err.until_line - self.linenumbers.line_num_offset}.{err.until_column - self.column_offset}'
+                    self.text.tag_add('jedi-syntax-err', start, stop)
+                self.text.tag_configure('jedi-syntax-err', underline = True, underlinefg = 'red', background = '#f2a5a5', foreground = 'black')
             
             def passive_suggest(e):
-                self.ac.try_open_completions_event(e)
+                update_highlighting()
             self.custom_on_change.append(passive_suggest)
 
             def active_suggest(e):
-                self.ac.force_open_completions_event(e)
+                update_highlighting()
             self.text.bind('<Control-Key-space>', active_suggest)
 
         def on_change(e):
@@ -488,7 +493,7 @@ class StageEditor(CodeEditor):
     prefix_lines = 2
 
     def __init__(self, parent, name):
-        super().__init__(parent)
+        super().__init__(parent, column_offset = 4) # we auto-indent the content, so 4 offset for error messages
         self.name = name
 
         self.set_text('''
@@ -509,7 +514,7 @@ class TurtleEditor(CodeEditor):
     prefix_lines = 2
 
     def __init__(self, parent, name):
-        super().__init__(parent)
+        super().__init__(parent, column_offset = 4) # we auto-indent the content, so 4 offset for error messages
         self.name = name
 
         self.set_text('''

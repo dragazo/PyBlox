@@ -24,6 +24,7 @@ setup(
         'pillow',
         'turtle',
         'parso',
+        'jedi',
     ],
     classifiers = [
         'Development Status :: 1 - Planning',
