@@ -196,6 +196,12 @@ class StageBase:
     ```
     '''
     def __init__(self):
+        try:
+            if self.__initialized:
+                return # don't initialize twice (can happen from mixing @stage decorator and explicit StageBase base class)
+        except:
+            self.__initialized = True
+
         self.__turtle, self.__id = _make_turtle(lambda t, id: _setcostume(t, id, None)) # default to blank costume
 
     def setcostume(self, costume):
@@ -217,6 +223,12 @@ class TurtleBase:
     ```
     '''
     def __init__(self):
+        try:
+            if self.__initialized:
+                return # don't initialize twice (can happen from mixing @turtle decorator and explicit TurtleBase base class)
+        except:
+            self.__initialized = True
+
         self.__turtle, self.__id = _make_turtle()
         self.__drawing = False # turtles default to pendown
         self.__x = 0.0
@@ -345,7 +357,8 @@ class TurtleBase:
         return self.__drawing
 
 def _derive(bases, cls):
-    class Derived(*bases, cls):
+    limited_bases = [b for b in bases if not issubclass(cls, b)]
+    class Derived(*limited_bases, cls):
         def __init__(self, *args, **kwargs):
             for base in bases:
                 base.__init__(self)

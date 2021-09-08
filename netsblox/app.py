@@ -132,8 +132,8 @@ class Content(tk.Frame):
         self.project.grid(row = 0, column = 0, sticky = tk.NSEW)
         self.display.grid(row = 0, column = 1, sticky = tk.NSEW)
 
-        self.grid_columnconfigure(0, weight = 1, uniform = 'content')
-        self.grid_columnconfigure(1, weight = 1, uniform = 'content')
+        self.grid_columnconfigure(0, weight = 4, uniform = 'content')
+        self.grid_columnconfigure(1, weight = 3, uniform = 'content')
         self.grid_rowconfigure(0, weight = 1)
 
 class DndTarget:
@@ -225,6 +225,8 @@ class ProjectEditor(tk.Frame):
         self.notebook.pack(fill = tk.BOTH, expand = True)
 
         def on_change(e):
+            for _, editor in self.editors:
+                editor.hide_suggestion()
             tab = e.widget.tab('current')['text']
             editors = [x[1] for x in self.editors if x[0] == tab]
             assert len(editors) == 1
@@ -389,12 +391,22 @@ class ScrolledText(tk.Frame):
 
 class CodeEditor(ScrolledText):
     def __init__(self, parent, *, column_offset = 0, **kwargs):
-        global color_enabled
-        
         super().__init__(parent, linenumbers = True, **kwargs)
         self.__line_count = None
-
         self.column_offset = column_offset
+        self.help_popup = None
+
+        def on_change(e):
+            self.__line_count = None
+            if content is not None:
+                total = 0
+                for _, editor in content.project.editors:
+                    if editor is self:
+                        total += editor.prefix_lines
+                        break
+                    total += editor.line_count() + 1
+                self.linenumbers.line_num_offset = total
+        self.custom_on_change.append(on_change)
 
         if color_enabled:
             # source: https://stackoverflow.com/questions/38594978/tkinter-syntax-highlighting-for-text-widget
@@ -420,38 +432,8 @@ class CodeEditor(ScrolledText):
             percolator.Percolator(self.text).insertfilter(cdg)
 
         if force_enabled:
-            def update_highlighting():
-                if content is None or content.project is None:
-                    return
-
-                script = jedi.Script(content.project.get_full_script())
-
-                self.text.tag_delete('jedi-syntax-err')
-                for err in script.get_syntax_errors():
-                    start = f'{err.line       - self.linenumbers.line_num_offset}.{err.column       - self.column_offset}'
-                    stop  = f'{err.until_line - self.linenumbers.line_num_offset}.{err.until_column - self.column_offset}'
-                    self.text.tag_add('jedi-syntax-err', start, stop)
-                self.text.tag_configure('jedi-syntax-err', underline = True, underlinefg = 'red', background = '#f2a5a5', foreground = 'black')
-            
-            def passive_suggest(e):
-                update_highlighting()
-            self.custom_on_change.append(passive_suggest)
-
-            def active_suggest(e):
-                update_highlighting()
-            self.text.bind('<Control-Key-space>', active_suggest)
-
-        def on_change(e):
-            self.__line_count = None
-            if content is not None:
-                total = 0
-                for _, editor in content.project.editors:
-                    if editor is self:
-                        total += editor.prefix_lines
-                        break
-                    total += editor.line_count() + 1
-                self.linenumbers.line_num_offset = total
-        self.custom_on_change.append(on_change)
+            self.custom_on_change.append(lambda e: self.show_full_help())
+            self.text.bind('<Control-Key-space>', lambda e: self.show_suggestion())
 
     def line_count(self):
         if self.__line_count:
@@ -459,6 +441,64 @@ class CodeEditor(ScrolledText):
         content = self.get_script() # defined by base classes
         self.__line_count = content.count('\n') + 1
         return self.__line_count
+
+    def show_full_help(self):
+        if not force_enabled or content is None or content.project is None:
+            return
+        script = jedi.Script(content.project.get_full_script())
+        self.update_highlighting(script)
+
+        should_show = \
+            self.text.get('insert - 1 chars', 'insert').startswith('.') or \
+            self.text.get('insert - 1 chars wordstart - 1 chars', 'insert').startswith('.')
+
+        if should_show:
+            self.show_suggestion(script)
+        else:
+            self.hide_suggestion()
+
+    def update_highlighting(self, script = None):
+        if not force_enabled or content is None or content.project is None:
+            return
+        if script is None:
+            script = jedi.Script(content.project.get_full_script())
+
+        self.text.tag_delete('jedi-syntax-err')
+        for err in script.get_syntax_errors():
+            start = f'{err.line       - self.linenumbers.line_num_offset}.{err.column       - self.column_offset}'
+            stop  = f'{err.until_line - self.linenumbers.line_num_offset}.{err.until_column - self.column_offset}'
+            self.text.tag_add('jedi-syntax-err', start, stop)
+        self.text.tag_configure('jedi-syntax-err', underline = True, underlinefg = 'red', background = '#f2a5a5', foreground = 'black')
+
+    def show_suggestion(self, script = None):
+        if not force_enabled or content is None or content.project is None:
+            return
+        if script is None:
+            script = jedi.Script(content.project.get_full_script())
+
+        edit_line, edit_col = map(int, self.text.index(tk.INSERT).split('.'))
+        edit_line += self.linenumbers.line_num_offset
+        edit_col += self.column_offset
+        completions = script.complete(edit_line, edit_col)
+
+        if len(completions) != 0:
+            if self.help_popup is not None:
+                self.help_popup.destroy()
+            x, y, w, h = self.text.bbox(tk.INSERT)
+            self.help_popup = tk.Listbox()
+
+            xoff = self.text.winfo_rootx() - root.winfo_rootx()
+            yoff = self.text.winfo_rooty() - root.winfo_rooty()
+            self.help_popup.place(x = x + xoff, y = y + yoff + h)
+            for item in completions:
+                self.help_popup.insert(tk.END, item.name)
+        else:
+            self.hide_suggestion()
+
+    def hide_suggestion(self):
+        if self.help_popup is not None:
+            self.help_popup.destroy()
+            self.help_popup = None
 
 class GlobalEditor(CodeEditor):
     prefix = '''
@@ -508,7 +548,7 @@ def start(self):
 
     def get_script(self):
         raw = self.text.get('1.0', 'end-1c')
-        return transform.add_yields(f'@stage\nclass {self.name}:\n{indent(raw)}\n{self.name} = {self.name}()')
+        return transform.add_yields(f'@stage\nclass {self.name}(StageBase):\n{indent(raw)}\n{self.name} = {self.name}()')
 
 class TurtleEditor(CodeEditor):
     prefix_lines = 2
@@ -529,7 +569,7 @@ def start(self):
 
     def get_script(self):
         raw = self.text.get('1.0', 'end-1c')
-        return transform.add_yields(f'@turtle\nclass {self.name}:\n{indent(raw)}\n{self.name} = {self.name}()')
+        return transform.add_yields(f'@turtle\nclass {self.name}(TurtleBase):\n{indent(raw)}\n{self.name} = {self.name}()')
 
 class Display(tk.Frame):
     def __init__(self, parent):
