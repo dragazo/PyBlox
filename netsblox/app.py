@@ -11,7 +11,7 @@ import sys
 import io
 import re
 
-from typing import List
+from typing import List, Tuple
 
 import netsblox
 
@@ -53,8 +53,53 @@ def _process_print_queue():
                 pass # throwing would break print queue
     root.after(33, _process_print_queue)
 
-def indent(txt: str):
+def get_white_nonwhite(line: str) -> Tuple[str, str]:
+    i = 0
+    while i < len(line) and line[i].isspace():
+        i += 1
+    return line[:i], line[i:]
+def undent_single(line: str) -> str:
+    i = 0
+    while i < 4 and i < len(line) and line[i].isspace():
+        i += 1
+    return line[i:], i # remove at most 4 whitespace chars
+
+def indent(txt: str) -> str:
     return '\n'.join([ f'    {x}' for x in txt.splitlines() ])
+def indent_info(txt: str) -> str:
+    indents = [ f'    {x}' for x in txt.splitlines() ]
+    return '\n'.join(indents), [4 for _ in indents]
+def undent_info(txt: str) -> Tuple[str, int, int]:
+    undents = [ undent_single(x) for x in txt.splitlines() ]
+    if len(undents) == 0:
+        return txt, 0, 0
+    return '\n'.join([ x[0] for x in undents ]), [ -x[1] for x in undents ]
+
+def smart_comment_uncomment(txt: str) -> Tuple[str, int]:
+    line_parts = [ get_white_nonwhite(x) for x in txt.splitlines() ]
+    should_uncomment = all(part[1].startswith('#') or part[1] == '' for part in line_parts)
+
+    if should_uncomment:
+        res_lines = []
+        res_deltas = []
+        for part in line_parts:
+            for prefix in ['# ', '#', '']:
+                if part[1].startswith(prefix):
+                    res_lines.append(part[0] + part[1][len(prefix):])
+                    res_deltas.append(-len(prefix))
+                    break
+        return '\n'.join(res_lines), res_deltas
+    else:
+        res_lines = []
+        res_deltas = []
+        for part in line_parts:
+            if part[1] != '':
+                res_lines.append(f'{part[0]}# {part[1]}')
+                res_deltas.append(2)
+            else:
+                res_lines.append(part[0] + part[1])
+                res_deltas.append(0)
+        return '\n'.join(res_lines), res_deltas
 
 def exec_wrapper(*args):
     try:
@@ -351,11 +396,6 @@ class ScrolledText(tk.Frame):
             self.text.bind('<Control-Key-c>', on_copy)
             self.text.bind('<Control-Key-C>', on_copy)
         else:
-            def on_tab(e):
-                self.text.insert(tk.INSERT, '    ')
-                return 'break'
-            self.text.bind('<Tab>', on_tab)
-
             def on_redo(e):
                 self.text.edit_redo()
                 return 'break'
@@ -408,6 +448,14 @@ class CodeEditor(ScrolledText):
                 self.linenumbers.line_num_offset = total
         self.custom_on_change.append(on_change)
 
+        self.text.bind('<Shift-Key-Tab>', lambda e: self.do_untab())
+        self.text.bind('<Shift-ISO_Left_Tab>', lambda e: self.do_untab()) # needed on linux, for some reason
+
+        self.text.bind('<Control-slash>', lambda e: self.do_autocomment())
+
+        self.text.bind('<Tab>', lambda e: self.do_tab())
+        self.text.bind('<BackSpace>', lambda e: self.do_backspace())
+
         if color_enabled:
             # source: https://stackoverflow.com/questions/38594978/tkinter-syntax-highlighting-for-text-widget
             cdg = colorizer.ColorDelegator()
@@ -452,7 +500,7 @@ class CodeEditor(ScrolledText):
             self.text.get('insert - 1 chars', 'insert').startswith('.') or \
             self.text.get('insert - 1 chars wordstart - 1 chars', 'insert').startswith('.')
 
-        if should_show:
+        if should_show and not self.text.tag_ranges(tk.SEL):
             self.show_suggestion(script)
         else:
             self.hide_suggestion()
@@ -481,28 +529,94 @@ class CodeEditor(ScrolledText):
         edit_col += self.column_offset
         completions = script.complete(edit_line, edit_col)
 
-        if len(completions) != 0:
+        should_show = len(completions) >= 2 or (len(completions) == 1 and completions[0].complete != '')
+        if should_show:
             if self.help_popup is not None:
                 self.help_popup.destroy()
             x, y, w, h = self.text.bbox(tk.INSERT)
             self.help_popup = tk.Listbox()
+            self.help_completions = {}
 
             xoff = self.text.winfo_rootx() - root.winfo_rootx()
             yoff = self.text.winfo_rooty() - root.winfo_rooty()
             self.help_popup.place(x = x + xoff, y = y + yoff + h)
             for item in completions:
-                self.help_popup.insert(tk.END, item.name)
+                if not item.name.startswith('_'): # hide private stuff - would only confuse beginners and they shouldn't touch it anyway
+                    self.help_popup.insert(tk.END, item.name)
+                    self.help_completions[item.name] = item.complete
+            
+            self.help_popup.bind('<Double-Button-1>', lambda e: self.do_completion())
         else:
             self.hide_suggestion()
+
+    def do_completion(self):
+        if self.help_popup is not None:
+            completion = self.help_completions[self.help_popup.get(tk.ACTIVE)]
+            self.text.insert(tk.INSERT, completion)
+        self.text.focus_set()
 
     def hide_suggestion(self):
         if self.help_popup is not None:
             self.help_popup.destroy()
             self.help_popup = None
 
+    def _do_batch_edit(self, mutator):
+        ins = self.text.index(tk.INSERT)
+        sel_start, sel_end = self.text.index(tk.SEL_FIRST), self.text.index(tk.SEL_LAST)
+        sel_padded = f'{sel_start} linestart', f'{sel_end} lineend'
+
+        ins_pieces = ins.split('.')
+        sel_start_pieces, sel_end_pieces = sel_start.split('.'), sel_end.split('.')
+
+        content = self.text.get(*sel_padded)
+        mutated, line_deltas = mutator(content)
+        ins_delta = line_deltas[int(ins_pieces[0]) - int(sel_start_pieces[0])]
+
+        self.text.edit_separator()
+        self.text.delete(*sel_padded)
+        self.text.insert(sel_padded[0], mutated)
+        self.text.edit_separator()
+        
+        new_sel_start = f'{sel_start_pieces[0]}.{max(0, int(sel_start_pieces[1]) + line_deltas[0])}'
+        new_sel_end = f'{sel_end_pieces[0]}.{max(0, int(sel_end_pieces[1]) + line_deltas[-1])}'
+        new_ins = f'{ins_pieces[0]}.{max(0, int(ins_pieces[1]) + ins_delta)}'
+
+        self.text.tag_add(tk.SEL, new_sel_start, new_sel_end)
+        self.text.mark_set(tk.INSERT, new_ins)
+
+    def do_backspace(self):
+        col = int(self.text.index(tk.INSERT).split('.')[1])
+        if col != 0:
+            del_count = (col % 4) or 4 # delete back to previous tab column
+            pos = f'insert - {del_count} chars'
+            if self.text.get(pos, 'insert').isspace():
+                self.text.delete(pos, 'insert')
+                return 'break' # override default behavior
+    def do_untab(self):
+        if self.text.tag_ranges(tk.SEL):
+            self._do_batch_edit(undent_info)
+
+        return 'break'
+    def do_tab(self):
+        if self.text.tag_ranges(tk.SEL):
+            self._do_batch_edit(indent_info)
+        elif self.help_popup is not None:
+            self.do_completion()
+        else:
+            self.text.insert(tk.INSERT, '    ')
+
+        return 'break' # we always override default (we don't want tabs ever)
+    
+    def do_autocomment(self):
+        if self.text.tag_ranges(tk.SEL):
+            self._do_batch_edit(smart_comment_uncomment)
+        
+        return 'break'
+
 class GlobalEditor(CodeEditor):
     prefix = '''
 import netsblox
+nb = netsblox.Client()
 from netsblox.turtle import *
 from netsblox.concurrency import *
 setup_yielding()
@@ -512,7 +626,7 @@ def _yield_(x):
     return x
 
 '''.lstrip()
-    prefix_lines = 9
+    prefix_lines = 10
 
     blocks = [
         ('img/onstart.png', '@onstart\ndef function_name():\n    pass'),
@@ -533,7 +647,7 @@ class StageEditor(CodeEditor):
     prefix_lines = 2
 
     def __init__(self, parent, name):
-        super().__init__(parent, column_offset = 4) # we auto-indent the content, so 4 offset for error messages
+        super().__init__(parent, column_offset = 4) # we autoindent the content, so 4 offset for error messages
         self.name = name
 
         self.set_text('''
@@ -554,7 +668,7 @@ class TurtleEditor(CodeEditor):
     prefix_lines = 2
 
     def __init__(self, parent, name):
-        super().__init__(parent, column_offset = 4) # we auto-indent the content, so 4 offset for error messages
+        super().__init__(parent, column_offset = 4) # we autoindent the content, so 4 offset for error messages
         self.name = name
 
         self.set_text('''
