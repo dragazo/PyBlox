@@ -220,7 +220,7 @@ class BlocksList(tk.Frame):
         super().__init__(parent)
 
         self.scrollbar = tk.Scrollbar(self)
-        self.text = tk.Text(self, wrap = tk.NONE, width = 16, yscrollcommand = self.scrollbar.set)
+        self.text = tk.Text(self, wrap = tk.NONE, width = 24, yscrollcommand = self.scrollbar.set)
         self.scrollbar.configure(command = self.text.yview)
 
         self.scrollbar.pack(side = tk.RIGHT, fill = tk.Y)
@@ -461,7 +461,7 @@ class CodeEditor(ScrolledText):
             cdg = colorizer.ColorDelegator()
 
             patterns = [
-                r'(?P<MYDECO>@\w+)\b',
+                r'(?P<MYDECO>@(\w+\.)*\w+)\b',
                 r'\b(?P<MYSELF>self)\b',
                 r'\b(?P<MYNUMBER>(\d+\.?|\.\d)\d*(e[-+]?\d+)?)\b',
                 colorizer.make_pat(),
@@ -613,6 +613,17 @@ class CodeEditor(ScrolledText):
         
         return 'break'
 
+GLOBAL_BLOCKS = [
+    ('img/onstart.png', '@onstart\ndef function_name():\n    pass'),
+    ('img/keypress.png', '@onkey(\'space\')\ndef function_name():\n    pass'),
+    ('img/msgrecv.png', '@nb.on_message(\'message_type\')\ndef function_name(): # add arguments to receive values\n    pass'),
+]
+TURTLE_STAGE_BLOCKS = [
+    ('img/onstart.png', '@onstart\ndef function_name(self):\n    pass'),
+    ('img/keypress.png', '@onkey(\'space\')\ndef function_name(self):\n    pass'),
+    ('img/msgrecv.png', '@nb.on_message(\'message_type\')\ndef function_name(self): # add arguments to receive values\n    pass'),
+]
+
 class GlobalEditor(CodeEditor):
     prefix = '''
 import netsblox
@@ -628,13 +639,8 @@ def _yield_(x):
 '''.lstrip()
     prefix_lines = 10
 
-    blocks = [
-        ('img/onstart.png', '@onstart\ndef function_name():\n    pass'),
-        ('img/sleep.png', 'time.sleep(1)'),
-    ]
-
     def __init__(self, parent):
-        super().__init__(parent, blocks = GlobalEditor.blocks)
+        super().__init__(parent, blocks = GLOBAL_BLOCKS)
 
         self.set_text('''
 someval = 'hello world' # create a global variable
@@ -647,7 +653,7 @@ class StageEditor(CodeEditor):
     prefix_lines = 2
 
     def __init__(self, parent, name):
-        super().__init__(parent, column_offset = 4) # we autoindent the content, so 4 offset for error messages
+        super().__init__(parent, blocks = TURTLE_STAGE_BLOCKS, column_offset = 4) # we autoindent the content, so 4 offset for error messages
         self.name = name
 
         self.set_text('''
@@ -668,7 +674,7 @@ class TurtleEditor(CodeEditor):
     prefix_lines = 2
 
     def __init__(self, parent, name):
-        super().__init__(parent, column_offset = 4) # we autoindent the content, so 4 offset for error messages
+        super().__init__(parent, blocks = TURTLE_STAGE_BLOCKS, column_offset = 4) # we autoindent the content, so 4 offset for error messages
         self.name = name
 
         self.set_text('''
