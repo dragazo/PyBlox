@@ -100,7 +100,7 @@ def parse_arg(arg_meta, types_meta, override_name: str = None):
     return arg_meta, t, '\n'.join(desc), t_parser
 
 # returns either a string containing a class definition for the given service, or None if it should be omitted
-async def generate_service(session, base_url, service_name, types_meta):
+async def generate_service(session, base_url: str, service_name: str, types_meta):
     async with session.get(f'{base_url}/services/{service_name}') as res:
         meta = await res.json(content_type=None) # ignore content type in case response mime type is wrong
         if 'servicePath' not in meta or not meta['servicePath']:
@@ -131,9 +131,9 @@ async def generate_service(session, base_url, service_name, types_meta):
             rpcs.append((fn_name, f"    def {fn_name}({', '.join(args)}){ret_str}:\n{desc}\n{indent(code, 8)}"))
 
         rpcs = [x[1] for x in sorted(rpcs)] # sort rpcs so they'll be in alphabetical order by name
-        service_desc = indent(f"'''\n{meta['description']}\n'''", 4) if 'description' in meta and meta['description'] else ''
-        formatted = SERVICE_CLASS_TEMPLATE.substitute({ 'service_name': clean_class_name(service_name), 'service_desc': service_desc, 'rpcs': '\n'.join(rpcs) })
-        return (service_name, formatted)
+        service_desc = f"'''\n{meta['description']}\n'''" if 'description' in meta and meta['description'] else ''
+        formatted = SERVICE_CLASS_TEMPLATE.substitute({ 'service_name': clean_class_name(service_name), 'service_desc': indent(service_desc, 4), 'rpcs': '\n'.join(rpcs) })
+        return (service_name, formatted, service_desc)
 
 async def generate_client(base_url, client_name):
     async with aiohttp.ClientSession() as session:
@@ -145,7 +145,7 @@ async def generate_client(base_url, client_name):
                 services = sorted([x for x in services if x]) # remove None values (omitted services) and sort to make sure they're in a consistent order
 
                 service_classes = '\n'.join([x[1] for x in services])
-                service_instances = '\n'.join([f'        self.{clean_fn_name(x[0])} = {clean_class_name(x[0])}(self)' for x in services])
+                service_instances = '\n'.join([f'        self.{clean_fn_name(x[0])} = {clean_class_name(x[0])}(self)\n{indent(x[2], 8)}\n' for x in services])
 
                 return CLIENT_CLASS_TEMPLATE.substitute({ 'client_name': client_name, 'base_url': base_url,
                     'service_classes': service_classes, 'service_instances': service_instances })

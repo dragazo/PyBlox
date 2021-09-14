@@ -121,23 +121,13 @@ def play_button():
 
     toolbar.run_button.show_stop()
 
-    # wipe whatever was on the display
-    content.display.turtle_disp.screen.clear()
-    content.display.terminal.text.set_text('')
-    nbturtle._new_game()
-
-    # the first turtle on a blank screen for some reason clears click/key events,
-    # so make an invisible turtle and then reset the click events
-    turtle.RawTurtle(content.display.turtle_disp.canvas, visible = False)
-    content.display.turtle_disp.screen.onclick(content.display.turtle_disp.screen.listen)
-
     def file_piper(src, dst):
         src = io.TextIOWrapper(src)
         for c in iter(lambda: src.read(1), ''):
             dst.write(c)
             dst.flush()
 
-    code = content.project.get_full_script()
+    code = transform.add_yields(content.project.get_full_script())
     _exec_process = subprocess.Popen([sys.executable, '-uc', code], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
 
     # reading the pipes is blocking so do in another thread for each stream - they will exit when process is killed
@@ -401,6 +391,13 @@ class ScrolledText(tk.Frame):
                 return 'break'
             self.text.bind('<Control-Key-y>', on_redo)
             self.text.bind('<Control-Key-Y>', on_redo)
+
+            # default paste behavior doesn't delete selection first
+            def on_paste(e):
+                if self.text.tag_ranges(tk.SEL):
+                    self.text.delete(tk.SEL_FIRST, tk.SEL_LAST)
+            self.text.bind('<Control-Key-v>', on_paste)
+            self.text.bind('<Control-Key-V>', on_paste)
         
         if linenumbers:
             self.linenumbers = TextLineNumbers(self, target = self.text, width = 30)
@@ -500,6 +497,8 @@ class CodeEditor(ScrolledText):
             self.text.get('insert - 1 chars', 'insert').startswith('.') or \
             self.text.get('insert - 1 chars wordstart - 1 chars', 'insert').startswith('.')
 
+        self.show_docs(script)
+
         if should_show and not self.text.tag_ranges(tk.SEL):
             self.show_suggestion(script)
         else:
@@ -518,15 +517,39 @@ class CodeEditor(ScrolledText):
             self.text.tag_add('jedi-syntax-err', start, stop)
         self.text.tag_configure('jedi-syntax-err', underline = True, underlinefg = 'red', background = '#f2a5a5', foreground = 'black')
 
+    def total_pos(self):
+        edit_line, edit_col = map(int, self.text.index(tk.INSERT).split('.'))
+        edit_line += self.linenumbers.line_num_offset
+        edit_col += self.column_offset
+        return edit_line, edit_col
+
+    def show_docs(self, script = None):
+        if not force_enabled or content is None or content.project is None:
+            return
+        if script is None:
+            script = jedi.Script(content.project.get_full_script())
+
+        edit_line, edit_col = self.total_pos()
+        docs = script.help(edit_line, edit_col)
+
+        def get_docstring(item):
+            desc = item.description
+            if desc.startswith('keyword') or desc.startswith('instance'):
+                return ''
+            return item.docstring()
+        docs = [get_docstring(x) for x in docs]
+        docs = [x for x in docs if x] # don't show empty items
+
+        if docs: # if nothing to show, don't change the display
+            content.display.docs.set_text('\n\n----------\n\n'.join(docs))
+
     def show_suggestion(self, script = None):
         if not force_enabled or content is None or content.project is None:
             return
         if script is None:
             script = jedi.Script(content.project.get_full_script())
 
-        edit_line, edit_col = map(int, self.text.index(tk.INSERT).split('.'))
-        edit_line += self.linenumbers.line_num_offset
-        edit_col += self.column_offset
+        edit_line, edit_col = self.total_pos()
         completions = script.complete(edit_line, edit_col)
 
         should_show = len(completions) >= 2 or (len(completions) == 1 and completions[0].complete != '')
@@ -628,6 +651,7 @@ class GlobalEditor(CodeEditor):
     prefix = '''
 import netsblox
 nb = netsblox.Client()
+'A connection to NetsBlox, which allows you to use services and RPCs from python.'
 from netsblox.turtle import *
 from netsblox.concurrency import *
 setup_yielding()
@@ -637,7 +661,7 @@ def _yield_(x):
     return x
 
 '''.lstrip()
-    prefix_lines = 10
+    prefix_lines = 11
 
     def __init__(self, parent):
         super().__init__(parent, blocks = GLOBAL_BLOCKS)
@@ -647,7 +671,7 @@ someval = 'hello world' # create a global variable
 '''.strip())
 
     def get_script(self):
-        return transform.add_yields(self.prefix + self.text.get('1.0', 'end-1c'))
+        return self.prefix + self.text.get('1.0', 'end-1c')
 
 class StageEditor(CodeEditor):
     prefix_lines = 2
@@ -668,7 +692,7 @@ def start(self):
 
     def get_script(self):
         raw = self.text.get('1.0', 'end-1c')
-        return transform.add_yields(f'@stage\nclass {self.name}(StageBase):\n{indent(raw)}\n{self.name} = {self.name}()')
+        return f'@stage\nclass {self.name}(StageBase):\n{indent(raw)}\n{self.name} = {self.name}()'
 
 class TurtleEditor(CodeEditor):
     prefix_lines = 2
@@ -689,16 +713,16 @@ def start(self):
 
     def get_script(self):
         raw = self.text.get('1.0', 'end-1c')
-        return transform.add_yields(f'@turtle\nclass {self.name}(TurtleBase):\n{indent(raw)}\n{self.name} = {self.name}()')
+        return f'@turtle\nclass {self.name}(TurtleBase):\n{indent(raw)}\n{self.name} = {self.name}()'
 
 class Display(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
 
-        self.turtle_disp = TurtleDisplay(self)
+        self.docs = ScrolledText(self, readonly = True)
         self.terminal = TerminalOutput(self)
 
-        self.turtle_disp.grid(row = 0, column = 0, sticky = tk.NSEW)
+        self.docs.grid(row = 0, column = 0, sticky = tk.NSEW)
         self.terminal.grid(row = 1, column = 0, sticky = tk.NSEW)
 
         self.grid_columnconfigure(0, weight = 1)
