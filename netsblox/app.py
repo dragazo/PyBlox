@@ -254,10 +254,37 @@ class ProjectEditor(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.turtle_index = 0
-        self.editors = []
+        self.editors: List[Tuple[str, CodeEditor]] = []
 
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill = tk.BOTH, expand = True)
+
+        self.ctx_tab_idx = None
+        self.ctx_menu = None
+        def update_ctx_tab_idx(x, y):
+            x -= self.notebook.winfo_rootx()
+            y -= self.notebook.winfo_rooty()
+            idx = None
+            try:
+                idx = self.notebook.index(f'@{x},{y}')
+            except:
+                pass
+            self.ctx_tab_idx = idx
+            e_idx = idx if idx is not None else -1
+
+            self.ctx_menu.entryconfigure(self.ctx_menu_entries['delete'], state = tk.NORMAL if e_idx >= 2 else tk.DISABLED)
+
+            return idx is not None
+
+        self.ctx_menu = ContextMenu(self.notebook, on_show = update_ctx_tab_idx)
+        self.ctx_menu_entries = {}
+        def add_command(id, *, label, command):
+            self.ctx_menu.add_command(label = label, command = command)
+            idx = len(self.ctx_menu_entries)
+            self.ctx_menu_entries[id] = idx
+        
+        add_command('new-turtle', label = 'New Turtle', command = lambda: self.newturtle())
+        add_command('delete', label = 'Delete', command = lambda: self.delete_tab(self.ctx_tab_idx))
 
         def on_change(e):
             for _, editor in self.editors:
@@ -278,6 +305,18 @@ class ProjectEditor(tk.Frame):
 
         self.newturtle('turtle')
 
+    def delete_tab(self, idx):
+        name, editor = self.editors[idx]
+        if not isinstance(editor, TurtleEditor):
+            return # only turtle editors can be deleted
+        
+        title = f'Delete {name}'
+        msg = f'Are you sure you would like to delete {name}? This operation cannot be undone.'
+        confirm = tk.messagebox.askquestion(title, msg, icon = 'warning', default = 'no')
+        if confirm == 'yes':
+            del self.editors[idx]
+            self.notebook.forget(idx)
+
     def newturtle(self, name = None):
         if name is None:
             self.turtle_index += 1
@@ -295,6 +334,34 @@ class ProjectEditor(tk.Frame):
             scripts.append('\n\n')
         scripts.append('start_project()')
         return ''.join(scripts)
+
+class ContextMenu(tk.Menu):
+    def __init__(self, parent, *, on_show = None):
+        super().__init__(parent, tearoff = False)
+        parent.bind('<Button-3>', lambda e: self.show(e.x_root, e.y_root))
+        self.bind('<FocusOut>', lambda e: self.hide())
+        self.visible = False
+        self.on_show = on_show
+
+    def show(self, x, y):
+        if self.on_show is not None:
+            res = self.on_show(x, y)
+            if res is not None and not res:
+                return # don't show if on_show said false
+
+        try:
+            # theoretically these two _should be_ redundant, but they are needed in conjunction to work...
+            if not self.visible:
+                self.visible = True
+                self.tk_popup(x, y) # witchcraft needed for FocusOut to work on linux
+            self.post(x, y)         # wizardry needed for unpost to work
+        finally:
+            self.grab_release()
+
+    def hide(self):
+        if self.visible:
+            self.visible = False
+            self.unpost()
 
 # source: https://stackoverflow.com/questions/16369470/tkinter-adding-line-number-to-text-widget
 class TextLineNumbers(tk.Canvas):
@@ -692,7 +759,7 @@ def start(self):
 
     def get_script(self):
         raw = self.text.get('1.0', 'end-1c')
-        return f'@stage\nclass {self.name}(StageBase):\n{indent(raw)}\n{self.name} = {self.name}()'
+        return f'@netsblox.turtle.stage\nclass {self.name}(netsblox.turtle.StageBase):\n{indent(raw)}\n{self.name} = {self.name}()'
 
 class TurtleEditor(CodeEditor):
     prefix_lines = 2
@@ -713,7 +780,7 @@ def start(self):
 
     def get_script(self):
         raw = self.text.get('1.0', 'end-1c')
-        return f'@turtle\nclass {self.name}(TurtleBase):\n{indent(raw)}\n{self.name} = {self.name}()'
+        return f'@netsblox.turtle.turtle\nclass {self.name}(netsblox.turtle.TurtleBase):\n{indent(raw)}\n{self.name} = {self.name}()'
 
 class Display(tk.Frame):
     def __init__(self, parent):
