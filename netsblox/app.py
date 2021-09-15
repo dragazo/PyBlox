@@ -314,11 +314,10 @@ class ProjectEditor(tk.Frame):
         editor = self.editors[idx]
         if not isinstance(editor, TurtleEditor):
             return # only turtle editors can be deleted
-        
+
         title = f'Delete {editor.name}'
         msg = f'Are you sure you would like to delete {editor.name}? This operation cannot be undone.'
-        confirm = messagebox.askquestion(title, msg, icon = 'warning', default = 'no')
-        if confirm == 'yes':
+        if messagebox.askyesno(title, msg, icon = 'warning', default = 'no'):
             del self.editors[idx]
             self.notebook.forget(idx)
             editor.destroy()
@@ -377,7 +376,6 @@ class ProjectEditor(tk.Frame):
 
             self.notebook.add(editor, text = name)
             self.editors.append(editor)
-
 
 class ContextMenu(tk.Menu):
     def __init__(self, parent, *, on_show = None):
@@ -895,33 +893,71 @@ class MainMenu(tk.Menu):
     def __init__(self, parent):
         super().__init__(parent)
 
+        self.project_path = None
+
+        root.protocol('WM_DELETE_WINDOW', self.on_closing)
+
         submenu = tk.Menu(self, tearoff = False)
+        submenu.add_command(label = 'Save', command = self.save)
         submenu.add_command(label = 'Save As', command = self.save_as)
         submenu.add_command(label = 'Open', command = self.open_project)
         self.add_cascade(label = 'File', menu = submenu)
 
-    def save_as(self):
-        f = filedialog.asksaveasfile(mode = 'w', defaultextension = '.json')
-        if f is None: return
+    @property
+    def project_path(self):
+        return self._project_path
+    @project_path.setter
+    def project_path(self, p):
+        self._project_path = p
+        root.title(f'NetsBlox-Python - {"Untitled" if p is None else p}')
 
-        try:
-            proj = small_json(content.project.save())
-            f.write(proj)
-        except Exception as e:
-            messagebox.showerror('Failed to save project', str(e))
-        finally:
-            f.close()
+    def save(self) -> bool:
+        if self.project_path is not None:
+            try:
+                with open(self.project_path, 'w') as f:
+                    f.write(small_json(content.project.save()))
+                return True
+            except Exception as e:
+                messagebox.showerror('Failed to save project', str(e))
+                return False
+        else:
+            return self.save_as()
+    def save_as(self) -> bool:
+        p = filedialog.asksaveasfilename(defaultextension = '.json')
+        if type(p) is str and p:
+            self.project_path = p
+            return self.save()
+        return False
+
     def open_project(self):
-        f = filedialog.askopenfile(mode = 'r', defaultextension = '.json')
-        if f is None: return
+        p = filedialog.askopenfilename(defaultextension = '.json')
+        if type(p) is not str or not p:
+            return
 
+        rstor = None
         try:
-            proj = json.loads(f.read())
-            content.project.load(proj)
+            with open(p, 'r') as f:
+                proj = json.loads(f.read())
+                rstor = content.project.save() # in case load fails
+                content.project.load(proj)
+                self.project_path = p
         except Exception as e:
             messagebox.showerror('Failed to save project', str(e))
-        finally:
-            f.close()
+            if rstor is not None:
+                content.project.load(rstor)
+
+    def on_closing(self):
+        if self.project_path is not None:
+            self.save()
+            root.destroy()
+        else:
+            title = 'Save before closing'
+            msg = 'Would you like to save your unsaved project before closing?'
+            res = messagebox.askyesnocancel(title, msg)
+            if res == False:
+                root.destroy()
+            elif res == True and self.save():
+                root.destroy()
 
 def main():
     global root, main_menu, toolbar, content
@@ -929,7 +965,6 @@ def main():
     root = tk.Tk()
     root.geometry('1200x600')
     root.minsize(width = 800, height = 400)
-    root.title('NetsBlox - Python')
     ttk.Style().theme_use('clam')
 
     toolbar = Toolbar(root)
