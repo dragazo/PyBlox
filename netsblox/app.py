@@ -2,11 +2,14 @@
 
 import tkinter as tk
 from tkinter import ttk
+import tkinter.filedialog as filedialog
+import tkinter.messagebox as messagebox
 import multiprocessing as mproc
 import subprocess
 import threading
 import traceback
 import turtle
+import json
 import sys
 import io
 import re
@@ -14,6 +17,7 @@ import re
 from typing import List, Tuple
 
 import netsblox
+from netsblox.common import small_json
 
 from . import turtle as nbturtle
 from . import transform
@@ -35,6 +39,7 @@ except:
     pass
 
 root = None
+main_menu = None
 toolbar = None
 content = None
 
@@ -239,7 +244,7 @@ class BlocksList(tk.Frame):
 
         self.imgs = [] # for some reason we need to keep a reference to the images or they disappear
         for img_path, code in blocks:
-            img = tk.PhotoImage(file = module_path(img_path))
+            img = tk.PhotoImage(file = img_path)
             label = tk.Label(self, image = img)
 
             self.text.window_create('end', window = label)
@@ -254,7 +259,7 @@ class ProjectEditor(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.turtle_index = 0
-        self.editors: List[Tuple[str, CodeEditor]] = []
+        self.editors: List[CodeEditor] = []
 
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill = tk.BOTH, expand = True)
@@ -287,53 +292,92 @@ class ProjectEditor(tk.Frame):
         add_command('delete', label = 'Delete', command = lambda: self.delete_tab(self.ctx_tab_idx))
 
         def on_change(e):
-            for _, editor in self.editors:
+            for editor in self.editors:
                 editor.hide_suggestion()
             tab = e.widget.tab('current')['text']
-            editors = [x[1] for x in self.editors if x[0] == tab]
+            editors = [x for x in self.editors if x.name == tab]
             assert len(editors) == 1
             editors[0].on_content_change(e)
         self.notebook.bind('<<NotebookTabChanged>>', on_change)
 
         editor = GlobalEditor(self.notebook)
         self.notebook.add(editor, text = 'global')
-        self.editors.append(('global', editor))
+        self.editors.append(editor)
 
-        editor = StageEditor(self.notebook, 'stage')
+        editor = StageEditor(self.notebook, name = 'stage')
         self.notebook.add(editor, text = editor.name)
-        self.editors.append((editor.name, editor))
+        self.editors.append(editor)
 
         self.newturtle('turtle')
 
-    def delete_tab(self, idx):
-        name, editor = self.editors[idx]
+    def delete_tab(self, idx) -> None:
+        editor = self.editors[idx]
         if not isinstance(editor, TurtleEditor):
             return # only turtle editors can be deleted
         
-        title = f'Delete {name}'
-        msg = f'Are you sure you would like to delete {name}? This operation cannot be undone.'
-        confirm = tk.messagebox.askquestion(title, msg, icon = 'warning', default = 'no')
+        title = f'Delete {editor.name}'
+        msg = f'Are you sure you would like to delete {editor.name}? This operation cannot be undone.'
+        confirm = messagebox.askquestion(title, msg, icon = 'warning', default = 'no')
         if confirm == 'yes':
             del self.editors[idx]
             self.notebook.forget(idx)
+            editor.destroy()
 
-    def newturtle(self, name = None):
+    def newturtle(self, name = None) -> None:
         if name is None:
             self.turtle_index += 1
             name = f'turtle{self.turtle_index}'
-        
-        if not any(x[0] == name for x in self.editors):
-            editor = TurtleEditor(self.notebook, name)
+
+        if not any(x.name == name for x in self.editors):
+            editor = TurtleEditor(self.notebook, name = name)
             self.notebook.add(editor, text = name)
-            self.editors.append((name, editor))
+            self.editors.append(editor)
     
-    def get_full_script(self):
+    def get_full_script(self) -> str:
         scripts = []
-        for _, editor in self.editors:
+        for editor in self.editors:
             scripts.append(editor.get_script())
             scripts.append('\n\n')
         scripts.append('start_project()')
         return ''.join(scripts)
+
+    def save(self) -> dict:
+        res = {}
+        res['turtle_index'] = self.turtle_index
+        res['editors'] = []
+        for editor in self.editors:
+            ty = None
+            if isinstance(editor, GlobalEditor): ty = 'global'
+            elif isinstance(editor, StageEditor): ty = 'stage'
+            elif isinstance(editor, TurtleEditor): ty = 'turtle'
+            else: raise Exception(f'unknown editor type: {type(editor)}')
+            res['editors'].append({
+                'type': ty,
+                'name': editor.name,
+                'value': editor.text.get('1.0', 'end-1c'),
+            })
+        return res
+    def load(self, proj: dict) -> None:
+        for i in range(len(self.editors) - 1, -1, -1):
+            self.notebook.forget(i)
+            self.editors[i].destroy()
+        self.editors = []
+
+        self.turtle_index = proj['turtle_index']
+        for info in proj['editors']:
+            ty = info['type']
+            name = info['name']
+            value = info['value']
+
+            editor = None
+            if ty == 'global': editor = GlobalEditor(self.notebook, value = value)
+            elif ty == 'stage': editor = StageEditor(self.notebook, name = name, value = value)
+            elif ty == 'turtle': editor = TurtleEditor(self.notebook, name = name, value = value)
+            else: raise Exception(f'unknown editor type: {ty}')
+
+            self.notebook.add(editor, text = name)
+            self.editors.append(editor)
+
 
 class ContextMenu(tk.Menu):
     def __init__(self, parent, *, on_show = None):
@@ -504,7 +548,7 @@ class CodeEditor(ScrolledText):
             self.__line_count = None
             if content is not None:
                 total = 0
-                for _, editor in content.project.editors:
+                for editor in content.project.editors:
                     if editor is self:
                         total += editor.prefix_lines
                         break
@@ -703,16 +747,8 @@ class CodeEditor(ScrolledText):
         
         return 'break'
 
-GLOBAL_BLOCKS = [
-    ('img/onstart.png', '@onstart\ndef function_name():\n    pass'),
-    ('img/keypress.png', '@onkey(\'space\')\ndef function_name():\n    pass'),
-    ('img/msgrecv.png', '@nb.on_message(\'message_type\')\ndef function_name(): # add arguments to receive values\n    pass'),
-]
-TURTLE_STAGE_BLOCKS = [
-    ('img/onstart.png', '@onstart\ndef function_name(self):\n    pass'),
-    ('img/keypress.png', '@onkey(\'space\')\ndef function_name(self):\n    pass'),
-    ('img/msgrecv.png', '@nb.on_message(\'message_type\')\ndef function_name(self): # add arguments to receive values\n    pass'),
-]
+GLOBAL_BLOCKS = []
+TURTLE_BLOCKS = STAGE_BLOCKS = []
 
 class GlobalEditor(CodeEditor):
     prefix = '''
@@ -730,10 +766,12 @@ def _yield_(x):
 '''.lstrip()
     prefix_lines = 11
 
-    def __init__(self, parent):
+    name = 'global'
+
+    def __init__(self, parent, *, value = None):
         super().__init__(parent, blocks = GLOBAL_BLOCKS)
 
-        self.set_text('''
+        self.set_text(value if value is not None else '''
 someval = 'hello world' # create a global variable
 '''.strip())
 
@@ -743,11 +781,11 @@ someval = 'hello world' # create a global variable
 class StageEditor(CodeEditor):
     prefix_lines = 2
 
-    def __init__(self, parent, name):
-        super().__init__(parent, blocks = TURTLE_STAGE_BLOCKS, column_offset = 4) # we autoindent the content, so 4 offset for error messages
+    def __init__(self, parent, *, name, value = None):
+        super().__init__(parent, blocks = STAGE_BLOCKS, column_offset = 4) # we autoindent the content, so 4 offset for error messages
         self.name = name
 
-        self.set_text('''
+        self.set_text(value if value is not None else'''
 @onstart
 def start(self):
     self.myvar = 5                 # create a stage variable
@@ -764,11 +802,11 @@ def start(self):
 class TurtleEditor(CodeEditor):
     prefix_lines = 2
 
-    def __init__(self, parent, name):
-        super().__init__(parent, blocks = TURTLE_STAGE_BLOCKS, column_offset = 4) # we autoindent the content, so 4 offset for error messages
+    def __init__(self, parent, *, name, value = None):
+        super().__init__(parent, blocks = TURTLE_BLOCKS, column_offset = 4) # we autoindent the content, so 4 offset for error messages
         self.name = name
 
-        self.set_text('''
+        self.set_text(value if value is not None else '''
 @onstart
 def start(self):
     self.myvar = 40 # create a sprite variable
@@ -853,8 +891,40 @@ class TurtleDisplay(tk.Frame):
         # ScrolledCanvas has better behavior, but we dont actually want scrollbars, so always match display size
         self.canvas.bind('<Configure>', lambda e: self.screen.screensize(canvwidth = e.width, canvheight = e.height))
 
+class MainMenu(tk.Menu):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        submenu = tk.Menu(self, tearoff = False)
+        submenu.add_command(label = 'Save As', command = self.save_as)
+        submenu.add_command(label = 'Open', command = self.open_project)
+        self.add_cascade(label = 'File', menu = submenu)
+
+    def save_as(self):
+        f = filedialog.asksaveasfile(mode = 'w', defaultextension = '.json')
+        if f is None: return
+
+        try:
+            proj = small_json(content.project.save())
+            f.write(proj)
+        except Exception as e:
+            messagebox.showerror('Failed to save project', str(e))
+        finally:
+            f.close()
+    def open_project(self):
+        f = filedialog.askopenfile(mode = 'r', defaultextension = '.json')
+        if f is None: return
+
+        try:
+            proj = json.loads(f.read())
+            content.project.load(proj)
+        except Exception as e:
+            messagebox.showerror('Failed to save project', str(e))
+        finally:
+            f.close()
+
 def main():
-    global root, toolbar, content
+    global root, main_menu, toolbar, content
 
     root = tk.Tk()
     root.geometry('1200x600')
@@ -864,7 +934,9 @@ def main():
 
     toolbar = Toolbar(root)
     content = Content(root)
+    main_menu = MainMenu(root)
 
+    root.configure(menu = main_menu)
     content.display.terminal.wrap_stdio(tee = True)
 
     _process_print_queue()
