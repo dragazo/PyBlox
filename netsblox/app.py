@@ -8,19 +8,19 @@ import multiprocessing as mproc
 import subprocess
 import threading
 import traceback
+import requests
 import turtle
 import json
 import sys
 import io
 import re
 
+from PIL import Image, ImageTk
+
 from typing import List, Tuple
 
 import netsblox
-from netsblox.common import small_json
-
-from . import turtle as nbturtle
-from . import transform
+from netsblox import transform
 
 color_enabled = False
 try:
@@ -106,6 +106,28 @@ def smart_comment_uncomment(txt: str) -> Tuple[str, int]:
                 res_deltas.append(0)
         return '\n'.join(res_lines), res_deltas
 
+_img_cache = {}
+_error_image = Image.new('RGB', (50, 50), (252, 3, 244))
+def load_image(img_url: str, *, scale: float = 1):
+    if img_url in _img_cache:
+        return _img_cache[img_url]
+
+    res = requests.get(img_url)
+    img = _error_image # defualt to error image
+    if res.status_code == 200:
+        img = Image.open(io.BytesIO(res.content))
+    else:
+        title = 'Failed to Load Image'
+        msg = f'Failed to load image {img_url} (error code {res.status_code})\n\nMake sure the web host allows direct downloads.'
+        messagebox.showerror(title, msg)
+
+    if scale != 1:
+        img = img.resize((round(img.width * scale), round(img.height * scale)))
+
+    img = ImageTk.PhotoImage(img)
+    _img_cache[img_url] = img
+    return img
+
 _exec_monitor_running = False
 def start_exec_monitor():
     global _exec_monitor_running, _exec_process
@@ -144,6 +166,8 @@ def play_button():
         return
 
     toolbar.run_button.show_stop()
+
+    content.display.terminal.text.set_text('')
 
     def file_piper(src, dst):
         src = io.TextIOWrapper(src)
@@ -262,15 +286,15 @@ class BlocksList(tk.Frame):
             return DndManager(widget, [DndTarget(text_target, on_start, on_stop, on_drop)])
 
         self.imgs = [] # for some reason we need to keep a reference to the images or they disappear
-        for img_path, code in blocks:
-            img = tk.PhotoImage(file = img_path)
+        for block in blocks:
+            img = load_image(block['url'], scale = block['scale'])
             label = tk.Label(self, image = img)
 
             self.text.window_create('end', window = label)
             self.text.insert('end', '\n')
             self.imgs.append(img)
 
-            make_dnd_manager(label, code)
+            make_dnd_manager(label, block['replace'])
 
         self.text.configure(state = tk.DISABLED)
 
@@ -361,6 +385,9 @@ class ProjectEditor(tk.Frame):
 
     def save(self) -> dict:
         res = {}
+        res['global_blocks'] = [x.copy() for x in GLOBAL_BLOCKS]
+        res['stage_blocks'] = [x.copy() for x in  STAGE_BLOCKS]
+        res['turtle_blocks'] = [x.copy() for x in TURTLE_BLOCKS]
         res['turtle_index'] = self.turtle_index
         res['editors'] = []
         for editor in self.editors:
@@ -376,6 +403,12 @@ class ProjectEditor(tk.Frame):
             })
         return res
     def load(self, proj: dict) -> None:
+        global GLOBAL_BLOCKS, STAGE_BLOCKS, TURTLE_BLOCKS
+
+        GLOBAL_BLOCKS = [x.copy() for x in proj['global_blocks']]
+        STAGE_BLOCKS = [x.copy() for x in proj['stage_blocks']]
+        TURTLE_BLOCKS = [x.copy() for x in proj['turtle_blocks']]
+
         for i in range(len(self.editors) - 1, -1, -1):
             self.notebook.forget(i)
             self.editors[i].destroy()
@@ -764,14 +797,25 @@ class CodeEditor(ScrolledText):
         
         return 'break'
 
-GLOBAL_BLOCKS = []
-TURTLE_BLOCKS = STAGE_BLOCKS = []
+default_img_prefix = 'https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img'
+GLOBAL_BLOCKS = [
+    { 'url': f'{default_img_prefix}/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name():\n    pass' },
+    { 'url': f'{default_img_prefix}/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name():\n    pass' },
+    { 'url': f'{default_img_prefix}/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(): # add arguments to receive values\n    pass' },
+]
+TURTLE_BLOCKS = STAGE_BLOCKS = [
+    { 'url': f'{default_img_prefix}/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name(self):\n    pass' },
+    { 'url': f'{default_img_prefix}/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name(self):\n    pass' },
+    { 'url': f'{default_img_prefix}/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(self): # add arguments to receive values\n    pass' },
+]
 
 class GlobalEditor(CodeEditor):
     prefix = '''
 import netsblox
 nb = netsblox.Client()
 'A connection to NetsBlox, which allows you to use services and RPCs from python.'
+from turtle import Screen
+Screen().setup(1280, 720)
 from netsblox.turtle import *
 from netsblox.concurrency import *
 setup_yielding()
@@ -781,7 +825,7 @@ def _yield_(x):
     return x
 
 '''.lstrip()
-    prefix_lines = 11
+    prefix_lines = 13
 
     name = 'global'
 
@@ -933,8 +977,9 @@ class MainMenu(tk.Menu):
     def save(self) -> bool:
         if self.project_path is not None:
             try:
+                proj = content.project.save()
                 with open(self.project_path, 'w') as f:
-                    f.write(small_json(content.project.save()))
+                    json.dump(proj, f, separators = (', ', ': '), indent = 2)
                 return True
             except Exception as e:
                 messagebox.showerror('Failed to save project', str(e))
@@ -956,12 +1001,12 @@ class MainMenu(tk.Menu):
         rstor = None
         try:
             with open(p, 'r') as f:
-                proj = json.loads(f.read())
+                proj = json.load(f)
                 rstor = content.project.save() # in case load fails
                 content.project.load(proj)
                 self.project_path = p
         except Exception as e:
-            messagebox.showerror('Failed to save project', str(e))
+            messagebox.showerror('Failed to load project', str(e))
             if rstor is not None:
                 content.project.load(rstor)
 
