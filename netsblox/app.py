@@ -106,6 +106,24 @@ def smart_comment_uncomment(txt: str) -> Tuple[str, int]:
                 res_deltas.append(0)
         return '\n'.join(res_lines), res_deltas
 
+_exec_monitor_running = False
+def start_exec_monitor():
+    global _exec_monitor_running, _exec_process
+    if _exec_monitor_running: return
+    _exec_monitor_running = True
+
+    interval = 500
+    def watcher():
+        try:
+            proc = _exec_process
+            if proc is not None and proc.poll() is not None:
+                play_button() # this will end exec mode
+        except Exception as e:
+            print(e, file = sys.stderr)
+        finally:
+            root.after(interval, watcher)
+    watcher()
+
 def exec_wrapper(*args):
     try:
         exec(*args)
@@ -115,6 +133,7 @@ def exec_wrapper(*args):
 _exec_process = None
 def play_button():
     global _exec_process
+    start_exec_monitor()
 
     # if already running, just kill it - the only locks they can have were made by them, so no deadlocking issues.
     # the messaging pipe is broken, but we won't be using it anymore.
