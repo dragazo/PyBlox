@@ -3,14 +3,9 @@
 from netsblox.turtle import *
 
 @turtle
-class MyTurtle:
+class MyTurtle(TurtleBase):
     def __init__(self, x, y):
-        self.x = x
-        self.y = y
-
-    @onstart
-    def start(self):
-        self.goto(self.x * 50, self.y * 50)
+        self.pos = (x * 50, y * 50)
     
     @onkey('w')
     @onkey('Up')
@@ -20,12 +15,12 @@ class MyTurtle:
     @onkey('a')
     @onkey('Left')
     def press_left(self):
-        self.left(15)
+        self.turn_left(15)
 
     @onkey('d')
     @onkey('Right')
     def press_right(self):
-        self.right(15)
+        self.turn_right(15)
 
 @onkey('space')
 def press_space():

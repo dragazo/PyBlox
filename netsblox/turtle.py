@@ -5,7 +5,8 @@ import threading
 import inspect
 import queue
 import math
-from typing import Any, Union
+
+from typing import Any, Union, Tuple
 
 from PIL import Image, ImageTk
 
@@ -134,9 +135,9 @@ def _qinvoke_wait(fn, *args) -> Any:
     _action_queue.put((fn, args, ret_id))
     while True:
         with _action_queue_ret_cv:
-            if id in _action_queue_ret_vals:
-                ret_val = _action_queue_ret_vals[id]
-                del _action_queue_ret_vals[id]
+            if ret_id in _action_queue_ret_vals:
+                ret_val = _action_queue_ret_vals[ret_id]
+                del _action_queue_ret_vals[ret_id]
                 break
             _action_queue_ret_cv.wait()
 
@@ -167,7 +168,7 @@ _turtle_count = 0
 def _make_turtle(extra_fn = None):
     def batcher():
         global _turtle_count
-        id = _turtle_count
+        tid = _turtle_count
         _turtle_count += 1
 
         t = _turtle.Turtle() if _raw_turtle_target is None else _turtle.RawTurtle(_raw_turtle_target)
@@ -175,9 +176,9 @@ def _make_turtle(extra_fn = None):
         t.penup()
 
         if extra_fn is not None:
-            extra_fn(t, id)
+            extra_fn(t, tid)
 
-        return t, id
+        return t, tid
     return _qinvoke_wait(batcher)
 
 class StageBase:
@@ -202,10 +203,23 @@ class StageBase:
         except:
             self.__initialized = True
 
-        self.__turtle, self.__id = _make_turtle(lambda t, id: _setcostume(t, id, None)) # default to blank costume
+        self.__turtle, self.__tid = _make_turtle(lambda t, tid: _setcostume(t, tid, None)) # default to blank costume
+        self.__costume = None
 
-    def setcostume(self, costume):
-        _setcostume(self.__turtle, self.__id, costume)
+    @property
+    def costume(self) -> Any:
+        return self.__costume
+    @costume.setter
+    def costume(self, new_costume: Any) -> None:
+        '''
+        Get or set the current stage costume (background).
+
+        ```
+        self.costume = img
+        ```
+        '''
+        _setcostume(self.__turtle, self.__tid, new_costume)
+        self.__costume = new_costume
 
 class TurtleBase:
     '''
@@ -229,132 +243,264 @@ class TurtleBase:
         except:
             self.__initialized = True
 
-        self.__turtle, self.__id = _make_turtle()
-        self.__drawing = False # turtles default to pendown
+        self.__turtle, self.__tid = _make_turtle()
+        self.__drawing = False
+        self.__visible = True
         self.__x = 0.0
         self.__y = 0.0
         self.__rot = 0.25 # angle [0, 1)
         self.__degrees = 360.0
+        self.__costume = 'classic'
+        self.__pen_size = 1.0
 
-    def setcostume(self, costume):
-        _setcostume(self.__turtle, self.__id, costume)
+    # ----------------------------------------
 
-    def goto(self, x, y = None):
-        if y is None:
-            x, y = y
-        self.__x = float(x)
-        self.__y = float(y)
-        _qinvoke(self.__turtle.goto, self.__x, self.__y)
-    setposition = goto
-    setpos = goto
+    @property
+    def costume(self) -> Any:
+        return self.__costume
+    @costume.setter
+    def costume(self, new_costume: Any) -> None:
+        '''
+        Get or set the current turtle costume.
 
-    def setheading(self, to_angle):
-        self.__rot = (float(to_angle) / self.__degrees) % 1.0
+        ```
+        self.costume = img
+        ```
+        '''
+        _setcostume(self.__turtle, self.__tid, new_costume)
+        self.__costume = new_costume
+
+    @property
+    def pos(self) -> Tuple[float, float]:
+        return self.__x, self.__y
+    @pos.setter
+    def pos(self, new_pos: Tuple[float, float]) -> None:
+        '''
+        Get or set the position of the turtle, which is a pair of (x, y) coordinates.
+
+        ```
+        self.pos = (10, 45)
+        ```
+        '''
+        self.__setpos(*map(float, new_pos))
+    def __setpos(self, x: float, y: float) -> None:
+        self.__x, self.__y = x, y
+        _qinvoke(self.__turtle.goto, x, y)
+
+    @property
+    def x(self) -> float:
+        return self.__x
+    @x.setter
+    def x(self, new_x: float) -> None:
+        '''
+        Get or set the x coordinate of the turtle.
+
+        ```
+        self.x = 60
+        ```
+        '''
+        self.__setpos(float(new_x), self.__y)
+
+    @property
+    def y(self) -> float:
+        return self.__y
+    @y.setter
+    def y(self, new_y: float) -> None:
+        '''
+        Get or set the y coordinate of the turtle.
+
+        ```
+        self.y = -10
+        ```
+        '''
+        self.__setpos(self.__x, float(new_y))
+
+    @property
+    def heading(self) -> float:
+        return self.__rot * self.__degrees
+    @heading.setter
+    def heading(self, new_heading: float) -> None:
+        '''
+        Get or set the heading (direction) of the turtle.
+        Note that this is affected by the current degrees mode.
+
+        ```
+        self.heading = 0 # face north
+        ```
+        '''
+        self.__setheading(float(new_heading))
+    def __setheading(self, new_heading: float) -> None:
+        self.__rot = (new_heading / self.__degrees) % 1.0
         _qinvoke(self.__turtle.setheading, (0.25 - self.__rot) % 1.0 * 360.0) # raw turtle is always in degrees mode
-    seth = setheading
 
-    def setx(self, x):
-        self.goto(float(x), self.__y)
-    def sety(self, y):
-        self.goto(self.__x, float(y))
+    @property
+    def degrees(self) -> float:
+        return self.__degrees
+    @degrees.setter
+    def degrees(self, full_circle: float = 360.0) -> None:
+        '''
+        Get or set how many "degrees" are in a circle (default 360).
+        This is useful if you want to draw pie charts (100 "degrees" per circle) or work in radians (2*pi "degrees" per circle).
 
-    def forward(self, distance):
+        The apparent heading of the turtle is unchanged - this is just a way of measuring angles.
+
+        ```
+        self.degress = 360         # switch to (normal) degrees mode
+        self.degress = 2 * math.pi # switch to radians mode
+        ```
+        '''
+        self.__degrees = float(full_circle)
+
+    @property
+    def visible(self) -> bool:
+        return self.__visible
+    @visible.setter
+    def visible(self, is_visible: bool) -> None:
+        '''
+        Get or set whether or not the turtle is visible
+
+        ```
+        self.visible = True  # show the turtle
+        self.visible = False # hide the turtle
+        ```
+        '''
+        self.__visible = bool(is_visible)
+        _qinvoke(self.__turtle.showturtle if self.__visible else self.__turtle.hideturtle)
+
+    @property
+    def drawing(self) -> bool:
+        return self.__drawing
+    @drawing.setter
+    def drawing(self, is_drawing: bool) -> None:
+        '''
+        Get or set whether or not the turtle should draw a trail behind it as it moves.
+
+        ```
+        self.drawing = True  # start drawing
+        self.drawing = False # stop drawing
+        ```
+        '''
+        self.__drawing = bool(is_drawing)
+        _qinvoke(self.__turtle.pendown if self.__drawing else self.__turtle.penup)
+
+    @property
+    def pen_size(self) -> float:
+        return self.__pen_size
+    @pen_size.setter
+    def pen_size(self, new_size: float) -> None:
+        '''
+        Get or set the width of the drawing pen (in pixels).
+        This affects the width of drawn trails when `drawing` is set to `True`.
+
+        ```
+        self.pen_size = 1 # normal pen size
+        self.pen_size = 4 # larger pen size
+        ```
+        '''
+        self.__pen_size = float(new_size)
+        _qinvoke(self.__turtle.pensize, self.__pen_size)
+
+    # -------------------------------------------------------
+
+    def forward(self, distance: float) -> None:
+        '''
+        Move forward by the given number of pixels.
+
+        ```
+        self.forward(40)
+        ```
+        '''
         distance = float(distance)
         h = self.__rot * 2 * math.pi
-        self.goto(self.__x + math.sin(h) * distance, self.__y + math.cos(h) * distance)
-    fd = forward
+        self.__setpos(self.__x + math.sin(h) * distance, self.__y + math.cos(h) * distance)
 
-    def back(self, distance):
-        self.forward(-float(distance))
-    backward = back
-    bk = back
+    def turn_left(self, angle: float = None) -> None:
+        '''
+        Turn the turtle to the left by the given angle.
+        Note that this is affected by the current degrees mode.
+        If no angle is specified, turns the equivalent of 90 degrees.
 
-    def left(self, angle):
-        self.setheading(self.heading() - float(angle))
-    lt = left
+        ```
+        self.turn_left(45)
+        ```
+        '''
+        self.__setheading(self.heading - float(angle) if angle is not None else self.__degrees / 4)
+    def turn_right(self, angle: float = None) -> None:
+        '''
+        Turn the turtle to the right by the given angle.
+        Note that this is affected by the current degrees mode.
+        If no angle is specified, turns the equivalent of 90 degrees.
 
-    def right(self, angle):
-        self.setheading(self.heading() + float(angle))
-    rt = right
-
-    def home(self):
-        self.setpos(0, 0)
-        self.setheading(0)
+        ```
+        self.turn_right(45)
+        ```
+        '''
+        self.__setheading(self.heading + float(angle) if angle is not None else self.__degrees / 4)
     
-    def dot(self, radius = None, *color):
-        _qinvoke(self.__turtle.dot, radius, *color)
+    # -------------------------------------------------------
 
-    def stamp(self):
-        _qinvoke(self.__turtle.stamp)
+    def clear(self) -> None:
+        '''
+        Clears (erases) all of the drawings made by this turtle.
 
-    def clearstamps(self, n = None):
-        _qinvoke(self.__turtle.clearstamps, n)
-
-    def clear(self):
+        ```
+        self.clear()
+        ```
+        '''
         _qinvoke(self.__turtle.clear)
 
-    def write(self, arg, move = False, align = 'left', font = ('Arial', 8, 'normal')):
-        _qinvoke(self.__turtle.write, arg, move, align, font)
+    def stamp(self) -> None:
+        '''
+        Stamps an image of the turtle on the background at the current position.
+        Stamps can be deleted by calling `self.clear_stamps()` (just stamps) or `self.clear()` (all drawings).
 
-    def showturtle(self):
-        _qinvoke(self.__turtle.showturtle)
-    show = showturtle
-    st = showturtle
+        ```
+        self.stamp()
+        ```
+        '''
+        _qinvoke(self.__turtle.stamp)
 
-    def hideturtle(self):
-        _qinvoke(self.__turtle.hideturtle)
-    hide = hideturtle
-    ht = hideturtle
+    def clear_stamps(self) -> None:
+        '''
+        Clears (erases) all of the stamps made by this turtle.
 
-    def isvisible(self):
-        return self.__turtle.isvisible()
+        ```
+        self.clear_stamps()
+        ```
+        '''
+        _qinvoke(self.__turtle.clearstamps)
 
-    def pendown(self):
-        self.__drawing = True
-        _qinvoke(self.__turtle.pendown)
-    down = pendown
-    pd = pendown
+    def dot(self, radius: int = None):
+        '''
+        Draws a dot (circle) on the background at the current position.
+        The radius argument allows you to set the size in pixels, otherwise a default is used based on the pen width.
+        Dots count as drawings, so they can be erased with `self.clear()`.
 
-    def penup(self):
-        self.__drawing = False
-        _qinvoke(self.__turtle.penup)
-    up = penup
-    pu = penup
+        ```
+        self.dot()   # make a dot with default radius
+        self.dot(10) # make a dot with radius 10 pixels
+        ```
+        '''
+        _qinvoke(self.__turtle.dot, int(radius) if radius is not None else None)
 
-    def position(self):
-        return self.__x, self.__y
-    pos = position
+    def write(self, text: str, *, size: int = 12, align: str = 'left', move = False):
+        '''
+        Draws text onto the background.
+        The `size` argument sets the font size of the drawn text.
+        The `align` argument can be `left`, `right`, or `center` and controls how the text is drawn.
+        The `move` argument specifies if the turtle should move to the end of the text after drawing.
 
-    def towards(self, x, y = None):
-        return self.__turtle.towards(x, y)
-    
-    def xcor(self):
-        return self.__x
-    
-    def ycor(self):
-        return self.__y
-    
-    def heading(self):
-        return self.__rot * self.__degrees
-    
-    def distance(self, x, y = None):
-        return self.__turtle.distance(x, y)
+        Text counts as a drawing, so it can be erased by calling `self.clear()`.
 
-    def degrees(self, fullcircle = 360.0):
-        self.__degrees = float(fullcircle)
-    
-    def radians(self):
-        self.__degrees = 2 * math.pi
-
-    def pensize(self, width=None):
-        return self.__turtle.pensize(width)
-    width = pensize
-
-    def pen(self, pen = None, **pendict):
-        return self.__turtle.pen(pen, **pendict)
-
-    def isdown(self):
-        return self.__drawing
+        ```
+        self.write('normal hello world!')
+        self.write('small hello world!', size = 8)
+        ```
+        '''
+        def batcher():
+            self.__turtle.write(str(text), bool(move), align, ('Arial', int(size), 'normal'))
+            return self.__turtle.position()
+        self.__x, self.__y = _qinvoke_wait(batcher)
 
 def _derive(bases, cls):
     limited_bases = [b for b in bases if not issubclass(cls, b)]

@@ -22,14 +22,9 @@ phoneiot.add_button(device, 65, 50, 25, 25, '>', { 'event': 'rightbtn2' })
 phoneiot.listen_to_gui(device)
 
 @turtle
-class MyTurtle:
+class MyTurtle(TurtleBase):
     def __init__(self, x, y):
-        self.x = x
-        self.y = y
-
-    @onstart
-    def start(self):
-        self.goto(self.x * 50, self.y * 50)
+        self.pos = (x * 50, y * 50)
 
     @client.on_message('forwardbtn')
     @client.on_message('forwardbtn2')
@@ -43,14 +38,14 @@ class MyTurtle:
     @onkey('a')
     @onkey('Left')
     def press_left(self):
-        self.left(15)
+        self.turn_left(15)
 
     @client.on_message('rightbtn')
     @client.on_message('rightbtn2')
     @onkey('d')
     @onkey('Right')
     def press_right(self):
-        self.right(15)
+        self.turn_right(15)
 
 @onkey('space')
 def press_space():

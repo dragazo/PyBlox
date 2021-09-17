@@ -874,7 +874,7 @@ def start(self):
 
     for i in range(400):
         self.forward(self.myvar) # access sprite variable
-        self.right(90)
+        self.turn_right(90)
 '''.strip())
 
     def get_script(self):

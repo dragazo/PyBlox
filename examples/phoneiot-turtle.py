@@ -23,19 +23,19 @@ phone_iot.listen_to_gui(device)
 phone_iot.listen_to_sensors(device, { 'accelerometer': 100 })
 
 @turtle
-class MyTurtle:
+class MyTurtle(TurtleBase):
     @onstart
     def start(self):
-        self.radians() # math.atan2() returns radians, so switch to radians mode
-        self.pendown()
+        self.degress = 2 * math.pi # math.atan2() returns radians, so switch to radians mode
+        self.drawing = True
 
         self.velx = 0
         self.vely = 0
         while True:
             time.sleep(0.05)
             x, y = self.pos()
-            self.setheading(math.atan2(self.velx, self.vely))
-            self.setpos(x + self.velx, y + self.vely)
+            self.heading = math.atan2(self.velx, self.vely)
+            self.pos = (x + self.velx, y + self.vely)
 
     @client.on_message('accelerometer')
     def accel_handler(self, x, y):
@@ -46,7 +46,7 @@ class MyTurtle:
     def reset(self):
         self.velx = 0
         self.vely = 0
-        self.setpos(0, 0)
+        self.pos = (0, 0)
         self.clear()
 
 @client.on_message('terminate')

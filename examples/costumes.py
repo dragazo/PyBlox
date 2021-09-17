@@ -10,30 +10,30 @@ google_maps = client.google_maps
 this_x_dne = client.this_x_does_not_exist
 
 @turtle
-class MyTurtle:
+class MyTurtle(TurtleBase):
     @onstart
     def start(self):
         while True:
             img = this_x_dne.get_cat()
             img = img.resize((img.width // 5, img.height // 5)) # a bit too big - make it smaller
-            self.setcostume(img)
+            self.costume = img
 
             x = (random.random() - 0.5) * 900
             y = (random.random() - 0.5) * 500
-            self.goto(x, y)
+            self.pos = (x, y)
 
             time.sleep(1)
 t = MyTurtle()
 
 @stage
-class MyStage:
+class MyStage(StageBase):
     @onstart
     def start(self):
         while True:
             lat = random.random() + 36.152056
             long = random.random() + -86.811432
             img = google_maps.get_map(lat, long, 1000, 600, 12)
-            self.setcostume(img)
+            self.costume = img
 
             time.sleep(2)
 stage = MyStage()

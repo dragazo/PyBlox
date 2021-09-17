@@ -3,22 +3,20 @@
 from netsblox.turtle import *
 
 @turtle
-class MyTurtle:
+class MyTurtle(TurtleBase):
     def __init__(self, start_angle):
-        self.start_angle = start_angle
+        self.heading = start_angle
+        self.drawing = True
 
     @onstart
     def start(self):
-        self.setheading(self.start_angle)
-        self.pendown()
-
         d = 10
         while d >= 1:
             self.forward(d)
-            self.left(5)
+            self.turn_left(5)
             d *= 0.995
-        
-        self.hide()
+
+        self.visible = False
 
 num_turtles = 50
 for i in range(num_turtles):
