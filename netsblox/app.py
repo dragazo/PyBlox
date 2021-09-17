@@ -303,6 +303,7 @@ class ProjectEditor(tk.Frame):
         super().__init__(parent)
         self.turtle_index = 0
         self.editors: List[CodeEditor] = []
+        self.__show_blocks = True
 
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill = tk.BOTH, expand = True)
@@ -353,6 +354,15 @@ class ProjectEditor(tk.Frame):
 
         self.newturtle('turtle')
 
+    @property
+    def show_blocks(self) -> bool:
+        return self.__show_blocks
+    @show_blocks.setter
+    def show_blocks(self, value: bool) -> None:
+        self.__show_blocks = value
+        for editor in self.editors:
+            editor.update_pack()
+
     def delete_tab(self, idx) -> None:
         editor = self.editors[idx]
         if not isinstance(editor, TurtleEditor):
@@ -388,6 +398,7 @@ class ProjectEditor(tk.Frame):
         res['global_blocks'] = [x.copy() for x in GLOBAL_BLOCKS]
         res['stage_blocks'] = [x.copy() for x in  STAGE_BLOCKS]
         res['turtle_blocks'] = [x.copy() for x in TURTLE_BLOCKS]
+        res['show_blocks'] = self.show_blocks
         res['turtle_index'] = self.turtle_index
         res['editors'] = []
         for editor in self.editors:
@@ -413,6 +424,8 @@ class ProjectEditor(tk.Frame):
             self.notebook.forget(i)
             self.editors[i].destroy()
         self.editors = []
+
+        self.show_blocks = proj['show_blocks']
 
         self.turtle_index = proj['turtle_index']
         for info in proj['editors']:
@@ -570,10 +583,16 @@ class ScrolledText(tk.Frame):
 
         # -----------------------------------------------------
 
+        self.update_pack()
+
+    def update_pack(self):
+        for item in [self.scrollbar, self.blocks, self.linenumbers, self.text]:
+            if item is not None: item.pack_forget()
+
         self.scrollbar.pack(side = tk.RIGHT, fill = tk.Y)
-        if len(blocks) > 0:
+        if self.blocks is not None and content is not None and content.project.show_blocks:
             self.blocks.pack(side = tk.LEFT, fill = tk.Y)
-        if linenumbers:
+        if self.linenumbers is not None:
             self.linenumbers.pack(side = tk.LEFT, fill = tk.Y)
         self.text.pack(side = tk.RIGHT, fill = tk.BOTH, expand = True)
 
@@ -966,6 +985,10 @@ class MainMenu(tk.Menu):
         submenu.add_command(label = 'Open', command = self.open_project)
         self.add_cascade(label = 'File', menu = submenu)
 
+        submenu = tk.Menu(self, tearoff = False)
+        submenu.add_command(label = 'Blocks', command = self.toggle_blocks)
+        self.add_cascade(label = 'View', menu = submenu)
+
     @property
     def project_path(self):
         return self._project_path
@@ -1022,6 +1045,9 @@ class MainMenu(tk.Menu):
                 root.destroy()
             elif res == True and self.save():
                 root.destroy()
+    
+    def toggle_blocks(self):
+        content.project.show_blocks = not content.project.show_blocks
 
 def main():
     global root, main_menu, toolbar, content
@@ -1034,6 +1060,8 @@ def main():
     toolbar = Toolbar(root)
     content = Content(root)
     main_menu = MainMenu(root)
+
+    content.project.show_blocks = content.project.show_blocks # trigger update now that content is loaded
 
     root.configure(menu = main_menu)
     content.display.terminal.wrap_stdio(tee = True)
