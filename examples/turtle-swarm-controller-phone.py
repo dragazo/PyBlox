@@ -40,10 +40,8 @@ class MyTurtle(TurtleBase):
     def press_left(self):
         self.turn_left(15)
 
-    @client.on_message('rightbtn')
-    @client.on_message('rightbtn2')
-    @onkey('d')
-    @onkey('Right')
+    @client.on_message('rightbtn', 'rightbtn2')
+    @onkey('d', 'Right')
     def press_right(self):
         self.turn_right(15)
 

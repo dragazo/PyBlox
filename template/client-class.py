@@ -196,48 +196,37 @@ $service_instances
                 handlers = []
                 self._message_handlers[msg_type] = handlers
             handlers.append(handler)
-    def on_message(self, msg_type, handler=None):
+    def on_message(self, *msg_types: str):
         '''
-        Adds a new message handler for incoming messages of the given type.
-        If handler is specified, it is used as the message handler.
-        Otherwise, this returns an annotation type that can be applied to a function definition.
-        For example, the following would cause on_start to be called on every incoming 'start' message.
+        This is a decorator that can be applied to a turtle/stage method or a function
+        to cause the function to be executed when a message of the given type is received from NetsBlox.
+        You can receive message fields by specifying input parameters.
 
         ```
-        client = $client_name()
-        
-        @client.on_message('start')
+        @nb.on_message('start')
         def on_start():
             print('started')
-        ```
 
-        This can also be used on a method definition inside a custom turtle class,
-        in which case every turtle of the given type will perform the action each time a message is received.
-
-        ```
-        client = $client_name()
-
-        @turtle
-        class MyTurtle:
-            @client.on_message('start')
-            def on_start(self):
-                print('started')
+        @nb.on_message('left', 'right')
+        def on_left_or_right(self, distance):
+            print('moved', distance, 'cm')
         ```
         '''
-        if handler is not None:
-            self._on_message(msg_type, handler)
-        else:
-            def wrapper(f):
-                info = inspect.getfullargspec(f)
-                if len(info.args) != 0 and info.args[0] == 'self':
-                    if not hasattr(f, '__run_on_message'):
-                        setattr(f, '__run_on_message', [])
-                    getattr(f, '__run_on_message').append(lambda x: self._on_message(msg_type, x)) # mark it for the constructor to handle when an instance is created
-                else:
+        def wrapper(f):
+            info = inspect.getfullargspec(f)
+            if len(info.args) != 0 and info.args[0] == 'self':
+                if not hasattr(f, '__run_on_message'):
+                    setattr(f, '__run_on_message', [])
+                # mark it for the constructor to handle when an instance is created
+                def stupid_closure_semantics(_msg_type):
+                    return lambda x: self._on_message(_msg_type, x)
+                getattr(f, '__run_on_message').extend([stupid_closure_semantics(msg_type) for msg_type in msg_types])
+            else:
+                for msg_type in msg_types:
                     self._on_message(msg_type, f)
-                
-                return f
-            return wrapper
+            
+            return f
+        return wrapper
 
     def _call(self, service, rpc, payload):
         payload = { k: prep_send(v) for k,v in payload.items() }

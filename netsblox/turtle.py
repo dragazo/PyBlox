@@ -184,11 +184,11 @@ def _make_turtle(extra_fn = None):
 class StageBase:
     '''
     The base class for any custom stage.
-    This type should not be used directly; instead, you should create a custom stage with the @stage decorator.
+    Custom stages should use this as their base class, and additionally use the `@stage` decorator.
 
     ```
     @stage
-    class MyStage:
+    class MyStage(StageBase):
         @onstart
         def start(self):
             pass
@@ -224,11 +224,11 @@ class StageBase:
 class TurtleBase:
     '''
     The base class for any custom turtle.
-    This type should not be used directly; instead, you should create a custom turtle with the @turtle decorator.
+    Custom turtles should use this as their base class, and additionally use the `@turtle` decorator.
 
     ```
     @turtle
-    class MyTurtle:
+    class MyTurtle(TurtleBase):
         @onstart
         def start(self):
             self.forward(75)
@@ -531,11 +531,13 @@ def _derive(bases, cls):
 def turtle(cls):
     '''
     The `@turtle` decorator for a class creates a new type of turtle.
-    You can use the `@onstart` annotation on any method definition to make it run when a turtle of this type is created.
+    This should be used in conjunction with the `TurtleBase` base class.
+
+    You can use the `@onstart` decorator on any method definition to make it run when a turtle of this type is created.
 
     ```
     @turtle
-    class MyTurtle:
+    class MyTurtle(TurtleBase):
         @onstart
         def start(self):
             self.forward(75)
@@ -548,12 +550,15 @@ def turtle(cls):
 def stage(cls):
     '''
     The `@stage` decorator for a class creates a new type of stage.
+    This should be used in conjunction with the `StageBase` base class.
     Stages function much like the stage in NetsBlox - equivalent to a sprite/turtle except with no movement controls.
     Unlike in NetsBlox, you may create multiple instances of a stage, or even multiple types of stages.
 
+    You can use the `@onstart` decorator on any method definition to make it run when a stage of this type is created.
+
     ```
     @stage
-    class MyStage:
+    class MyStage(StageBase):
         @onstart
         def start(self):
             print('stage starting')
@@ -563,23 +568,21 @@ def stage(cls):
 
 def onstart(f):
     '''
-    The `@onstart` decorator can be applied to a method definition inside a custom turtle
-    to make that function run whenever an instance of the custom turtle type is created.
+    The `@onstart` decorator can be applied to any method definition inside stage or turtle
+    to make that function run whenever the stage/turtle is created.
+
+    `@onstart` can also be applied to a function at global scope (not a method).
 
     ```
-    @turtle
-    class MyTurtle:
-        @onstart
-        def start(self):
-            self.forward(75)
-
-    t = MyTurtle() # create an instance of MyTurtle - start() is executed automatically
+    @onstart
+    def start(self):
+        self.forward(75)
     ```
     '''
     setattr(f, '__run_on_start', True)
     return f
 
-def onkey(key):
+def onkey(*keys: str):
     '''
     The `@onkey` decorator can be applied to a function at global scope
     or to a method definition inside a custom turtle
@@ -590,11 +593,9 @@ def onkey(key):
     def space_key_pressed():
         stop_project()
 
-    @turtle
-    class MyTurtle:
-        @onkey('w')
-        def w_key_pressed(self):
-            self.forward(50)
+    @onkey('w', 'up')
+    def w_or_up_arrow_pressed(self):
+        self.forward(50)
     ```
     '''
     def wrapper(f):
@@ -602,9 +603,10 @@ def onkey(key):
         if len(info.args) != 0 and info.args[0] == 'self':
             if not hasattr(f, '__run_on_key'):
                 setattr(f, '__run_on_key', [])
-            getattr(f, '__run_on_key').append(key)
+            getattr(f, '__run_on_key').extend(keys)
         else:
-            _add_key_event(key, f)
+            for key in keys:
+                _add_key_event(key, f)
 
         return f
         
