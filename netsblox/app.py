@@ -344,16 +344,6 @@ class ProjectEditor(tk.Frame):
             editors[0].on_content_change(e)
         self.notebook.bind('<<NotebookTabChanged>>', on_change)
 
-        editor = GlobalEditor(self.notebook)
-        self.notebook.add(editor, text = 'global')
-        self.editors.append(editor)
-
-        editor = StageEditor(self.notebook, name = 'stage')
-        self.notebook.add(editor, text = editor.name)
-        self.editors.append(editor)
-
-        self.newturtle('turtle')
-
     @property
     def show_blocks(self) -> bool:
         return self.__show_blocks
@@ -393,11 +383,65 @@ class ProjectEditor(tk.Frame):
         scripts.append('start_project()')
         return ''.join(scripts)
 
+    DEFAULT_IMG_PREFIX = 'https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img'
+    DEFAULT_GLOBAL_BLOCKS = [
+        { 'url': f'{DEFAULT_IMG_PREFIX}/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name():\n    pass' },
+        { 'url': f'{DEFAULT_IMG_PREFIX}/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name():\n    pass' },
+        { 'url': f'{DEFAULT_IMG_PREFIX}/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(): # add arguments to receive values\n    pass' },
+    ]
+    DEFAULT_TURTLE_BLOCKS = DEFAULT_STAGE_BLOCKS = [
+        { 'url': f'{DEFAULT_IMG_PREFIX}/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name(self):\n    pass' },
+        { 'url': f'{DEFAULT_IMG_PREFIX}/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name(self):\n    pass' },
+        { 'url': f'{DEFAULT_IMG_PREFIX}/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(self): # add arguments to receive values\n    pass' },
+    ]
+    DEFAULT_PROJECT = {
+        'global_blocks': DEFAULT_GLOBAL_BLOCKS,
+        'stage_blocks': DEFAULT_STAGE_BLOCKS,
+        'turtle_blocks': DEFAULT_TURTLE_BLOCKS,
+        'show_blocks': True,
+        'turtle_index': 0,
+        'editors': [
+            {
+                'type': 'global',
+                'name': 'global',
+                'value': '''
+someval = 'hello world' # create a global variable
+'''.strip(),
+            },
+            {
+                'type': 'stage',
+                'name': 'stage',
+                'value': '''
+@onstart
+def start(self):
+    self.myvar = 5                 # create a stage variable
+    print('value is:', self.myvar) # access stage variable
+
+    for i in range(10):
+        print(i ** 2)
+'''.strip(),
+            },
+            {
+                'type': 'turtle',
+                'name': 'turtle',
+                'value': '''
+@onstart
+def start(self):
+    self.myvar = 40 # create a sprite variable
+
+    for i in range(400):
+        self.forward(self.myvar) # access sprite variable
+        self.turn_right(90)
+'''.strip(),
+            },
+        ],
+    }
+
     def save(self) -> dict:
         res = {}
-        res['global_blocks'] = [x.copy() for x in GLOBAL_BLOCKS]
-        res['stage_blocks'] = [x.copy() for x in  STAGE_BLOCKS]
-        res['turtle_blocks'] = [x.copy() for x in TURTLE_BLOCKS]
+        res['global_blocks'] = [x.copy() for x in GlobalEditor.blocks]
+        res['stage_blocks'] = [x.copy() for x in  StageEditor.blocks]
+        res['turtle_blocks'] = [x.copy() for x in TurtleEditor.blocks]
         res['show_blocks'] = self.show_blocks
         res['turtle_index'] = self.turtle_index
         res['editors'] = []
@@ -414,11 +458,9 @@ class ProjectEditor(tk.Frame):
             })
         return res
     def load(self, proj: dict) -> None:
-        global GLOBAL_BLOCKS, STAGE_BLOCKS, TURTLE_BLOCKS
-
-        GLOBAL_BLOCKS = [x.copy() for x in proj['global_blocks']]
-        STAGE_BLOCKS = [x.copy() for x in proj['stage_blocks']]
-        TURTLE_BLOCKS = [x.copy() for x in proj['turtle_blocks']]
+        GlobalEditor.blocks = [x.copy() for x in proj['global_blocks']]
+        StageEditor.blocks = [x.copy() for x in proj['stage_blocks']]
+        TurtleEditor.blocks = [x.copy() for x in proj['turtle_blocks']]
 
         for i in range(len(self.editors) - 1, -1, -1):
             self.notebook.forget(i)
@@ -816,18 +858,6 @@ class CodeEditor(ScrolledText):
         
         return 'break'
 
-default_img_prefix = 'https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img'
-GLOBAL_BLOCKS = [
-    { 'url': f'{default_img_prefix}/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name():\n    pass' },
-    { 'url': f'{default_img_prefix}/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name():\n    pass' },
-    { 'url': f'{default_img_prefix}/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(): # add arguments to receive values\n    pass' },
-]
-TURTLE_BLOCKS = STAGE_BLOCKS = [
-    { 'url': f'{default_img_prefix}/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name(self):\n    pass' },
-    { 'url': f'{default_img_prefix}/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name(self):\n    pass' },
-    { 'url': f'{default_img_prefix}/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(self): # add arguments to receive values\n    pass' },
-]
-
 class GlobalEditor(CodeEditor):
     prefix = '''
 import netsblox
@@ -845,35 +875,24 @@ def _yield_(x):
 
 '''.lstrip()
     prefix_lines = 13
-
+    blocks = []
     name = 'global'
 
-    def __init__(self, parent, *, value = None):
-        super().__init__(parent, blocks = GLOBAL_BLOCKS)
-
-        self.set_text(value if value is not None else '''
-someval = 'hello world' # create a global variable
-'''.strip())
+    def __init__(self, parent, *, value: str):
+        super().__init__(parent, blocks = GlobalEditor.blocks)
+        self.set_text(value)
 
     def get_script(self):
         return self.prefix + self.text.get('1.0', 'end-1c')
 
 class StageEditor(CodeEditor):
     prefix_lines = 2
+    blocks = []
 
-    def __init__(self, parent, *, name, value = None):
-        super().__init__(parent, blocks = STAGE_BLOCKS, column_offset = 4) # we autoindent the content, so 4 offset for error messages
+    def __init__(self, parent, *, name: str, value: str):
+        super().__init__(parent, blocks = StageEditor.blocks, column_offset = 4) # we autoindent the content, so 4 offset for error messages
         self.name = name
-
-        self.set_text(value if value is not None else'''
-@onstart
-def start(self):
-    self.myvar = 5                 # create a stage variable
-    print('value is:', self.myvar) # access stage variable
-
-    for i in range(10):
-        print(i ** 2)
-'''.strip())
+        self.set_text(value)
 
     def get_script(self):
         raw = self.text.get('1.0', 'end-1c')
@@ -881,20 +900,12 @@ def start(self):
 
 class TurtleEditor(CodeEditor):
     prefix_lines = 2
+    blocks = []
 
-    def __init__(self, parent, *, name, value = None):
-        super().__init__(parent, blocks = TURTLE_BLOCKS, column_offset = 4) # we autoindent the content, so 4 offset for error messages
+    def __init__(self, parent, *, name: str, value: str):
+        super().__init__(parent, blocks = TurtleEditor.blocks, column_offset = 4) # we autoindent the content, so 4 offset for error messages
         self.name = name
-
-        self.set_text(value if value is not None else '''
-@onstart
-def start(self):
-    self.myvar = 40 # create a sprite variable
-
-    for i in range(400):
-        self.forward(self.myvar) # access sprite variable
-        self.turn_right(90)
-'''.strip())
+        self.set_text(value)
 
     def get_script(self):
         raw = self.text.get('1.0', 'end-1c')
@@ -977,12 +988,19 @@ class MainMenu(tk.Menu):
 
         self.project_path = None
 
-        root.protocol('WM_DELETE_WINDOW', self.on_closing)
+        def kill():
+            if self.try_close_project():
+                root.destroy()
+        root.protocol('WM_DELETE_WINDOW', kill)
 
         submenu = tk.Menu(self, tearoff = False)
+        submenu.add_command(label = 'New', command = self.new_project)
+        submenu.add_command(label = 'Open', command = self.open_project)
+        submenu.add_separator()
         submenu.add_command(label = 'Save', command = self.save)
         submenu.add_command(label = 'Save As', command = self.save_as)
-        submenu.add_command(label = 'Open', command = self.open_project)
+        submenu.add_separator()
+        submenu.add_command(label = 'Exit', command = kill)
         self.add_cascade(label = 'File', menu = submenu)
 
         submenu = tk.Menu(self, tearoff = False)
@@ -1016,7 +1034,17 @@ class MainMenu(tk.Menu):
             return self.save()
         return False
 
+    def new_project(self):
+        if not self.try_close_project():
+            return
+
+        self.project_path = None
+        content.project.load(ProjectEditor.DEFAULT_PROJECT)
+
     def open_project(self):
+        if not self.try_close_project():
+            return
+
         p = filedialog.askopenfilename(defaultextension = '.json')
         if type(p) is not str or not p:
             return
@@ -1033,19 +1061,15 @@ class MainMenu(tk.Menu):
             if rstor is not None:
                 content.project.load(rstor)
 
-    def on_closing(self):
+    def try_close_project(self) -> bool: # true if user accepted close
         if self.project_path is not None:
-            self.save()
-            root.destroy()
+            return self.save()
         else:
             title = 'Save before closing'
             msg = 'Would you like to save your unsaved project before closing?'
             res = messagebox.askyesnocancel(title, msg)
-            if res == False:
-                root.destroy()
-            elif res == True and self.save():
-                root.destroy()
-    
+            return res == False or (res == True and self.save())
+
     def toggle_blocks(self):
         content.project.show_blocks = not content.project.show_blocks
 
@@ -1061,7 +1085,7 @@ def main():
     content = Content(root)
     main_menu = MainMenu(root)
 
-    content.project.show_blocks = content.project.show_blocks # trigger update now that content is loaded
+    content.project.load(ProjectEditor.DEFAULT_PROJECT)
 
     root.configure(menu = main_menu)
     content.display.terminal.wrap_stdio(tee = True)
