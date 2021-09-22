@@ -2,6 +2,7 @@
 
 import tkinter as tk
 from tkinter import ttk
+from tkinter import font as tkfont
 import tkinter.filedialog as filedialog
 import tkinter.messagebox as messagebox
 import multiprocessing as mproc
@@ -21,6 +22,8 @@ from typing import List, Tuple
 
 import netsblox
 from netsblox import transform
+
+IMG_ROOT = 'https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img'
 
 color_enabled = False
 try:
@@ -196,13 +199,14 @@ class Toolbar(tk.Frame):
 
 class StartStopButton(tk.Button):
     def __init__(self, parent, **kwargs):
-        super().__init__(parent, width = 5, **kwargs)
+        font = tkfont.Font(size = 16)
+        super().__init__(parent, width = 5, font = font, padx = 0, pady = 0, **kwargs)
         self.show_play()
 
     def show_play(self):
-        self.config(text = '▶', bg = '#2d9e29', fg = 'white')
+        self.config(text = '⚑', bg = '#2d9e29', fg = 'white')
     def show_stop(self):
-        self.config(text = '■', bg = '#b31515', fg = 'white')
+        self.config(text = '◾', bg = '#b31515', fg = 'white')
 
 class Content(tk.Frame):
     def __init__(self, parent):
@@ -383,16 +387,15 @@ class ProjectEditor(tk.Frame):
         scripts.append('start_project()')
         return ''.join(scripts)
 
-    DEFAULT_IMG_PREFIX = 'https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img'
     DEFAULT_GLOBAL_BLOCKS = [
-        { 'url': f'{DEFAULT_IMG_PREFIX}/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name():\n    pass' },
-        { 'url': f'{DEFAULT_IMG_PREFIX}/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name():\n    pass' },
-        { 'url': f'{DEFAULT_IMG_PREFIX}/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(): # add arguments to receive values\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name():\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name():\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(): # add arguments to receive values\n    pass' },
     ]
     DEFAULT_TURTLE_BLOCKS = DEFAULT_STAGE_BLOCKS = [
-        { 'url': f'{DEFAULT_IMG_PREFIX}/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name(self):\n    pass' },
-        { 'url': f'{DEFAULT_IMG_PREFIX}/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name(self):\n    pass' },
-        { 'url': f'{DEFAULT_IMG_PREFIX}/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(self): # add arguments to receive values\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name(self):\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name(self):\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(self): # add arguments to receive values\n    pass' },
     ]
     DEFAULT_PROJECT = {
         'global_blocks': DEFAULT_GLOBAL_BLOCKS,
@@ -1000,6 +1003,8 @@ class MainMenu(tk.Menu):
         submenu.add_command(label = 'Save', command = self.save)
         submenu.add_command(label = 'Save As', command = self.save_as)
         submenu.add_separator()
+        submenu.add_command(label = 'Export', command = self.export_as)
+        submenu.add_separator()
         submenu.add_command(label = 'Exit', command = kill)
         self.add_cascade(label = 'File', menu = submenu)
 
@@ -1029,10 +1034,20 @@ class MainMenu(tk.Menu):
             return self.save_as()
     def save_as(self) -> bool:
         p = filedialog.asksaveasfilename(defaultextension = '.json')
-        if type(p) is str and p:
+        if type(p) is str and p: # despite the type hints, above returns empty tuple on cancel
             self.project_path = p
             return self.save()
         return False
+
+    def export_as(self) -> None:
+        p = filedialog.asksaveasfilename(defaultextension = '.py')
+        if type(p) is str and p: # despite the type hints, above returns empty tuple on cancel
+            try:
+                res = transform.add_yields(content.project.get_full_script())
+                with open(p, 'w') as f:
+                    f.write(res)
+            except Exception as e:
+                messagebox.showerror('Failed to save exported project', str(e))
 
     def new_project(self):
         if not self.try_close_project():
@@ -1080,6 +1095,9 @@ def main():
     root.geometry('1200x600')
     root.minsize(width = 800, height = 400)
     ttk.Style().theme_use('clam')
+
+    logo = load_image(f'{IMG_ROOT}/logo/logo-256.png')
+    root.iconphoto(True, logo)
 
     toolbar = Toolbar(root)
     content = Content(root)
