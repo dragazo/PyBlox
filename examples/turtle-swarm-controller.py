@@ -7,18 +7,15 @@ class MyTurtle(TurtleBase):
     def __init__(self, x, y):
         self.pos = (x * 50, y * 50)
     
-    @onkey('w')
-    @onkey('Up')
+    @onkey('w', 'up')
     def press_forward(self):
         self.forward(10)
 
-    @onkey('a')
-    @onkey('Left')
+    @onkey('a', 'left')
     def press_left(self):
         self.turn_left(15)
 
-    @onkey('d')
-    @onkey('Right')
+    @onkey('d', 'right')
     def press_right(self):
         self.turn_right(15)
 

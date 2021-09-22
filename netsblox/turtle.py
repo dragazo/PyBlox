@@ -582,6 +582,39 @@ def onstart(f):
     setattr(f, '__run_on_start', True)
     return f
 
+# keys are targets (case sensitive), values are lists of valid inputs (case insentive)
+_KEY_GROUPS = {
+    'Right': ['right', 'right arrow', 'arrow right'],
+    'Left': ['left', 'left arrow', 'arrow left'],
+    'Up': ['up', 'up arrow', 'arrow up'],
+    'Down': ['down', 'down arrow', 'arrow down'],
+    'Prior': ['pageup', 'page up'],
+    'Next': ['pagedown', 'page down'],
+    'Return': ['return', 'enter'],
+    'Caps_Lock': ['capslock', 'caps lock'],
+    'Num_Lock': ['numlock', 'num lock'],
+    'Scroll_Lock': ['scrolllock', 'scroll lock'],
+    'Alt_L': ['alt', 'left alt'],
+    'Control_L': ['control', 'left control', 'ctrl', 'left ctrl'],
+    'Shift_L': ['shift', 'left shift'],
+    'Alt_R': ['right alt'],
+    'Control_R': ['right control', 'right ctrl'],
+    'Shift_R': ['right shift'],
+    'Escape': ['esc', 'escape'],
+}
+# flattened transpose of _KEY_GROUPS - keys are input (case insensitive), values are targets (case sensitive)
+_KEY_MAPS = {}
+for k,vs in _KEY_GROUPS.items():
+    for v in vs:
+        _KEY_MAPS[v] = k
+for i in range(ord('a'), ord('z') + 1):
+    c = chr(i)
+    _KEY_MAPS[c] = c
+for c in ['space', 'BackSpace', 'Delete', 'End', 'Home', 'Insert', 'Print', 'Tab']:
+    _KEY_MAPS[c.lower()] = c
+def _map_key(key: str) -> str:
+    return _KEY_MAPS.get(key.lower(), key)
+
 def onkey(*keys: str):
     '''
     The `@onkey` decorator can be applied to a function at global scope
@@ -598,6 +631,7 @@ def onkey(*keys: str):
         self.forward(50)
     ```
     '''
+    keys = [_map_key(key) for key in keys]
     def wrapper(f):
         info = inspect.getfullargspec(f)
         if len(info.args) != 0 and info.args[0] == 'self':
