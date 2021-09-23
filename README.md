@@ -56,7 +56,8 @@ brew install python-tk
 ## Linux
 
 ```sh
-sudo apt install python-tk
+sudo apt install python3-pil python3-pil.imagetk
+sudo apt install idle3
 ```
 
 # Scructured Data

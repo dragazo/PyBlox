@@ -9,7 +9,7 @@ with open(path.join(path.dirname(__file__), 'README.md'), encoding='utf-8') as f
 
 setup(
     name = 'netsblox',
-    version = '0.2.7',
+    version = '0.2.8',
     description = 'A python client for accessing NetsBlox',
     long_description = long_description,
     long_description_content_type = 'text/markdown',
@@ -22,7 +22,6 @@ setup(
         'websocket-client',
         'requests',
         'pillow',
-        'turtle',
         'parso',
         'jedi',
     ],
