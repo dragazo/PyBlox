@@ -670,8 +670,11 @@ class CodeEditor(ScrolledText):
                 self.linenumbers.line_num_offset = total
         self.custom_on_change.append(on_change)
 
-        self.text.bind('<Shift-Key-Tab>', lambda e: self.do_untab())
-        self.text.bind('<Shift-ISO_Left_Tab>', lambda e: self.do_untab()) # needed on linux, for some reason
+        try:
+            # they decided to make linux a special case for no apparent reason
+            self.text.bind('<Shift-ISO_Left_Tab>', lambda e: self.do_untab())
+        except:
+            self.text.bind('<Shift-Tab>', lambda e: self.do_untab())
 
         self.text.bind('<Control-slash>', lambda e: self.do_autocomment())
 
@@ -715,6 +718,9 @@ class CodeEditor(ScrolledText):
     def show_full_help(self):
         if not force_enabled or content is None or content.project is None:
             return
+        if self.text.compare('end-1c', '==', '1.0'):
+            return # if our text is empty, don't do anything
+
         script = jedi.Script(content.project.get_full_script())
         self.update_highlighting(script)
 
@@ -729,11 +735,9 @@ class CodeEditor(ScrolledText):
         else:
             self.hide_suggestion()
 
-    def update_highlighting(self, script = None):
+    def update_highlighting(self, script):
         if not force_enabled or content is None or content.project is None:
             return
-        if script is None:
-            script = jedi.Script(content.project.get_full_script())
 
         self.text.tag_delete('jedi-syntax-err')
         for err in script.get_syntax_errors():
@@ -748,11 +752,9 @@ class CodeEditor(ScrolledText):
         edit_col += self.column_offset
         return edit_line, edit_col
 
-    def show_docs(self, script = None):
+    def show_docs(self, script):
         if not force_enabled or content is None or content.project is None:
             return
-        if script is None:
-            script = jedi.Script(content.project.get_full_script())
 
         edit_line, edit_col = self.total_pos()
         docs = script.help(edit_line, edit_col)
@@ -889,7 +891,7 @@ def _yield_(x):
         return self.prefix + self.text.get('1.0', 'end-1c')
 
 class StageEditor(CodeEditor):
-    prefix_lines = 2
+    prefix_lines = 3
     blocks = []
 
     def __init__(self, parent, *, name: str, value: str):
@@ -899,10 +901,10 @@ class StageEditor(CodeEditor):
 
     def get_script(self):
         raw = self.text.get('1.0', 'end-1c')
-        return f'@netsblox.turtle.stage\nclass {self.name}(netsblox.turtle.StageBase):\n{indent(raw)}\n{self.name} = {self.name}()'
+        return f'@netsblox.turtle.stage\nclass {self.name}(netsblox.turtle.StageBase):\n    pass\n{indent(raw)}\n{self.name} = {self.name}()'
 
 class TurtleEditor(CodeEditor):
-    prefix_lines = 2
+    prefix_lines = 3
     blocks = []
 
     def __init__(self, parent, *, name: str, value: str):
@@ -912,7 +914,7 @@ class TurtleEditor(CodeEditor):
 
     def get_script(self):
         raw = self.text.get('1.0', 'end-1c')
-        return f'@netsblox.turtle.turtle\nclass {self.name}(netsblox.turtle.TurtleBase):\n{indent(raw)}\n{self.name} = {self.name}()'
+        return f'@netsblox.turtle.turtle\nclass {self.name}(netsblox.turtle.TurtleBase):\n    pass\n{indent(raw)}\n{self.name} = {self.name}()'
 
 class Display(tk.Frame):
     def __init__(self, parent):
