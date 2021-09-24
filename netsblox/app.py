@@ -877,10 +877,15 @@ class CodeEditor(ScrolledText):
         return 'break'
 
     def do_backspace(self):
+        # if there's a selection, use default behavior
+        if self.text.tag_ranges(tk.SEL):
+            return
+
+        # otherwise try deleting back to a tab stop
         col = int(self.text.index(tk.INSERT).split('.')[1])
         if col != 0:
             del_count = (col % 4) or 4 # delete back to previous tab column
-            pos = f'insert - {del_count} chars'
+            pos = f'insert-{del_count}c'
             if self.text.get(pos, 'insert').isspace():
                 self.text.delete(pos, 'insert')
                 return 'break' # override default behavior

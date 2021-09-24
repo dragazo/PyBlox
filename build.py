@@ -95,7 +95,7 @@ def parse_arg(arg_meta, types_meta, override_name: str = None):
     desc = [f':{override_name or clean_fn_name(arg_meta["name"])}: {arg_meta.get("description") or ""}']
     if (arg_meta.get('type') or {}).get('name') == 'Object':
         for param_meta in arg_meta['type'].get('params') or []:
-            desc.append(f'  - :{clean_fn_name(param_meta["name"])}: ({parse_type(param_meta.get("type"), types_meta)[0]}) {param_meta.get("description") or ""}')
+            desc.append(f'  - :{param_meta["name"]}: ({parse_type(param_meta.get("type"), types_meta)[0]}) {param_meta.get("description") or ""}')
 
     return arg_meta, t, '\n'.join(desc), t_parser
 
