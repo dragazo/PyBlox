@@ -568,10 +568,11 @@ def stage(cls):
 
 def onstart(f):
     '''
-    The `@onstart` decorator can be applied to any method definition inside stage or turtle
+    The `@onstart` decorator can be applied to a method definition inside a stage or turtle
     to make that function run whenever the stage/turtle is created.
 
-    `@onstart` can also be applied to a function at global scope (not a method).
+    `@onstart` can also be applied to a function at global scope (not a method),
+    in which case the function is called when the project is started.
 
     ```
     @onstart
@@ -618,7 +619,7 @@ def _map_key(key: str) -> str:
 def onkey(*keys: str):
     '''
     The `@onkey` decorator can be applied to a function at global scope
-    or to a method definition inside a custom turtle
+    or a method definition inside a stage or turtle
     to make that function run whenever the user presses a key on the keyboard.
 
     ```

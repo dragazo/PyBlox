@@ -204,9 +204,9 @@ class StartStopButton(tk.Button):
         self.show_play()
 
     def show_play(self):
-        self.config(text = '⚑', bg = '#2d9e29', fg = 'white')
+        self.config(text = '⚑', bg = '#2d9e29', activebackground = '#23b81d', fg = 'white', activeforeground = 'white')
     def show_stop(self):
-        self.config(text = '◾', bg = '#b31515', fg = 'white')
+        self.config(text = '◾', bg = '#b31515', activebackground = '#d10d0d', fg = 'white', activeforeground = 'white')
 
 class Content(tk.Frame):
     def __init__(self, parent):
@@ -680,6 +680,7 @@ class CodeEditor(ScrolledText):
 
         self.text.bind('<Tab>', lambda e: self.do_tab())
         self.text.bind('<BackSpace>', lambda e: self.do_backspace())
+        self.text.bind('<Return>', lambda e: self.do_newline())
 
         if color_enabled:
             # source: https://stackoverflow.com/questions/38594978/tkinter-syntax-highlighting-for-text-widget
@@ -834,6 +835,14 @@ class CodeEditor(ScrolledText):
         self.text.tag_add(tk.SEL, new_sel_start, new_sel_end)
         self.text.mark_set(tk.INSERT, new_ins)
 
+    def do_newline(self):
+        line = self.text.get('insert linestart', 'insert')
+        white, _ = get_white_nonwhite(line)
+        if line.endswith(':'):
+            white += '    '
+        self.text.insert('insert', '\n' + white)
+        return 'break'
+
     def do_backspace(self):
         col = int(self.text.index(tk.INSERT).split('.')[1])
         if col != 0:
@@ -987,9 +996,10 @@ class TurtleDisplay(tk.Frame):
         # ScrolledCanvas has better behavior, but we dont actually want scrollbars, so always match display size
         self.canvas.bind('<Configure>', lambda e: self.screen.screensize(canvwidth = e.width, canvheight = e.height))
 
+MENU_STYLE = { 'tearoff': False, 'relief': 'flat', 'bg': '#bdbdbd' }
 class MainMenu(tk.Menu):
     def __init__(self, parent):
-        super().__init__(parent)
+        super().__init__(parent, **MENU_STYLE)
 
         self.project_path = None
 
@@ -998,11 +1008,11 @@ class MainMenu(tk.Menu):
                 root.destroy()
         root.protocol('WM_DELETE_WINDOW', kill)
 
-        submenu = tk.Menu(self, tearoff = False)
-        submenu.add_command(label = 'New', command = self.new_project)
-        submenu.add_command(label = 'Open', command = self.open_project)
+        submenu = tk.Menu(self, **MENU_STYLE)
+        submenu.add_command(label = 'New', command = self.new_project, accelerator = 'Ctrol+N')
+        submenu.add_command(label = 'Open', command = self.open_project, accelerator = 'Ctrl+O')
         submenu.add_separator()
-        submenu.add_command(label = 'Save', command = self.save)
+        submenu.add_command(label = 'Save', command = self.save, accelerator = 'Ctrl+S')
         submenu.add_command(label = 'Save As', command = self.save_as)
         submenu.add_separator()
         submenu.add_command(label = 'Export', command = self.export_as)
@@ -1010,9 +1020,15 @@ class MainMenu(tk.Menu):
         submenu.add_command(label = 'Exit', command = kill)
         self.add_cascade(label = 'File', menu = submenu)
 
-        submenu = tk.Menu(self, tearoff = False)
-        submenu.add_command(label = 'Blocks', command = self.toggle_blocks)
+        root.bind_all('<Control-n>', lambda e: self.new_project())
+        root.bind_all('<Control-o>', lambda e: self.open_project())
+        root.bind_all('<Control-s>', lambda e: self.save())
+
+        submenu = tk.Menu(self, **MENU_STYLE)
+        submenu.add_command(label = 'Blocks', command = self.toggle_blocks, accelerator = 'Ctrl+B')
         self.add_cascade(label = 'View', menu = submenu)
+
+        root.bind_all('<Control-b>', lambda e: self.toggle_blocks())
 
     @property
     def project_path(self):
