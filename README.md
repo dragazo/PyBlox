@@ -60,7 +60,7 @@ sudo apt install python3-pil python3-pil.imagetk
 sudo apt install idle3
 ```
 
-# Scructured Data
+# Structured Data
 
 Due to the limited type primitives in Snap!, one NetsBlox typing convention is "structured data", which is really just a list of lists (pairs) denoting (unique string) keys and values.
 In the python interface, this is replaced by `dict` for both input and return value.
