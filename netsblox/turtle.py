@@ -288,29 +288,29 @@ class TurtleBase:
         _qinvoke(self.__turtle.goto, x, y)
 
     @property
-    def x(self) -> float:
+    def x_pos(self) -> float:
         return self.__x
-    @x.setter
-    def x(self, new_x: float) -> None:
+    @x_pos.setter
+    def x_pos(self, new_x: float) -> None:
         '''
-        Get or set the x coordinate of the turtle.
+        Get or set the x position of the turtle.
 
         ```
-        self.x = 60
+        self.x_pos = 60
         ```
         '''
         self.__setpos(float(new_x), self.__y)
 
     @property
-    def y(self) -> float:
+    def y_pos(self) -> float:
         return self.__y
-    @y.setter
-    def y(self, new_y: float) -> None:
+    @y_pos.setter
+    def y_pos(self, new_y: float) -> None:
         '''
-        Get or set the y coordinate of the turtle.
+        Get or set the y position of the turtle.
 
         ```
-        self.y = -10
+        self.y_pos = -10
         ```
         '''
         self.__setpos(self.__x, float(new_y))

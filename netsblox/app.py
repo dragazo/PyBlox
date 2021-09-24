@@ -109,6 +109,37 @@ def smart_comment_uncomment(txt: str) -> Tuple[str, int]:
                 res_deltas.append(0)
         return '\n'.join(res_lines), res_deltas
 
+INLINE_CODE_REGEX = re.compile(r'`([^`]+)`')
+def clean_docstring(content: str) -> str:
+    paragraphs = ['']
+    in_code = False
+
+    def par():
+        if paragraphs[-1]:
+            paragraphs.append('')
+
+    for line in content.splitlines():
+        if not line or line.isspace():
+            par()
+            continue
+        if line.startswith('```'):
+            par()
+            in_code = not in_code
+            continue
+
+        if in_code:
+            if paragraphs[-1]:
+                paragraphs[-1] += '\n'
+            paragraphs[-1] += line
+        else:
+            if paragraphs[-1]:
+                paragraphs[-1] += '\n' if line[0].isspace() else ' '
+            paragraphs[-1] += line
+
+    res = '\n\n'.join(paragraphs).strip()
+    res = re.sub(INLINE_CODE_REGEX, r'\1', res)
+    return res
+
 _img_cache = {}
 _error_image = Image.new('RGB', (50, 50), (252, 3, 244))
 def load_image(img_url: str, *, scale: float = 1):
@@ -769,7 +800,9 @@ class CodeEditor(ScrolledText):
         docs = [x for x in docs if x] # don't show empty items
 
         if docs: # if nothing to show, don't change the display
-            content.display.docs.set_text('\n\n----------\n\n'.join(docs))
+            raw = '\n\n----------\n\n'.join(docs)
+            clean = clean_docstring(raw)
+            content.display.docs.set_text(clean)
 
     def show_suggestion(self, script = None):
         if not force_enabled or content is None or content.project is None:
@@ -931,6 +964,8 @@ class Display(tk.Frame):
 
         self.docs = ScrolledText(self, readonly = True)
         self.terminal = TerminalOutput(self)
+
+        self.docs.text.configure(wrap = tk.WORD)
 
         self.docs.grid(row = 0, column = 0, sticky = tk.NSEW)
         self.terminal.grid(row = 1, column = 0, sticky = tk.NSEW)
