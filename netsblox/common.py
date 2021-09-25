@@ -1,5 +1,6 @@
 #!/user/bin/env python
 
+import inspect
 import json
 
 class UnavailableService(Exception):
@@ -27,3 +28,7 @@ def prep_send(val):
 
 def vectorize(f):
     return lambda v: [f(x) for x in v]
+
+def is_method(f): # inspect.ismethod doesn't work at annotation time, so we use args list directly
+    info = inspect.getfullargspec(f)
+    return len(info.args) != 0 and info.args[0] == 'self'

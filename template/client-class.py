@@ -213,8 +213,7 @@ $service_instances
         ```
         '''
         def wrapper(f):
-            info = inspect.getfullargspec(f)
-            if len(info.args) != 0 and info.args[0] == 'self':
+            if is_method(f):
                 if not hasattr(f, '__run_on_message'):
                     setattr(f, '__run_on_message', [])
                 # mark it for the constructor to handle when an instance is created
@@ -224,7 +223,7 @@ $service_instances
             else:
                 for msg_type in msg_types:
                     self._on_message(msg_type, f)
-            
+
             return f
         return wrapper
 

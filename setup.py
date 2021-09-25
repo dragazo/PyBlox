@@ -4,7 +4,7 @@ from setuptools import setup
 
 # source: https://packaging.python.org/guides/making-a-pypi-friendly-readme/
 from os import path
-with open(path.join(path.dirname(__file__), 'README.md'), encoding='utf-8') as f:
+with open(path.join(path.dirname(__file__), 'README.md'), encoding = 'utf-8') as f:
     long_description = f.read()
 
 setup(
@@ -16,7 +16,7 @@ setup(
     url = 'https://github.com/dragazo/NetsBlox-python',
     author = 'Devin Jean',
     author_email = 'devin.c.jean@vanderbilt.edu',
-    license='Apache 2.0',
+    license = 'Apache 2.0',
     packages = [ 'netsblox' ],
     install_requires = [
         'websocket-client',

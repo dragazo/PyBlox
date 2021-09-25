@@ -1049,7 +1049,7 @@ class MainMenu(tk.Menu):
         root.protocol('WM_DELETE_WINDOW', kill)
 
         submenu = tk.Menu(self, **MENU_STYLE)
-        submenu.add_command(label = 'New', command = self.new_project, accelerator = 'Ctrol+N')
+        submenu.add_command(label = 'New', command = self.new_project, accelerator = 'Ctrl+N')
         submenu.add_command(label = 'Open', command = self.open_project, accelerator = 'Ctrl+O')
         submenu.add_separator()
         submenu.add_command(label = 'Save', command = self.save, accelerator = 'Ctrl+S')

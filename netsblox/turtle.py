@@ -6,6 +6,8 @@ import inspect
 import queue
 import math
 
+from netsblox.common import *
+
 from typing import Any, Union, Tuple
 
 from PIL import Image, ImageTk
@@ -25,6 +27,22 @@ def _add_key_event(key, event):
         _turtle.onkeypress(entry[0], key)
 
     _key_events[key][1].append(event)
+
+_click_events = {} # maps key to [raw handler, event[]]
+def _add_click_event(key, event):
+    if key not in _click_events:
+        entry = [None, []]
+        def raw_handler(x, y):
+            for handler in entry[1]:
+                t = threading.Thread(target = handler, args = (x, y))
+                t.setDaemon(True)
+                t.start()
+        entry[0] = raw_handler
+
+        _click_events[key] = entry
+        _turtle.onscreenclick(entry[0], key)
+    
+    _click_events[key][1].append(event)
 
 class GameStateError(Exception):
     pass
@@ -520,6 +538,11 @@ def _derive(bases, cls):
             for _, key_script in key_scripts:
                 for key in getattr(key_script, '__run_on_key'):
                     _add_key_event(key, key_script)
+            
+            click_scripts = inspect.getmembers(self, predicate = lambda x: inspect.ismethod(x) and hasattr(x, '__run_on_click'))
+            for _, click_script in click_scripts:
+                for key in getattr(click_script, '__run_on_click'):
+                    _add_click_event(key, click_script)
 
             msg_scripts = inspect.getmembers(self, predicate = lambda x: inspect.ismethod(x) and hasattr(x, '__run_on_message'))
             for _, msg_script in msg_scripts:
@@ -580,8 +603,26 @@ def onstart(f):
         self.forward(75)
     ```
     '''
-    setattr(f, '__run_on_start', True)
+    if is_method(f):
+        setattr(f, '__run_on_start', True)
+    else:
+        t = threading.Thread(target = f)
+        t.setDaemon(True)
+        t.start()
     return f
+
+def _add_gui_event_wrapper(field, register, keys):
+    def wrapper(f):
+        if is_method(f):
+            if not hasattr(f, field):
+                setattr(f, field, [])
+            getattr(f, field).extend(keys)
+        else:
+            for key in keys:
+                register(key, f)
+
+        return f
+    return wrapper
 
 # keys are targets (case sensitive), values are lists of valid inputs (case insentive)
 _KEY_GROUPS = {
@@ -633,16 +674,21 @@ def onkey(*keys: str):
     ```
     '''
     keys = [_map_key(key) for key in keys]
-    def wrapper(f):
-        info = inspect.getfullargspec(f)
-        if len(info.args) != 0 and info.args[0] == 'self':
-            if not hasattr(f, '__run_on_key'):
-                setattr(f, '__run_on_key', [])
-            getattr(f, '__run_on_key').extend(keys)
-        else:
-            for key in keys:
-                _add_key_event(key, f)
+    return _add_gui_event_wrapper('__run_on_key', _add_key_event, keys)
 
-        return f
-        
-    return wrapper
+def onclick(f):
+    '''
+    The `@onclick` decorator can be applied to a function at global scope to
+    make that function run whenever the user clicks on the display.
+    The function you apply it to will receive the `x` and `y` position of the click.
+
+    This can also be applied to turtle/stage methods, however note that they
+    will be called when the user clicks _anywhere_ on the display, not specifically on the stage/turtle.
+
+    ```
+    @onclick
+    def mouse_click(x, y):
+        print('user clicked at', x, y)
+    ```
+    '''
+    return _add_gui_event_wrapper('__run_on_click', _add_click_event, [1])(f) # call wrapper immediately cause we take no args
