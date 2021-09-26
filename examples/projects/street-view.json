@@ -1,0 +1,72 @@
+{
+  "global_blocks": [
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/onstart.png", 
+      "scale": 1, 
+      "replace": "@onstart\ndef function_name():\n    pass"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/keypress.png", 
+      "scale": 1, 
+      "replace": "@onkey('space')\ndef function_name():\n    pass"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/msgrecv.png", 
+      "scale": 1, 
+      "replace": "@nb.on_message('message_type')\ndef function_name(): # add arguments to receive values\n    pass"
+    }
+  ], 
+  "stage_blocks": [
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/onstart.png", 
+      "scale": 1, 
+      "replace": "@onstart\ndef function_name(self):\n    pass"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/keypress.png", 
+      "scale": 1, 
+      "replace": "@onkey('space')\ndef function_name(self):\n    pass"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/msgrecv.png", 
+      "scale": 1, 
+      "replace": "@nb.on_message('message_type')\ndef function_name(self): # add arguments to receive values\n    pass"
+    }
+  ], 
+  "turtle_blocks": [
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/onstart.png", 
+      "scale": 1, 
+      "replace": "@onstart\ndef function_name(self):\n    pass"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/keypress.png", 
+      "scale": 1, 
+      "replace": "@onkey('space')\ndef function_name(self):\n    pass"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/msgrecv.png", 
+      "scale": 1, 
+      "replace": "@nb.on_message('message_type')\ndef function_name(self): # add arguments to receive values\n    pass"
+    }
+  ], 
+  "show_blocks": true, 
+  "turtle_index": 0, 
+  "editors": [
+    {
+      "type": "global", 
+      "name": "global", 
+      "value": "lat, long = netsblox.get_location()\nstreet_lat, street_long = lat, long\nfov = 90\nheading, pitch = 0, 0\nzoom = 15\nmode = 'X'\nview = 'X'\n"
+    }, 
+    {
+      "type": "stage", 
+      "name": "stage", 
+      "value": "def update_map(self):\n    if view == 'Map':\n        self.costume = nb.google_maps.get_map(lat, long, self.width, self.height, zoom)\n    else:\n        self.costume = nb.google_maps.get_satellite_map(lat, long, self.width, self.height, zoom)\n\ndef update_street_view(self):\n    self.costume = nb.google_street_view.get_view(street_lat, street_long,\n        self.width, self.height, fov, heading, pitch)\n\ndef zoom_by(self, zoom_delta, fov_delta):\n    global zoom, fov\n    if mode == 'Map':\n        zoom = min(25, max(1, zoom + zoom_delta))\n        self.update_map()\n    elif mode == 'Street View':\n        fov = min(120, max(10, fov + fov_delta))\n        self.update_street_view()\n\n@onkey('+')\ndef zoom_in(self):\n    self.zoom_by(1, -10)\n@onkey('-')\ndef zoom_out(self):\n    self.zoom_by(-1, 10)\n\n@onkey('space')\ndef exit_street_view(self):\n    global mode\n    if mode == 'Street View':\n        mode = 'Map'\n        self.update_map()\n\n@onkey('x')\ndef toggle_map_sat(self):\n    global view\n    if mode == 'Map':\n        view = 'Sat' if view == 'Map' else 'Map'\n        self.update_map()\n\ndef pan_h(self, mult):\n    global long, heading\n    if mode == 'Map':\n        long = nb.google_maps.get_longitude_from_x(mult * self.width / 2)\n        self.update_map()\n    elif mode == 'Street View':\n        heading = (heading + mult * fov / 9) % 360\n        self.update_street_view()\n\n@onkey('left arrow', 'a')\ndef pan_left(self):\n    self.pan_h(-1)\n@onkey('right arrow', 'd')\ndef pan_right(self):\n    self.pan_h(1)\n\ndef pan_v(self, mult):\n    global lat, pitch\n    if mode == 'Map':\n        lat = nb.google_maps.get_latitude_from_y(mult * self.height / 2)\n        self.update_map()\n    elif mode == 'Street View':\n        pitch = min(90, max(-90, pitch + mult * fov / 9))\n        self.update_street_view()\n\n@onkey('up arrow', 'w')\ndef pan_up(self):\n    self.pan_v(1)\n@onkey('down arrow', 's')\ndef pan_down(self):\n    self.pan_v(-1)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+    }, 
+    {
+      "type": "turtle", 
+      "name": "turtle", 
+      "value": "started = False\n\n@onstart\ndef start(self):\n    self.visible = False\n    \n    self.pos = (0, 170)\n    self.pen_color = 'red'\n    self.write('Google Street View in NetsBlox-python', size = 24, align = 'center')\n    \n    lines = [\n        'Use the arrow keys or wasd to pan and +/- to zoom',\n        'Press x to toggle between map and satellite view',\n        'Click on the magnifier to search for places',\n        'Click on the map to get street view',\n        'The arrow keys/wasd and +/- work here too',\n    ]\n    self.y_pos -= 60\n    self.pen_color = 'blue'\n    for line in lines:\n        self.y_pos -= 40\n        self.write(line, size = 16, align = 'center')\n    \n    self.y_pos -= 100\n    self.pen_color = 'red'\n    self.write('Click anywhere or press any key to continue', size = 20, align = 'center')\n\n@onclick\n@onkey('any')\ndef do_continue(self, *args):\n    global mode, view\n    if mode == 'X':\n        mode = view = 'Map'\n        self.clear()\n        stage.update_map()"
+    }
+  ]
+}

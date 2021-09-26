@@ -8,7 +8,7 @@ import math
 
 from netsblox.common import *
 
-from typing import Any, Union, Tuple
+from typing import Any, Union, Tuple, Iterable
 
 from PIL import Image, ImageTk
 
@@ -239,6 +239,41 @@ class StageBase:
         _setcostume(self.__turtle, self.__tid, new_costume)
         self.__costume = new_costume
 
+    @property
+    def size(self) -> Tuple[float, float]:
+        '''
+        Get the size of the stage (width, height) in pixels.
+
+        ```
+        width, height = self.size
+        ```
+        '''
+        def batcher():
+            return _turtle.window_width(), _turtle.window_height()
+        return _qinvoke_wait(batcher)
+
+    @property
+    def width(self) -> float:
+        '''
+        Get the width of the stage in pixels.
+
+        ```
+        print('width:', self.width)
+        ```
+        '''
+        return _qinvoke_wait(_turtle.window_width)
+
+    @property
+    def height(self) -> float:
+        '''
+        Get the height of the stage in pixels.
+
+        ```
+        print('height:', self.height)
+        ```
+        '''
+        return _qinvoke_wait(_turtle.window_height)
+
 class TurtleBase:
     '''
     The base class for any custom turtle.
@@ -417,6 +452,28 @@ class TurtleBase:
         '''
         self.__pen_size = float(new_size)
         _qinvoke(self.__turtle.pensize, self.__pen_size)
+
+    @property
+    def pen_color(self) -> Tuple[int, int, int]:
+        return _qinvoke_wait(self.__turtle.color)
+    @pen_color.setter
+    def pen_color(self, new_color: Any) -> None:
+        '''
+        Get or set the current pen color.
+        For getting, this is returned as three integers representing the red, green, and blue components: (red, green, blue).
+        For setting, this can be specified in several ways:
+            - A color name string like `'red'`
+            - A tuple of three integers representing the red, green, and blue components like `(34, 23, 104)`
+            - A hexadecimal color string like `'#a0c8f0'`
+
+        ```
+        self.pen_color = 'red'
+        self.pen_color = (34, 23, 104)
+        self.pen_color = '#a0c8f0'
+        ```
+        '''
+        _qinvoke(self.__turtle.color, new_color)
+
 
     # -------------------------------------------------------
 
@@ -626,23 +683,27 @@ def _add_gui_event_wrapper(field, register, keys):
 
 # keys are targets (case sensitive), values are lists of valid inputs (case insentive)
 _KEY_GROUPS = {
-    'Right': ['right', 'right arrow', 'arrow right'],
-    'Left': ['left', 'left arrow', 'arrow left'],
-    'Up': ['up', 'up arrow', 'arrow up'],
-    'Down': ['down', 'down arrow', 'arrow down'],
-    'Prior': ['pageup', 'page up'],
-    'Next': ['pagedown', 'page down'],
-    'Return': ['return', 'enter'],
-    'Caps_Lock': ['capslock', 'caps lock'],
-    'Num_Lock': ['numlock', 'num lock'],
-    'Scroll_Lock': ['scrolllock', 'scroll lock'],
-    'Alt_L': ['alt', 'left alt'],
-    'Control_L': ['control', 'left control', 'ctrl', 'left ctrl'],
-    'Shift_L': ['shift', 'left shift'],
-    'Alt_R': ['right alt'],
-    'Control_R': ['right control', 'right ctrl'],
-    'Shift_R': ['right shift'],
-    'Escape': ['esc', 'escape'],
+    ('Right',): ['right', 'right arrow', 'arrow right'],
+    ('Left',): ['left', 'left arrow', 'arrow left'],
+    ('Up',): ['up', 'up arrow', 'arrow up'],
+    ('Down',): ['down', 'down arrow', 'arrow down'],
+    ('Prior',): ['pageup', 'page up'],
+    ('Next',): ['pagedown', 'page down'],
+    ('Return',): ['return', 'enter'],
+    ('Caps_Lock',): ['capslock', 'caps lock'],
+    ('Num_Lock',): ['numlock', 'num lock'],
+    ('Scroll_Lock',): ['scrolllock', 'scroll lock'],
+    ('Alt_L',): ['alt', 'left alt'],
+    ('Control_L',): ['control', 'left control', 'ctrl', 'left ctrl'],
+    ('Shift_L',): ['shift', 'left shift'],
+    ('Alt_R',): ['right alt'],
+    ('Control_R',): ['right control', 'right ctrl'],
+    ('Shift_R',): ['right shift'],
+    ('Escape',): ['esc', 'escape'],
+    ('minus', 'KP_Subtract'): ['-', 'minus', 'subtract'],
+    ('plus', 'KP_Add'): ['+', 'plus', 'add'],
+    ('space',): ['space', ' '],
+    (None,): ['any'],
 }
 # flattened transpose of _KEY_GROUPS - keys are input (case insensitive), values are targets (case sensitive)
 _KEY_MAPS = {}
@@ -651,17 +712,25 @@ for k,vs in _KEY_GROUPS.items():
         _KEY_MAPS[v] = k
 for i in range(ord('a'), ord('z') + 1):
     c = chr(i)
-    _KEY_MAPS[c] = c
-for c in ['space', 'BackSpace', 'Delete', 'End', 'Home', 'Insert', 'Print', 'Tab']:
-    _KEY_MAPS[c.lower()] = c
-def _map_key(key: str) -> str:
-    return _KEY_MAPS.get(key.lower(), key)
+    _KEY_MAPS[c] = (c,)
+for c in ['BackSpace', 'Delete', 'End', 'Home', 'Insert', 'Print', 'Tab']:
+    _KEY_MAPS[c.lower()] = (c,)
+
+for k,vs in _KEY_MAPS.items(): # sanity check
+    assert type(k) == str
+    assert type(vs) == tuple
+    for v in vs:
+        assert v is None or type(v) == str
+def _map_key(key: str) -> Iterable[str]:
+    return _KEY_MAPS.get(key.lower(), (key,))
 
 def onkey(*keys: str):
     '''
     The `@onkey` decorator can be applied to a function at global scope
     or a method definition inside a stage or turtle
     to make that function run whenever the user presses a key on the keyboard.
+
+    The special `'any'` value can be used to catch any key press.
 
     ```
     @onkey('space')
@@ -673,8 +742,10 @@ def onkey(*keys: str):
         self.forward(50)
     ```
     '''
-    keys = [_map_key(key) for key in keys]
-    return _add_gui_event_wrapper('__run_on_key', _add_key_event, keys)
+    mapped_keys = []
+    for key in keys:
+        mapped_keys.extend(_map_key(key))
+    return _add_gui_event_wrapper('__run_on_key', _add_key_event, mapped_keys)
 
 def onclick(f):
     '''

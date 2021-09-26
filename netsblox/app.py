@@ -1135,13 +1135,10 @@ class MainMenu(tk.Menu):
                 content.project.load(rstor)
 
     def try_close_project(self) -> bool: # true if user accepted close
-        if self.project_path is not None:
-            return self.save()
-        else:
-            title = 'Save before closing'
-            msg = 'Would you like to save your unsaved project before closing?'
-            res = messagebox.askyesnocancel(title, msg)
-            return res == False or (res == True and self.save())
+        title = 'Save before closing'
+        msg = 'Would you like to save your project before closing?'
+        res = messagebox.askyesnocancel(title, msg)
+        return res == False or (res == True and self.save())
 
     def toggle_blocks(self):
         content.project.show_blocks = not content.project.show_blocks

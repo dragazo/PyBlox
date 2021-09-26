@@ -1,7 +1,10 @@
 #!/user/bin/env python
 
+import requests
 import inspect
 import json
+
+from typing import Tuple
 
 class UnavailableService(Exception):
     pass
@@ -32,3 +35,18 @@ def vectorize(f):
 def is_method(f): # inspect.ismethod doesn't work at annotation time, so we use args list directly
     info = inspect.getfullargspec(f)
     return len(info.args) != 0 and info.args[0] == 'self'
+
+def get_location() -> Tuple[float, float]:
+    '''
+    Get the current physical location of the client.
+    This is returned as a (latitude, longitude) pair.
+
+    Note that an internet connection is required for this to work.
+    '''
+    res = requests.post('https://reallyfreegeoip.org/json/', headers = { 'Content-Type': 'application/json' })
+
+    if res.status_code == 200:
+        parsed = json.loads(res.text)
+        return parsed['latitude'], parsed['longitude']
+    else:
+        raise Exception(f'Failed to get location: {res.status_code}\n{res.text}')
