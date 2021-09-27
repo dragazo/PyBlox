@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import builtins
+
 import turtle as _turtle
 import threading
 import inspect
@@ -689,32 +691,43 @@ _KEY_GROUPS = {
     ('Down',): ['down', 'down arrow', 'arrow down'],
     ('Prior',): ['pageup', 'page up'],
     ('Next',): ['pagedown', 'page down'],
-    ('Return',): ['return', 'enter'],
+    ('Return', 'KP_Enter'): ['return', 'enter'],
     ('Caps_Lock',): ['capslock', 'caps lock'],
     ('Num_Lock',): ['numlock', 'num lock'],
     ('Scroll_Lock',): ['scrolllock', 'scroll lock'],
-    ('Alt_L',): ['alt', 'left alt'],
-    ('Control_L',): ['control', 'left control', 'ctrl', 'left ctrl'],
-    ('Shift_L',): ['shift', 'left shift'],
-    ('Alt_R',): ['right alt'],
-    ('Control_R',): ['right control', 'right ctrl'],
-    ('Shift_R',): ['right shift'],
+    ('Alt_L', 'Alt_R'): ['alt', 'left alt'],
+    ('Control_L', 'Control_R'): ['control', 'left control', 'ctrl', 'left ctrl'],
+    ('Shift_L', 'Shift_R'): ['shift', 'left shift'],
     ('Escape',): ['esc', 'escape'],
     ('minus', 'KP_Subtract'): ['-', 'minus', 'subtract'],
     ('plus', 'KP_Add'): ['+', 'plus', 'add'],
     ('space',): ['space', ' '],
+    ('BackSpace',): ['backspace'],
+    ('Delete',): ['delete'],
+    ('Home',): ['home'],
+    ('End',): ['end'],
+    ('Insert',): ['insert'],
+    ('Print',): ['print'],
+    ('Tab',): ['tab'],
+    ('0', 'KP_0'): ['0'],
+    ('1', 'KP_1'): ['1'],
+    ('2', 'KP_2'): ['2'],
+    ('3', 'KP_3'): ['3'],
+    ('4', 'KP_4'): ['4'],
+    ('5', 'KP_5'): ['5'],
+    ('6', 'KP_6'): ['6'],
+    ('7', 'KP_7'): ['7'],
+    ('8', 'KP_8'): ['8'],
+    ('9', 'KP_9'): ['9'],
     (None,): ['any'],
 }
 # flattened transpose of _KEY_GROUPS - keys are input (case insensitive), values are targets (case sensitive)
 _KEY_MAPS = {}
 for k,vs in _KEY_GROUPS.items():
     for v in vs:
+        assert v not in _KEY_MAPS
+        assert v == v.lower()
         _KEY_MAPS[v] = k
-for i in range(ord('a'), ord('z') + 1):
-    c = chr(i)
-    _KEY_MAPS[c] = (c,)
-for c in ['BackSpace', 'Delete', 'End', 'Home', 'Insert', 'Print', 'Tab']:
-    _KEY_MAPS[c.lower()] = (c,)
 
 for k,vs in _KEY_MAPS.items(): # sanity check
     assert type(k) == str
@@ -763,3 +776,14 @@ def onclick(f):
     ```
     '''
     return _add_gui_event_wrapper('__run_on_click', _add_click_event, [1])(f) # call wrapper immediately cause we take no args
+
+_did_setup_input = False
+def setup_input():
+    global _did_setup_input
+    if _did_setup_input:
+        return
+    _did_setup_input = True
+
+    def new_input(prompt: Any = '?') -> str:
+        return _qinvoke_wait(_turtle.textinput, 'User Input', str(prompt))
+    builtins.input = new_input

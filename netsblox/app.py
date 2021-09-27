@@ -109,6 +109,18 @@ def smart_comment_uncomment(txt: str) -> Tuple[str, int]:
                 res_deltas.append(0)
         return '\n'.join(res_lines), res_deltas
 
+DOC_REMAPS = {
+    'builtins.input': '''
+input(prompt: Any=...) -> str
+
+Prompt the user to input a string (which might be empty).
+If the prompt is closed or canceled, `None` is returned.
+
+Note that calling this function will pause the turtle simulation
+while the user decides what to enter.
+'''.strip(),
+}
+
 INLINE_CODE_REGEX = re.compile(r'`([^`]+)`')
 def clean_docstring(content: str) -> str:
     paragraphs = ['']
@@ -292,21 +304,35 @@ class BlocksList(tk.Frame):
     def __init__(self, parent, blocks, text_target):
         super().__init__(parent)
 
+        self.disabled_color = '#d9d9d9'
+
         self.scrollbar = tk.Scrollbar(self)
-        self.text = tk.Text(self, wrap = tk.NONE, width = 24, yscrollcommand = self.scrollbar.set)
+        self.text = tk.Text(self, wrap = tk.NONE, width = 24, yscrollcommand = self.scrollbar.set, bg = self.disabled_color)
         self.scrollbar.configure(command = self.text.yview)
 
         self.scrollbar.pack(side = tk.RIGHT, fill = tk.Y)
         self.text.pack(side = tk.LEFT, fill = tk.Y, expand = True)
 
+        # make sure user can't select anything with the mouse (would look weird)
+        self.text.bind('<Button-1>', lambda e: 'break')
+        self.text.bind('<B1-Motion>', lambda e: 'break')
+        self.text.configure(cursor = 'arrow')
+
         orig_bcolor = text_target.cget('background')
         def make_dnd_manager(widget, code):
+            focused = [None]
             def on_start(e):
+                # store focused widget and steal focus so that the red outline will always show
+                focused[0] = root.focus_get()
+                widget.focus()
+
                 text_target.configure(highlightbackground = 'red')
-                pass
             def on_stop(e):
+                # restore saved focus
+                if focused[0] is not None:
+                    focused[0].focus()
+    
                 text_target.configure(highlightbackground = orig_bcolor)
-                pass
             def on_drop(e):
                 x, y = text_target.winfo_pointerxy()
                 x -= text_target.winfo_rootx()
@@ -323,7 +349,7 @@ class BlocksList(tk.Frame):
         self.imgs = [] # for some reason we need to keep a reference to the images or they disappear
         for block in blocks:
             img = load_image(block['url'], scale = block['scale'])
-            label = tk.Label(self, image = img)
+            label = tk.Label(self, image = img, bg = self.disabled_color)
 
             self.text.window_create('end', window = label)
             self.text.insert('end', '\n')
@@ -792,6 +818,10 @@ class CodeEditor(ScrolledText):
         docs = script.help(edit_line, edit_col)
 
         def get_docstring(item):
+            mapped = DOC_REMAPS.get(item.full_name, None)
+            if mapped is not None:
+                return mapped
+
             desc = item.description
             if desc.startswith('keyword') or desc.startswith('instance'):
                 return ''
@@ -874,6 +904,7 @@ class CodeEditor(ScrolledText):
         if line.endswith(':'):
             white += '    '
         self.text.insert('insert', '\n' + white)
+        self.text.see('insert')
         return 'break'
 
     def do_backspace(self):
@@ -924,9 +955,10 @@ import time
 def _yield_(x):
     time.sleep(0)
     return x
+setup_input()
 
 '''.lstrip()
-    prefix_lines = 13
+    prefix_lines = 14
     blocks = []
     name = 'global'
 
@@ -983,16 +1015,9 @@ class TerminalOutput(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
 
-        def style(control):
-            control.config(bg = '#1a1a1a', fg = '#bdbdbd', insertbackground = '#bdbdbd')
-
-        self.entry = tk.Entry(self)
-        self.entry.pack(side = tk.BOTTOM, fill = tk.X)
-        style(self.entry)
-
         self.text = ScrolledText(self, readonly = True)
         self.text.pack(side = tk.TOP, fill = tk.BOTH, expand = True)
-        style(self.text.text)
+        self.text.text.config(bg = '#1a1a1a', fg = '#bdbdbd', insertbackground = '#bdbdbd')
 
     def wrap_stdio(self, *, tee: bool):
         _print_targets.append(self)
