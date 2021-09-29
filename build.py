@@ -74,7 +74,7 @@ def parse_type(t, types_meta):
 
         inner_t, inner_parse = parse_type(params[0].get('type') if type(params[0]) == dict else params[0], types_meta)
         inner_t = f'List[{inner_t}]' if inner_t != 'Any' else 'list'
-        inner_parse = f'vectorize({inner_parse})' if inner_parse else ''
+        inner_parse = f'_common.vectorize({inner_parse})' if inner_parse else ''
         return inner_t, inner_parse
 
     for k,v in FIXED_TYPES.items():

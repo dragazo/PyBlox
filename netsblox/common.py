@@ -1,8 +1,8 @@
 #!/user/bin/env python
 
-import requests
-import inspect
-import json
+import requests as _requests
+import inspect as _inspect
+import json as _json
 
 from typing import Tuple
 
@@ -16,7 +16,7 @@ class ServerError(Exception):
     pass
 
 def small_json(obj):
-    return json.dumps(obj, separators=(',', ':'))
+    return _json.dumps(obj, separators=(',', ':'))
 
 def prep_send(val):
     if val is None:
@@ -33,7 +33,7 @@ def vectorize(f):
     return lambda v: [f(x) for x in v]
 
 def is_method(f): # inspect.ismethod doesn't work at annotation time, so we use args list directly
-    info = inspect.getfullargspec(f)
+    info = _inspect.getfullargspec(f)
     return len(info.args) != 0 and info.args[0] == 'self'
 
 def get_location() -> Tuple[float, float]:
@@ -43,10 +43,10 @@ def get_location() -> Tuple[float, float]:
 
     Note that an internet connection is required for this to work.
     '''
-    res = requests.post('https://reallyfreegeoip.org/json/', headers = { 'Content-Type': 'application/json' })
+    res = _requests.post('https://reallyfreegeoip.org/json/', headers = { 'Content-Type': 'application/json' })
 
     if res.status_code == 200:
-        parsed = json.loads(res.text)
+        parsed = _json.loads(res.text)
         return parsed['latitude'], parsed['longitude']
     else:
         raise Exception(f'Failed to get location: {res.status_code}\n{res.text}')

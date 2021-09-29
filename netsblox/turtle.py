@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
-import builtins
+import builtins as _builtins
 
 import turtle as _turtle
-import threading
-import inspect
-import queue
-import math
+import threading as _threading
+import inspect as _inspect
+import queue as _queue
+import math as _math
 
-from netsblox.common import *
+import netsblox.common as _common
 
 from typing import Any, Union, Tuple, Iterable
 
@@ -21,7 +21,7 @@ def _add_key_event(key, event):
         def raw_handler():
             handlers = entry[1] if key is None or None not in _key_events else entry[1] + _key_events[None][1]
             for handler in handlers:
-                t = threading.Thread(target = handler)
+                t = _threading.Thread(target = handler)
                 t.setDaemon(True)
                 t.start()
         entry[0] = raw_handler
@@ -37,7 +37,7 @@ def _add_click_event(key, event):
         entry = [None, []]
         def raw_handler(x, y):
             for handler in entry[1]:
-                t = threading.Thread(target = handler, args = (x, y))
+                t = _threading.Thread(target = handler, args = (x, y))
                 t.setDaemon(True)
                 t.start()
         entry[0] = raw_handler
@@ -50,13 +50,13 @@ def _add_click_event(key, event):
 class GameStateError(Exception):
     pass
 
-_action_queue_thread_id = threading.get_ident()
+_action_queue_thread_id = _threading.get_ident()
 
-_action_queue_ret_cv = threading.Condition(threading.Lock())
+_action_queue_ret_cv = _threading.Condition(_threading.Lock())
 _action_queue_ret_id = 0
 _action_queue_ret_vals = {}
 
-_action_queue = queue.Queue(1) # max size is equal to max total exec imbalance, so keep it low
+_action_queue = _queue.Queue(1) # max size is equal to max total exec imbalance, so keep it low
 _action_queue_interval = 16    # ms between control slices
 _action_max_per_slice = 16     # max number of actions to perform during a control slice
 
@@ -133,7 +133,7 @@ def stop_project():
 
 def _qinvoke(fn, *args) -> None:
     # if we're running on the action queue thread, we can just do it directly
-    if _action_queue_thread_id == threading.current_thread().ident:
+    if _action_queue_thread_id == _threading.current_thread().ident:
         fn(*args)
         return
 
@@ -144,7 +144,7 @@ def _qinvoke_wait(fn, *args) -> Any:
     global _action_queue_ret_id
 
     # if we're running on the action queue thread, we can just do it directly
-    if _action_queue_thread_id == threading.current_thread().ident:
+    if _action_queue_thread_id == _threading.current_thread().ident:
         return fn(*args)
 
     ret_id = None
@@ -489,8 +489,8 @@ class TurtleBase:
         ```
         '''
         distance = float(distance)
-        h = self.__rot * 2 * math.pi
-        self.__setpos(self.__x + math.sin(h) * distance, self.__y + math.cos(h) * distance)
+        h = self.__rot * 2 * _math.pi
+        self.__setpos(self.__x + _math.sin(h) * distance, self.__y + _math.cos(h) * distance)
 
     def turn_left(self, angle: float = None) -> None:
         '''
@@ -588,23 +588,23 @@ def _derive(bases, cls):
                 base.__init__(self)
             cls.__init__(self, *args, **kwargs)
 
-            start_scripts = inspect.getmembers(self, predicate = lambda x: inspect.ismethod(x) and hasattr(x, '__run_on_start'))
+            start_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_start'))
             for _, start_script in start_scripts:
-                thread = threading.Thread(target = start_script)
+                thread = _threading.Thread(target = start_script)
                 thread.setDaemon(True)
                 thread.start()
 
-            key_scripts = inspect.getmembers(self, predicate = lambda x: inspect.ismethod(x) and hasattr(x, '__run_on_key'))
+            key_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_key'))
             for _, key_script in key_scripts:
                 for key in getattr(key_script, '__run_on_key'):
                     _add_key_event(key, key_script)
             
-            click_scripts = inspect.getmembers(self, predicate = lambda x: inspect.ismethod(x) and hasattr(x, '__run_on_click'))
+            click_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_click'))
             for _, click_script in click_scripts:
                 for key in getattr(click_script, '__run_on_click'):
                     _add_click_event(key, click_script)
 
-            msg_scripts = inspect.getmembers(self, predicate = lambda x: inspect.ismethod(x) and hasattr(x, '__run_on_message'))
+            msg_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_message'))
             for _, msg_script in msg_scripts:
                 for inserter in getattr(msg_script, '__run_on_message'): # client gave us a list of convenient insertion functions
                     inserter(msg_script)
@@ -663,17 +663,17 @@ def onstart(f):
         self.forward(75)
     ```
     '''
-    if is_method(f):
+    if _common.is_method(f):
         setattr(f, '__run_on_start', True)
     else:
-        t = threading.Thread(target = f)
+        t = _threading.Thread(target = f)
         t.setDaemon(True)
         t.start()
     return f
 
 def _add_gui_event_wrapper(field, register, keys):
     def wrapper(f):
-        if is_method(f):
+        if _common.is_method(f):
             if not hasattr(f, field):
                 setattr(f, field, [])
             getattr(f, field).extend(keys)
@@ -791,4 +791,4 @@ def setup_input():
             _turtle.listen()
             return res
         return _qinvoke_wait(asker)
-    builtins.input = new_input
+    _builtins.input = new_input

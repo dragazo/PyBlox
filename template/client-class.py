@@ -1,22 +1,22 @@
-import collections
-import threading
-import traceback
-import inspect
-import time
-import json
-import sys
-import io
+import collections as _collections
+import threading as _threading
+import traceback as _traceback
+import inspect as _inspect
+import time as _time
+import json as _json
+import sys as _sys
+import io as _io
 
 from PIL import Image
 
 from typing import Optional, Any, List
 
-import websocket
-import requests
+import websocket as _websocket
+import requests as _requests
 
-from .common import *
+import netsblox.common as _common
 
-websocket.enableTrace(False) # disable auto-outputting of socket events
+_websocket.enableTrace(False) # disable auto-outputting of socket events
 
 class $client_name:
     '''
@@ -33,33 +33,33 @@ class $client_name:
         instead, you can explicitly call wait_till_disconnect() at the end of your program.
         '''
 
-        self._client_id = f'_pyblox{round(time.time() * 1000)}'
+        self._client_id = f'_pyblox{round(_time.time() * 1000)}'
         self._base_url = '$base_url'
 
         # set these up before the websocket since it might send us messages
-        self._message_cv = threading.Condition(threading.Lock())
-        self._message_queue = collections.deque()
+        self._message_cv = _threading.Condition(_threading.Lock())
+        self._message_queue = _collections.deque()
         self._message_handlers = {}
         self._message_last = {} # maps msg type to {received_count, last_content, waiters (count)}
         self._message_stream_stopped = False
 
         # create a websocket and start it before anything non-essential (has some warmup communication)
-        self._ws_lock = threading.Lock()
-        self._ws = websocket.WebSocketApp(self._base_url.replace('http', 'ws'),
+        self._ws_lock = _threading.Lock()
+        self._ws = _websocket.WebSocketApp(self._base_url.replace('http', 'ws'),
             on_open = self._ws_open, on_close = self._ws_close, on_error = self._ws_error, on_message = self._ws_message)
-        self._ws_thread = threading.Thread(target = self._ws.run_forever)
+        self._ws_thread = _threading.Thread(target = self._ws.run_forever)
         self._ws_thread.setDaemon(not run_forever)
         self._ws_thread.start()
 
         # create a thread to manage the message queue
-        self._message_thread = threading.Thread(target = self._message_router)
+        self._message_thread = _threading.Thread(target = self._message_router)
         self._message_thread.setDaemon(True)
         self._message_thread.start()
 
-        res = requests.post(f'{self._base_url}/api/newProject',
-            small_json({ 'clientId': self._client_id, 'name': None }),
+        res = _requests.post(f'{self._base_url}/api/newProject',
+            _common.small_json({ 'clientId': self._client_id, 'name': None }),
             headers = { 'Content-Type': 'application/json' })
-        res = json.loads(res.text)
+        res = _json.loads(res.text)
         self._project_id = res['projectId']
         self._project_name = res['name']
         self._role_id = res['roleId']
@@ -69,23 +69,23 @@ $service_instances
 
     def _ws_open(self, ws):
         with self._ws_lock:
-            ws.send(small_json({ 'type': 'set-uuid', 'clientId': self._client_id }))
+            ws.send(_common.small_json({ 'type': 'set-uuid', 'clientId': self._client_id }))
 
     def _ws_close(self, ws, status, message):
-        print('ws close', file=sys.stderr)
+        print('ws close', file = _sys.stderr)
     def _ws_error(self, ws, error):
-        print('ws error:', error, file=sys.stderr)
+        print('ws error:', error, file = _sys.stderr)
 
     def _ws_message(self, ws, message):
         try:
-            message = json.loads(message)
+            message = _json.loads(message)
             ty = message['type']
 
             if ty == 'connected': # currently unused
                 return
             elif ty == 'ping':
                 with self._ws_lock:
-                    ws.send(small_json({ 'type': 'pong' }))
+                    ws.send(_common.small_json({ 'type': 'pong' }))
                     return
             elif ty == 'message':
                 with self._message_cv:
@@ -107,7 +107,7 @@ $service_instances
         You can receive messages by registering a receiver with on_message().
         '''
         with self._ws_lock:
-            self._ws.send(small_json({
+            self._ws.send(_common.small_json({
                 'type': 'message',
                 'msgType': msg_type,
                 'content': values,
@@ -117,7 +117,7 @@ $service_instances
 
     @staticmethod
     def _check_handler(handler, content):
-        argspec = inspect.getfullargspec(handler)
+        argspec = _inspect.getfullargspec(handler)
         unused_params = set(content.keys())
         for arg in argspec.args + argspec.kwonlyargs:
             if arg not in content and arg != 'self':
@@ -158,21 +158,21 @@ $service_instances
                 def invoker(handler, content):
                     packet = $client_name._check_handler(handler, content)
                     if type(packet) == str:
-                        print(f'\'{message["msgType"]}\' message handler error:\n{packet}', file=sys.stderr)
+                        print(f'\'{message["msgType"]}\' message handler error:\n{packet}', file = _sys.stderr)
                         return
 
                     try:
                         handler(**packet) # the handler could be arbitrarily long and is fallible
                     except:
-                        traceback.print_exc(file = sys.stderr)
+                        _traceback.print_exc(file = _sys.stderr)
                 
                 content = message['content']
                 for handler in handlers: # without mutex lock so we don't block new ws messages or on_message()
-                    t = threading.Thread(target = invoker, args = (handler, content))
+                    t = _threading.Thread(target = invoker, args = (handler, content))
                     t.setDaemon(True)
                     t.start()
             except:
-                traceback.print_exc(file = sys.stderr)
+                _traceback.print_exc(file = _sys.stderr)
     
     def wait_for_message(self, msg_type: str) -> dict:
         '''
@@ -213,7 +213,7 @@ $service_instances
         ```
         '''
         def wrapper(f):
-            if is_method(f):
+            if _common.is_method(f):
                 if not hasattr(f, '__run_on_message'):
                     setattr(f, '__run_on_message', [])
                 # mark it for the constructor to handle when an instance is created
@@ -228,11 +228,11 @@ $service_instances
         return wrapper
 
     def _call(self, service, rpc, payload):
-        payload = { k: prep_send(v) for k,v in payload.items() }
-        state = f'uuid={self._client_id}&projectId={self._project_id}&roleId={self._role_id}&t={round(time.time() * 1000)}'
+        payload = { k: _common.prep_send(v) for k,v in payload.items() }
+        state = f'uuid={self._client_id}&projectId={self._project_id}&roleId={self._role_id}&t={round(_time.time() * 1000)}'
         url = f'{self._base_url}/services/{service}/{rpc}?{state}'
-        res = requests.post(url,
-            small_json(payload), # if the json has unnecessary white space, request on the server will hang for some reason
+        res = _requests.post(url,
+            _common.small_json(payload), # if the json has unnecessary white space, request on the server will hang for some reason
             headers = { 'Content-Type': 'application/json' })
 
         if res.status_code == 200:
@@ -240,14 +240,14 @@ $service_instances
                 if 'Content-Type' in res.headers:
                     ty = res.headers['Content-Type']
                     if ty.startswith('image/'):
-                        return Image.open(io.BytesIO(res.content))
-                return json.loads(res.text)
+                        return Image.open(_io.BytesIO(res.content))
+                return _json.loads(res.text)
             except:
                 return res.text # strings are returned unquoted, so they'll fail to parse as json
         elif res.status_code == 404:
-            raise NotFoundError(res.text)
+            raise _common.NotFoundError(res.text)
         elif res.status_code == 500:
-            raise ServerError(res.text)
+            raise _common.ServerError(res.text)
         else:
             raise Exception(f'Unknown error: {res.status_code}\n{res.text}')
 

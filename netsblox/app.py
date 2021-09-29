@@ -91,10 +91,10 @@ def smart_comment_uncomment(txt: str) -> Tuple[str, int]:
         res_lines = []
         res_deltas = []
         for part in line_parts:
-            for prefix in ['# ', '#', '']:
-                if part[1].startswith(prefix):
-                    res_lines.append(part[0] + part[1][len(prefix):])
-                    res_deltas.append(-len(prefix))
+            for head in ['# ', '#', '']:
+                if part[1].startswith(head):
+                    res_lines.append(part[0] + part[1][len(head):])
+                    res_deltas.append(-len(head))
                     break
         return '\n'.join(res_lines), res_deltas
     else:
@@ -359,12 +359,52 @@ class BlocksList(tk.Frame):
 
         self.text.configure(state = tk.DISABLED)
 
+class Imports:
+    RAW_INFO = [
+        ['time', 'time'],
+        ['math', 'math'],
+        ['matplotlib.pyplot', 'plt'],
+        ['numpy', 'np'],
+    ]
+    def __init__(self, *, on_update = None):
+        self.items = {}
+        for item in Imports.RAW_INFO:
+            self.items[item[0]] = {
+                'tkvar': tk.BooleanVar(),
+                'ident': item[1],
+                'code': f'import {item[0]}' if item[0] == item[1] else f'import {item[0]} as {item[1]}'
+            }
+        
+        self.on_update = on_update
+
+    def batch_update(self) -> None:
+        lines = []
+        for item in self.items.values():
+            if item['tkvar'].get():
+                lines.append(item['code'])
+
+        if len(lines) == 0:
+            GlobalEditor.prefix = GlobalEditor.BASE_PREFIX
+            GlobalEditor.prefix_lines = GlobalEditor.BASE_PREFIX_LINES
+        else:
+            import_str = '\n'.join(lines)
+            GlobalEditor.prefix = f'{GlobalEditor.BASE_PREFIX}{import_str}\n\n'
+            GlobalEditor.prefix_lines = GlobalEditor.BASE_PREFIX_LINES + len(lines) + 1
+        
+        if self.on_update is not None:
+            self.on_update()
+
 class ProjectEditor(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.turtle_index = 0
         self.editors: List[CodeEditor] = []
-        self.__show_blocks = True
+        self.show_blocks_tkvar = tk.BooleanVar()
+
+        def imports_update():
+            for editor in self.editors:
+                editor.on_content_change()
+        self.imports = Imports(on_update = imports_update)
 
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill = tk.BOTH, expand = True)
@@ -402,17 +442,19 @@ class ProjectEditor(tk.Frame):
             tab = e.widget.tab('current')['text']
             editors = [x for x in self.editors if x.name == tab]
             assert len(editors) == 1
-            editors[0].on_content_change(e)
+            editors[0].on_content_change()
         self.notebook.bind('<<NotebookTabChanged>>', on_change)
 
     @property
     def show_blocks(self) -> bool:
-        return self.__show_blocks
+        return self.show_blocks_tkvar.get()
     @show_blocks.setter
     def show_blocks(self, value: bool) -> None:
-        self.__show_blocks = value
+        self.show_blocks_tkvar.set(value)
         for editor in self.editors:
             editor.update_pack()
+    def update_show_blocks(self):
+        self.show_blocks = self.show_blocks
 
     def delete_tab(self, idx) -> None:
         editor = self.editors[idx]
@@ -495,6 +537,7 @@ def start(self):
 '''.strip(),
             },
         ],
+        'imports': [],
     }
 
     def save(self) -> dict:
@@ -504,6 +547,10 @@ def start(self):
         res['turtle_blocks'] = [x.copy() for x in TurtleEditor.blocks]
         res['show_blocks'] = self.show_blocks
         res['turtle_index'] = self.turtle_index
+        res['imports'] = []
+        for pkg, item in self.imports.items.items():
+            if item['tkvar'].get():
+                res['imports'].append(pkg)
         res['editors'] = []
         for editor in self.editors:
             ty = None
@@ -543,6 +590,12 @@ def start(self):
 
             self.notebook.add(editor, text = name)
             self.editors.append(editor)
+
+        for item in self.imports.items.values():
+            item['tkvar'].set(False)
+        for pkg in proj['imports']:
+            self.imports.items[pkg]['tkvar'].set(True)
+        self.imports.batch_update()
 
 class ContextMenu(tk.Menu):
     def __init__(self, parent, *, on_show = None):
@@ -677,8 +730,8 @@ class ScrolledText(tk.Frame):
 
         if linenumbers:
             self.linenumbers = TextLineNumbers(self, target = self.text, width = 40)
-            self.text.bind('<<Change>>', self.on_content_change)
-            self.text.bind('<Configure>', self.on_content_change)
+            self.text.bind('<<Change>>', lambda e: self.on_content_change())
+            self.text.bind('<Configure>', lambda e: self.on_content_change())
 
         if len(blocks) > 0:
             self.blocks = BlocksList(self, blocks, self.text)
@@ -698,9 +751,9 @@ class ScrolledText(tk.Frame):
             self.linenumbers.pack(side = tk.LEFT, fill = tk.Y)
         self.text.pack(side = tk.RIGHT, fill = tk.BOTH, expand = True)
 
-    def on_content_change(self, e):
+    def on_content_change(self):
         for handler in self.custom_on_change:
-            handler(e)
+            handler()
         if self.linenumbers is not None:
             self.linenumbers.redraw()
 
@@ -715,13 +768,13 @@ class CodeEditor(ScrolledText):
         self.column_offset = column_offset
         self.help_popup = None
 
-        def on_change(e):
+        def on_change():
             self.__line_count = None
             if content is not None:
                 total = 0
                 for editor in content.project.editors:
                     if editor is self:
-                        total += editor.prefix_lines
+                        total += type(editor).prefix_lines
                         break
                     total += editor.line_count() + 1
                 self.linenumbers.line_num_offset = total
@@ -763,7 +816,7 @@ class CodeEditor(ScrolledText):
             percolator.Percolator(self.text).insertfilter(cdg)
 
         if force_enabled:
-            self.custom_on_change.append(lambda e: self.show_full_help())
+            self.custom_on_change.append(self.show_full_help)
             self.text.bind('<Control-Key-space>', lambda e: self.show_suggestion())
 
     def line_count(self):
@@ -942,23 +995,26 @@ class CodeEditor(ScrolledText):
         return 'break'
 
 class GlobalEditor(CodeEditor):
-    prefix = '''
+    BASE_PREFIX = '''
 import netsblox
 nb = netsblox.Client()
 'A connection to NetsBlox, which allows you to use services and RPCs from python.'
-from turtle import Screen
-Screen().setup(1280, 720)
+from turtle import Screen as _Screen
+_Screen().setup(1280, 720)
 from netsblox.turtle import *
 from netsblox.concurrency import *
 setup_yielding()
-import time
+import time as _time
 def _yield_(x):
-    time.sleep(0)
+    _time.sleep(0)
     return x
 setup_input()
 
 '''.lstrip()
-    prefix_lines = 14
+    BASE_PREFIX_LINES = 14
+
+    prefix = BASE_PREFIX
+    prefix_lines = BASE_PREFIX_LINES
     blocks = []
     name = 'global'
 
@@ -967,7 +1023,7 @@ setup_input()
         self.set_text(value)
 
     def get_script(self):
-        return self.prefix + self.text.get('1.0', 'end-1c')
+        return GlobalEditor.prefix + self.text.get('1.0', 'end-1c')
 
 class StageEditor(CodeEditor):
     prefix_lines = 3
@@ -1090,8 +1146,15 @@ class MainMenu(tk.Menu):
         root.bind_all('<Control-s>', lambda e: self.save())
 
         submenu = tk.Menu(self, **MENU_STYLE)
-        submenu.add_command(label = 'Blocks', command = self.toggle_blocks, accelerator = 'Ctrl+B')
+        submenu.add_checkbutton(label = 'Blocks', variable = content.project.show_blocks_tkvar, command = content.project.update_show_blocks, accelerator = 'Ctrl+B')
         self.add_cascade(label = 'View', menu = submenu)
+
+        submenu = tk.Menu(self, **MENU_STYLE)
+        imp = content.project.imports
+        for pkg, item in imp.items.items():
+            label = pkg if pkg == item['ident'] else f'{pkg} ({item["ident"]})'
+            submenu.add_checkbutton(label = label, variable = item['tkvar'], command = imp.batch_update)
+        self.add_cascade(label = 'Imports', menu = submenu)
 
         root.bind_all('<Control-b>', lambda e: self.toggle_blocks())
 

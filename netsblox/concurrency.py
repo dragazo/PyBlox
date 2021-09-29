@@ -1,5 +1,5 @@
-import threading
-import time
+import threading as _threading
+import time as _time
 
 class Signal:
     '''
@@ -11,7 +11,7 @@ class Signal:
     This is especially useful in Google Colab, as visible execution stops when the main thread stops.
     '''
     def __init__(self):
-        self._cv = threading.Condition(threading.Lock())
+        self._cv = _threading.Condition(_threading.Lock())
         self._signal = False
 
     def clear(self):
@@ -48,7 +48,7 @@ class StepSignal:
     When you wait() for a StepSignal, you will be resume after the next step().
     '''
     def __init__(self):
-        self._cv = threading.Condition(threading.Lock())
+        self._cv = _threading.Condition(_threading.Lock())
         self._value = 0
 
     def step(self):
@@ -80,7 +80,7 @@ def is_warping() -> bool:
         print('should be true:', is_warping())
     ```
     '''
-    tid = threading.current_thread().ident
+    tid = _threading.current_thread().ident
     return _warp_counters.get(tid, 0) > 0
 
 class Warp:
@@ -95,7 +95,7 @@ class Warp:
     ```
     '''
     def __init__(self):
-        self.tid = threading.current_thread().ident
+        self.tid = _threading.current_thread().ident
     def __enter__(self):
         _warp_counters[self.tid] = _warp_counters.get(self.tid, 0) + 1
     def __exit__(self, *args):
@@ -111,12 +111,12 @@ def setup_yielding() -> None:
     if _did_yield_setup:
         return
 
-    old_sleep = time.sleep
+    old_sleep = _time.sleep
     def new_sleep(t: float) -> None:
         if t > 0:
             return old_sleep(t)
         if not is_warping():
             return old_sleep(0)
-    time.sleep = new_sleep
+    _time.sleep = new_sleep
 
     _did_yield_setup = True
