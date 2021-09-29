@@ -19,7 +19,8 @@ def _add_key_event(key, event):
     if key not in _key_events:
         entry = [None, []]
         def raw_handler():
-            for handler in entry[1]:
+            handlers = entry[1] if key is None or None not in _key_events else entry[1] + _key_events[None][1]
+            for handler in handlers:
                 t = threading.Thread(target = handler)
                 t.setDaemon(True)
                 t.start()
@@ -785,5 +786,9 @@ def setup_input():
     _did_setup_input = True
 
     def new_input(prompt: Any = '?') -> str:
-        return _qinvoke_wait(_turtle.textinput, 'User Input', str(prompt))
+        def asker():
+            res = _turtle.textinput('UserInput', str(prompt))
+            _turtle.listen()
+            return res
+        return _qinvoke_wait(asker)
     builtins.input = new_input

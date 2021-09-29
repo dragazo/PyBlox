@@ -674,12 +674,12 @@ class ScrolledText(tk.Frame):
                     self.text.delete(tk.SEL_FIRST, tk.SEL_LAST)
             self.text.bind('<Control-Key-v>', on_paste)
             self.text.bind('<Control-Key-V>', on_paste)
-        
+
         if linenumbers:
-            self.linenumbers = TextLineNumbers(self, target = self.text, width = 30)
+            self.linenumbers = TextLineNumbers(self, target = self.text, width = 40)
             self.text.bind('<<Change>>', self.on_content_change)
             self.text.bind('<Configure>', self.on_content_change)
-        
+
         if len(blocks) > 0:
             self.blocks = BlocksList(self, blocks, self.text)
 
