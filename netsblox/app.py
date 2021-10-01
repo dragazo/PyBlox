@@ -363,6 +363,7 @@ class Imports:
     RAW_INFO = [
         ['time', 'time'],
         ['math', 'math'],
+        ['random', 'random'],
         ['matplotlib.pyplot', 'plt'],
         ['numpy', 'np'],
     ]
@@ -474,7 +475,7 @@ class ProjectEditor(tk.Frame):
             name = f'turtle{self.turtle_index}'
 
         if not any(x.name == name for x in self.editors):
-            editor = TurtleEditor(self.notebook, name = name)
+            editor = TurtleEditor(self.notebook, name = name, value = '')
             self.notebook.add(editor, text = name)
             self.editors.append(editor)
     
