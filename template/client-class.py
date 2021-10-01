@@ -15,6 +15,7 @@ import websocket as _websocket
 import requests as _requests
 
 import netsblox.common as _common
+import netsblox.events as _events
 
 _websocket.enableTrace(False) # disable auto-outputting of socket events
 
@@ -117,7 +118,7 @@ $service_instances
 
     @staticmethod
     def _check_handler(handler, content):
-        argspec = _inspect.getfullargspec(handler)
+        argspec = _inspect.getfullargspec(handler.fn)
         unused_params = set(content.keys())
         for arg in argspec.args + argspec.kwonlyargs:
             if arg not in content and arg != 'self':
@@ -154,23 +155,18 @@ $service_instances
                     if last['waiters'] > 0:
                         last['waiters'] = 0
                         self._message_cv.notify_all()
-
-                def invoker(handler, content):
-                    packet = $client_name._check_handler(handler, content)
-                    if type(packet) == str:
-                        print(f'\'{message["msgType"]}\' message handler error:\n{packet}', file = _sys.stderr)
-                        return
-
-                    try:
-                        handler(**packet) # the handler could be arbitrarily long and is fallible
-                    except:
-                        _traceback.print_exc(file = _sys.stderr)
                 
                 content = message['content']
                 for handler in handlers: # without mutex lock so we don't block new ws messages or on_message()
-                    t = _threading.Thread(target = invoker, args = (handler, content))
-                    t.setDaemon(True)
-                    t.start()
+                    try:
+                        packet = $client_name._check_handler(handler, content)
+                        if type(packet) == str:
+                            print(f'\'{message["msgType"]}\' message handler error:\n{packet}', file = _sys.stderr)
+                            continue
+
+                        handler.schedule(**packet)
+                    except:
+                        _traceback.print_exc(file = _sys.stderr)
             except:
                 _traceback.print_exc(file = _sys.stderr)
     
@@ -195,7 +191,7 @@ $service_instances
             if handlers is None:
                 handlers = []
                 self._message_handlers[msg_type] = handlers
-            handlers.append(handler)
+            handlers.append(_events.get_event_wrapper(handler))
     def on_message(self, *msg_types: str):
         '''
         This is a decorator that can be applied to a turtle/stage method or a function

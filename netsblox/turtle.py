@@ -9,27 +9,26 @@ import queue as _queue
 import math as _math
 
 import netsblox.common as _common
+import netsblox.events as _events
 
 from typing import Any, Union, Tuple, Iterable
 
 from PIL import Image, ImageTk
 
-_key_events = {} # maps key to [raw handler, event[]]
+_key_events = {} # maps key to [raw handler, _EventWrapper[]]
 def _add_key_event(key, event):
     if key not in _key_events:
         entry = [None, []]
         def raw_handler():
             handlers = entry[1] if key is None or None not in _key_events else entry[1] + _key_events[None][1]
             for handler in handlers:
-                t = _threading.Thread(target = handler)
-                t.setDaemon(True)
-                t.start()
+                handler.schedule()
         entry[0] = raw_handler
 
         _key_events[key] = entry
         _turtle.onkeypress(entry[0], key)
 
-    _key_events[key][1].append(event)
+    _key_events[key][1].append(_events.get_event_wrapper(event))
 
 _click_events = {} # maps key to [raw handler, event[]]
 def _add_click_event(key, event):
@@ -37,15 +36,13 @@ def _add_click_event(key, event):
         entry = [None, []]
         def raw_handler(x, y):
             for handler in entry[1]:
-                t = _threading.Thread(target = handler, args = (x, y))
-                t.setDaemon(True)
-                t.start()
+                handler.schedule(x, y)
         entry[0] = raw_handler
 
         _click_events[key] = entry
         _turtle.onscreenclick(entry[0], key)
-    
-    _click_events[key][1].append(event)
+
+    _click_events[key][1].append(_events.get_event_wrapper(event))
 
 class GameStateError(Exception):
     pass

@@ -364,7 +364,6 @@ class Imports:
         ['time', 'time'],
         ['math', 'math'],
         ['random', 'random'],
-        ['matplotlib.pyplot', 'plt'],
         ['numpy', 'np'],
     ]
     def __init__(self, *, on_update = None):

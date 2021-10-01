@@ -9,8 +9,8 @@ with open(path.join(path.dirname(__file__), 'README.md'), encoding = 'utf-8') as
 
 setup(
     name = 'netsblox',
-    version = '0.2.9',
-    description = 'A python client for accessing NetsBlox',
+    version = '0.3.0',
+    description = 'A python interface for accessing NetsBlox services',
     long_description = long_description,
     long_description_content_type = 'text/markdown',
     url = 'https://github.com/dragazo/NetsBlox-python',
@@ -24,6 +24,9 @@ setup(
         'pillow',
         'parso',
         'jedi',
+
+        # the following deps are just for turtle ide optional imports (we want them to already be installed)
+        'numpy',
     ],
     classifiers = [
         'Development Status :: 1 - Planning',
