@@ -3,10 +3,14 @@
 import builtins as _builtins
 
 import turtle as _turtle
+
 import threading as _threading
+import traceback as _traceback
 import inspect as _inspect
 import queue as _queue
 import math as _math
+import copy as _copy
+import sys as _sys
 
 import netsblox.common as _common
 import netsblox.events as _events
@@ -14,6 +18,14 @@ import netsblox.events as _events
 from typing import Any, Union, Tuple, Iterable
 
 from PIL import Image, ImageTk
+
+def _traceback_wrapped(fn):
+    def wrapped(*args, **kwargs):
+        try:
+            fn(*args, **kwargs)
+        except:
+            print(_traceback.format_exc(), file = _sys.stderr) # print out directly so that the stdio wrappers are used
+    return wrapped
 
 _key_events = {} # maps key to [raw handler, _EventWrapper[]]
 def _add_key_event(key, event):
@@ -172,9 +184,12 @@ _blank_img = Image.new('RGBA', (10, 10))
 def _setcostume(t, tid, costume: Union[None, str, Any]):
     def batcher():
         if costume is not None:
-            name = f'custom-costume-{tid}'
-            _turtle.register_shape(name, costume if type(costume) == str else _ImgWrapper(costume))
-            t.shape(name)
+            if type(costume) == str:
+                t.shape(costume)
+            else:
+                name = f'custom-costume-{tid}'
+                _turtle.register_shape(name, costume if type(costume) == str else _ImgWrapper(costume))
+                t.shape(name)
         else:
             _turtle.register_shape('blank', _ImgWrapper(_blank_img))
             t.shape('blank')
@@ -305,6 +320,37 @@ class TurtleBase:
         self.__degrees = 360.0
         self.__costume = 'classic'
         self.__pen_size = 1.0
+
+    def __clone_from(self, src):
+        def batcher():
+            self.drawing = src.drawing
+            self.visible = src.visible
+            self.pos = src.pos
+            self.heading = src.heading
+            self.degrees = src.degrees
+            self.costume = src.costume
+            self.pen_size = src.pen_size
+            self.pen_color = src.pen_color
+        _qinvoke(batcher)
+
+    def clone(self) -> Any:
+        '''
+        Create and return a clone (copy) of this turtle.
+        The created turtle will have a deep copy of any variables this turtle has set.
+        The new turtle will be created at the same position and in the same direction as the current turtle (everything is identical).
+
+        Cloning is a great way to reduce duplicated code.
+        If you need many turtles which happen to do the same thing,
+        consider writing a single turtle and making it clone itself several times at the beginning.
+
+        ```
+        my_clone = self.clone()
+        ```
+        '''
+        Derived = getattr(self, '_Derived__Derived', None)
+        if Derived is None:
+            raise RuntimeError('Tried to clone a turtle type which was not defined with @turtle')
+        return Derived(_CloneTag(self))
 
     # ----------------------------------------
 
@@ -454,8 +500,8 @@ class TurtleBase:
         _qinvoke(self.__turtle.pensize, self.__pen_size)
 
     @property
-    def pen_color(self) -> Tuple[int, int, int]:
-        return _qinvoke_wait(self.__turtle.color)
+    def pen_color(self) -> Any:
+        return _qinvoke_wait(self.__turtle.color)[0]
     @pen_color.setter
     def pen_color(self, new_color: Any) -> None:
         '''
@@ -473,7 +519,6 @@ class TurtleBase:
         ```
         '''
         _qinvoke(self.__turtle.color, new_color)
-
 
     # -------------------------------------------------------
 
@@ -577,17 +622,33 @@ class TurtleBase:
             return self.__turtle.position()
         self.__x, self.__y = _qinvoke_wait(batcher)
 
+class _CloneTag:
+    def __init__(self, src):
+        self.src = src
+
 def _derive(bases, cls):
     limited_bases = [b for b in bases if not issubclass(cls, b)]
     class Derived(*limited_bases, cls):
         def __init__(self, *args, **kwargs):
+            self.__Derived = Derived
             for base in bases:
                 base.__init__(self)
-            cls.__init__(self, *args, **kwargs)
+
+            if len(args) == 1 and len(kwargs) == 0 and isinstance(args[0], _CloneTag):
+                src = args[0].src
+                self.__Derived_args = src.__Derived_args
+                self.__Derived_kwargs = src.__Derived_kwargs
+
+                self.__clone_from(src)
+                cls.__init__(self, *self.__Derived_args, **self.__Derived_kwargs)
+            else:
+                self.__Derived_args = args
+                self.__Derived_kwargs = kwargs
+                cls.__init__(self, *args, **kwargs)
 
             start_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_start'))
             for _, start_script in start_scripts:
-                thread = _threading.Thread(target = start_script)
+                thread = _threading.Thread(target = _traceback_wrapped(start_script))
                 thread.setDaemon(True)
                 thread.start()
 
@@ -605,7 +666,17 @@ def _derive(bases, cls):
             for _, msg_script in msg_scripts:
                 for inserter in getattr(msg_script, '__run_on_message'): # client gave us a list of convenient insertion functions
                     inserter(msg_script)
-    
+
+        def __clone_from(self, src):
+            def filter_out(name):
+                return any(name.startswith(x) for x in ['_Derived_', '_TurtleBase_', '_StageBase_'])
+            fields = [x for x in vars(src).keys() if not filter_out(x)]
+            for field in fields:
+                setattr(self, field, _copy.deepcopy(getattr(src, field)))
+            
+            for base in bases: # recurse to child types for specialized cloning logic (like turtle repositioning)
+                getattr(base, f'_{base.__name__}__clone_from')(self, src)
+
     return Derived
 
 def turtle(cls):
@@ -663,7 +734,7 @@ def onstart(f):
     if _common.is_method(f):
         setattr(f, '__run_on_start', True)
     else:
-        t = _threading.Thread(target = f)
+        t = _threading.Thread(target = _traceback_wrapped(f))
         t.setDaemon(True)
         t.start()
     return f
@@ -775,12 +846,12 @@ def onclick(f):
     '''
     return _add_gui_event_wrapper('__run_on_click', _add_click_event, [1])(f) # call wrapper immediately cause we take no args
 
-_did_setup_input = False
-def setup_input():
-    global _did_setup_input
-    if _did_setup_input:
-        return
-    _did_setup_input = True
+_did_setup_stdio = False
+_print_lock = _threading.Lock()
+def setup_stdio():
+    global _did_setup_stdio
+    if _did_setup_stdio: return
+    _did_setup_stdio = True
 
     def new_input(prompt: Any = '?') -> str:
         def asker():
@@ -789,3 +860,9 @@ def setup_input():
             return res
         return _qinvoke_wait(asker)
     _builtins.input = new_input
+
+    old_print = print
+    def new_print(*args, **kwargs) -> None:
+        with _print_lock:
+            old_print(*args, **kwargs)
+    _builtins.print = new_print

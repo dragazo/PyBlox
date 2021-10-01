@@ -15,6 +15,7 @@ import json
 import sys
 import io
 import re
+import os
 
 from PIL import Image, ImageTk
 
@@ -222,11 +223,10 @@ def play_button():
             dst.flush()
 
     code = transform.add_yields(content.project.get_full_script())
-    _exec_process = subprocess.Popen([sys.executable, '-uc', code], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    _exec_process = subprocess.Popen([sys.executable, '-uc', code], stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
 
-    # reading the pipes is blocking so do in another thread for each stream - they will exit when process is killed
+    # reading the pipe is blocking so do in another thread - it will exit when process is killed
     threading.Thread(target = file_piper, args = (_exec_process.stdout, sys.stdout), daemon = True).start()
-    threading.Thread(target = file_piper, args = (_exec_process.stderr, sys.stderr), daemon = True).start()
 
 _package_dir = netsblox.__path__[0]
 def module_path(path: str) -> str:
@@ -1024,7 +1024,7 @@ import time as _time
 def _yield_(x):
     _time.sleep(0)
     return x
-setup_input()
+setup_stdio()
 
 '''.lstrip()
     BASE_PREFIX_LINES = 14
@@ -1262,7 +1262,15 @@ def main():
     content = Content(root)
     main_menu = MainMenu(root)
 
-    content.project.load(ProjectEditor.DEFAULT_PROJECT)
+    if len(sys.argv) <= 1:
+        content.project.load(ProjectEditor.DEFAULT_PROJECT)
+    elif len(sys.argv) == 2:
+        with open(sys.argv[1], 'r') as f:
+            content.project.load(json.load(f))
+            main_menu.project_path = os.path.abspath(sys.argv[1])
+    else:
+        print(f'usage: {sys.argv[0]} (project)', file = sys.stderr)
+        sys.exit(1)
 
     root.configure(menu = main_menu)
     content.display.terminal.wrap_stdio(tee = True)
