@@ -768,6 +768,7 @@ class CodeEditor(ScrolledText):
         self.__line_count = None
         self.column_offset = column_offset
         self.help_popup = None
+        self.update_timer = None
 
         def on_change():
             self.__line_count = None
@@ -817,7 +818,15 @@ class CodeEditor(ScrolledText):
             percolator.Percolator(self.text).insertfilter(cdg)
 
         if force_enabled:
-            self.custom_on_change.append(self.show_full_help)
+            def trigger():
+                self.update_timer = None
+                self.show_full_help()
+            def delayed_show_full_help():
+                if self.update_timer is not None:
+                    self.after_cancel(self.update_timer)
+                self.update_timer = self.after(100, trigger)
+            self.custom_on_change.append(delayed_show_full_help)
+            
             self.text.bind('<Control-Key-space>', lambda e: self.show_suggestion())
 
     def line_count(self):
@@ -918,6 +927,13 @@ class CodeEditor(ScrolledText):
             self.hide_suggestion()
 
     def do_completion(self):
+        # complete any pending update actions
+        if self.update_timer is not None:
+            self.after_cancel(self.update_timer)
+            self.update_timer = None
+            self.show_full_help()
+
+        # if we're still showing help, complete with the up-to-date value
         if self.help_popup is not None:
             completion = self.help_completions[self.help_popup.get(tk.ACTIVE)]
             self.text.insert(tk.INSERT, completion)
