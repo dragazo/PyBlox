@@ -18,6 +18,7 @@ import netsblox.events as _events
 from typing import Any, Union, Tuple, Iterable
 
 from PIL import Image, ImageTk
+import mss
 
 def _traceback_wrapped(fn):
     def wrapped(*args, **kwargs):
@@ -288,6 +289,26 @@ class StageBase:
         ```
         '''
         return _qinvoke_wait(_turtle.window_height)
+    
+    def grab_image(self) -> Any:
+        '''
+        Grabs and returns an image of the stage and everything one it.
+        This is effectively a picture of the entire turtle environment.
+
+        ```
+        img = self.grab_image()
+        ```
+        '''
+        def batcher():
+            canvas = _turtle.Screen().getcanvas()
+            x = canvas.winfo_rootx()
+            y = canvas.winfo_rooty()
+            w = canvas.winfo_width()
+            h = canvas.winfo_height()
+            with mss.mss() as sct:
+                raw = sct.grab({ 'left': x, 'top': y, 'width': w, 'height': h })
+                return Image.frombytes('RGB', raw.size, raw.bgra, 'raw', 'BGRX')
+        return _qinvoke_wait(batcher)
 
 class TurtleBase:
     '''
