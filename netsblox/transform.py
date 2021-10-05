@@ -5,6 +5,8 @@ from typing import Any, List
 import parso # docs: https://parso.readthedocs.io/_/downloads/en/latest/pdf/
 import unittest
 
+import netsblox.common as common
+
 def remove_new_line(line: str) -> str:
     if line.endswith('\r\n'):
         return line[:-2]
@@ -26,12 +28,6 @@ def remove_leading_ws(txt: str) -> str:
         if ch == '\n' or not ch.isspace():
             return txt[i:]
     return ''
-
-def inclusive_splitlines(src: str) -> List[str]:
-    res = src.splitlines()
-    if src and src[-1] == '\n':
-        res.append('')
-    return res
 
 def add_to_pos(lines: List[str], res: List[str], res_pos: List[int], target_pos: int) -> None:
     assert target_pos >= res_pos[0]
@@ -96,7 +92,7 @@ def add_yields(code: str) -> str:
     '''
 
     root = parso.parse(code)
-    lines = [remove_new_line(x) for x in inclusive_splitlines(code)]
+    lines = [remove_new_line(x) for x in common.inclusive_splitlines(code)]
     res = []
     res_pos = [0]
     add_yields_recursive(root, lines, res, res_pos)

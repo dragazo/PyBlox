@@ -4,7 +4,7 @@ import requests as _requests
 import inspect as _inspect
 import json as _json
 
-from typing import Tuple
+from typing import Tuple, List
 
 class UnavailableService(Exception):
     pass
@@ -35,6 +35,12 @@ def vectorize(f):
 def is_method(f): # inspect.ismethod doesn't work at annotation time, so we use args list directly
     info = _inspect.getfullargspec(f)
     return len(info.args) != 0 and info.args[0] == 'self'
+
+def inclusive_splitlines(src: str) -> List[str]:
+    res = src.splitlines()
+    if src and src[-1] == '\n':
+        res.append('')
+    return res
 
 def get_location() -> Tuple[float, float]:
     '''

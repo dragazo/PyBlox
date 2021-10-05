@@ -23,8 +23,11 @@ from typing import List, Tuple
 
 import netsblox
 from netsblox import transform
+from netsblox import common
 
 IMG_ROOT = 'https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img'
+
+SUGGESTION_UPDATE_INTERVAL = 200
 
 color_enabled = False
 try:
@@ -489,12 +492,16 @@ class ProjectEditor(tk.Frame):
     DEFAULT_GLOBAL_BLOCKS = [
         { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name():\n    pass' },
         { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name():\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick\ndef function_name(x, y):\n    pass' },
         { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(): # add arguments to receive values\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass' },
     ]
     DEFAULT_TURTLE_BLOCKS = DEFAULT_STAGE_BLOCKS = [
         { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name(self):\n    pass' },
         { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name(self):\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick\ndef function_name(self, x, y):\n    pass' },
         { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(self): # add arguments to receive values\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass' },
     ]
     DEFAULT_PROJECT = {
         'global_blocks': DEFAULT_GLOBAL_BLOCKS,
@@ -684,12 +691,12 @@ class ChangedText(tk.Text):
         return result # return what the actual widget returned
 
 class ScrolledText(tk.Frame):
-    def __init__(self, parent, *, readonly = False, linenumbers = False, blocks = []):
+    def __init__(self, parent, *, readonly = False, linenumbers = False, blocks = [], **kwargs):
         super().__init__(parent)
         undo_args = { 'undo': True, 'maxundo': -1, 'autoseparators': True }
 
         self.scrollbar = tk.Scrollbar(self)
-        self.text = ChangedText(self, yscrollcommand = self.scrollbar.set, **({} if readonly else undo_args))
+        self.text = ChangedText(self, yscrollcommand = self.scrollbar.set, **({} if readonly else undo_args), **kwargs)
         self.scrollbar.config(command = self.text.yview)
 
         self.custom_on_change = []
@@ -823,9 +830,9 @@ class CodeEditor(ScrolledText):
             def delayed_show_full_help():
                 if self.update_timer is not None:
                     self.after_cancel(self.update_timer)
-                self.update_timer = self.after(100, trigger)
+                self.update_timer = self.after(SUGGESTION_UPDATE_INTERVAL, trigger)
             self.custom_on_change.append(delayed_show_full_help)
-            
+
             self.text.bind('<Control-Key-space>', lambda e: self.show_suggestion())
 
     def line_count(self):
@@ -945,7 +952,7 @@ class CodeEditor(ScrolledText):
 
     def _do_batch_edit(self, mutator):
         ins = self.text.index(tk.INSERT)
-        sel_start, sel_end = self.text.index(tk.SEL_FIRST), self.text.index(tk.SEL_LAST)
+        sel_start, sel_end = (self.text.index(tk.SEL_FIRST), self.text.index(tk.SEL_LAST)) if self.text.tag_ranges(tk.SEL) else (ins, ins)
         sel_padded = f'{sel_start} linestart', f'{sel_end} lineend'
 
         ins_pieces = ins.split('.')
@@ -1005,9 +1012,7 @@ class CodeEditor(ScrolledText):
         return 'break' # we always override default (we don't want tabs ever)
     
     def do_autocomment(self):
-        if self.text.tag_ranges(tk.SEL):
-            self._do_batch_edit(smart_comment_uncomment)
-        
+        self._do_batch_edit(smart_comment_uncomment)
         return 'break'
 
 class GlobalEditor(CodeEditor):
@@ -1086,10 +1091,14 @@ class Display(tk.Frame):
 class TerminalOutput(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
+        self.__last_line_len = 0
 
-        self.text = ScrolledText(self, readonly = True)
+        font = tkfont.Font(family = 'monospace', size = 10)
+        self.text = ScrolledText(self, readonly = True, font = font)
         self.text.pack(side = tk.TOP, fill = tk.BOTH, expand = True)
         self.text.text.config(bg = '#1a1a1a', fg = '#bdbdbd', insertbackground = '#bdbdbd')
+
+        self.__char_width = font.measure('m')
 
     def wrap_stdio(self, *, tee: bool):
         _print_targets.append(self)
@@ -1114,10 +1123,34 @@ class TerminalOutput(tk.Frame):
 
         sys.stdout = TeeWriter(sys.stdout if tee else None)
         sys.stderr = TeeWriter(sys.stderr if tee else None)
-    
+
+    def __append_intraline(self, line: str) -> None:
+        max_line_len = max(1, (self.text.text.winfo_width() - 8) // self.__char_width)
+
+        pos = 0
+        remaining = len(line)
+        while remaining > 0:
+            can_add = min(remaining, max_line_len - self.__last_line_len)
+            if can_add <= 0:
+                self.text.text.insert('end', '\n')
+                self.__last_line_len = 0
+                continue
+
+            self.text.text.insert('end', line[pos:pos+can_add])
+            self.text.text.see('end')
+            self.__last_line_len += can_add
+
+            pos += can_add
+            remaining -= can_add
+
     def write(self, txt):
-        self.text.text.insert('end', str(txt))
-        self.text.text.see(tk.END)
+        lines = common.inclusive_splitlines(str(txt))
+        for i in range(len(lines)):
+            self.__append_intraline(lines[i])
+            if i < len(lines) - 1:
+                self.text.text.insert('end', '\n')
+                self.text.text.see('end')
+                self.__last_line_len = 0
     def write_line(self, txt):
         self.write(f'{txt}\n')
 
