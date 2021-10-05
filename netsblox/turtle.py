@@ -35,7 +35,7 @@ def _add_key_event(key, event):
         def raw_handler():
             handlers = entry[1] if key is None or None not in _key_events else entry[1] + _key_events[None][1]
             for handler in handlers:
-                handler.schedule()
+                handler.schedule_no_queueing()
         entry[0] = raw_handler
 
         _key_events[key] = entry
@@ -49,7 +49,7 @@ def _add_click_event(key, event):
         entry = [None, []]
         def raw_handler(x, y):
             for handler in entry[1]:
-                handler.schedule(x, y)
+                handler.schedule_no_queueing(x, y)
         entry[0] = raw_handler
 
         _click_events[key] = entry
