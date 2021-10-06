@@ -2,7 +2,11 @@
 
 import requests as _requests
 import inspect as _inspect
+import base64 as _base64
 import json as _json
+import io as _io
+
+from PIL import Image as _Image
 
 from typing import Tuple, List
 
@@ -56,3 +60,11 @@ def get_location() -> Tuple[float, float]:
         return parsed['latitude'], parsed['longitude']
     else:
         raise Exception(f'Failed to get location: {res.status_code}\n{res.text}')
+
+def encode_image(img: _Image.Image) -> str:
+    res = _io.BytesIO()
+    img.save(res, 'png')
+    return _base64.b64encode(res.getvalue()).decode('ascii')
+def decode_image(img: str) -> _Image.Image:
+    raw = _base64.decodebytes(img.encode('ascii'))
+    return _Image.open(_io.BytesIO(raw))

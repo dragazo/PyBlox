@@ -3,6 +3,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import font as tkfont
+import tkinter.simpledialog as simpledialog
 import tkinter.filedialog as filedialog
 import tkinter.messagebox as messagebox
 import multiprocessing as mproc
@@ -112,6 +113,10 @@ def smart_comment_uncomment(txt: str) -> Tuple[str, int]:
                 res_lines.append(part[0] + part[1])
                 res_deltas.append(0)
         return '\n'.join(res_lines), res_deltas
+
+IDENT_REGEX = re.compile('^[a-zA-Z_][0-9a-zA-Z_]*$')
+def is_valid_ident(ident: str) -> bool:
+    return bool(IDENT_REGEX.match(ident))
 
 DOC_REMAPS = {
     'builtins.input': '''
@@ -226,7 +231,9 @@ def play_button():
             dst.flush()
 
     code = transform.add_yields(content.project.get_full_script())
-    _exec_process = subprocess.Popen([sys.executable, '-uc', code], stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+    _exec_process = subprocess.Popen([sys.executable, '-u'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+    _exec_process.stdin.write(code.encode('utf-8'))
+    _exec_process.stdin.close()
 
     # reading the pipe is blocking so do in another thread - it will exit when process is killed
     threading.Thread(target = file_piper, args = (_exec_process.stdout, sys.stdout), daemon = True).start()
@@ -370,21 +377,34 @@ class Imports:
         ['numpy', 'np'],
     ]
     def __init__(self, *, on_update = None):
-        self.items = {}
+        self.packages = {}
         for item in Imports.RAW_INFO:
-            self.items[item[0]] = {
+            self.packages[item[0]] = {
                 'tkvar': tk.BooleanVar(),
                 'ident': item[1],
                 'code': f'import {item[0]}' if item[0] == item[1] else f'import {item[0]} as {item[1]}'
             }
         
+        self.images = {}
+
         self.on_update = on_update
 
     def batch_update(self) -> None:
-        lines = []
-        for item in self.items.values():
+        import_lines = []
+        for item in self.packages.values():
             if item['tkvar'].get():
-                lines.append(item['code'])
+                import_lines.append(item['code'])
+
+        image_lines = []
+        if len(self.images) != 0:
+            image_lines.append('class images:')
+        for name, img in self.images.items():
+            image_lines.append(f'    {name} = _common.decode_image(\'{common.encode_image(img)}\')')
+        if len(self.images) != 0:
+            image_lines.append('images = images()')
+
+        needs_sep = len(import_lines) != 0 and len(image_lines) != 0
+        lines = [*import_lines, *([''] if needs_sep else []), *image_lines]
 
         if len(lines) == 0:
             GlobalEditor.prefix = GlobalEditor.BASE_PREFIX
@@ -407,6 +427,7 @@ class ProjectEditor(tk.Frame):
         def imports_update():
             for editor in self.editors:
                 editor.on_content_change()
+            main_menu.update_images()
         self.imports = Imports(on_update = imports_update)
 
         self.notebook = ttk.Notebook(self)
@@ -555,7 +576,7 @@ def start(self):
         res['show_blocks'] = self.show_blocks
         res['turtle_index'] = self.turtle_index
         res['imports'] = []
-        for pkg, item in self.imports.items.items():
+        for pkg, item in self.imports.packages.items():
             if item['tkvar'].get():
                 res['imports'].append(pkg)
         res['editors'] = []
@@ -570,6 +591,7 @@ def start(self):
                 'name': editor.name,
                 'value': editor.text.get('1.0', 'end-1c'),
             })
+        res['images'] = { name: common.encode_image(img) for name, img in self.imports.images.items() }
         return res
     def load(self, proj: dict) -> None:
         GlobalEditor.blocks = [x.copy() for x in proj['global_blocks']]
@@ -598,10 +620,12 @@ def start(self):
             self.notebook.add(editor, text = name)
             self.editors.append(editor)
 
-        for item in self.imports.items.values():
+        for item in self.imports.packages.values():
             item['tkvar'].set(False)
         for pkg in proj['imports']:
-            self.imports.items[pkg]['tkvar'].set(True)
+            self.imports.packages[pkg]['tkvar'].set(True)
+        for name, raw in proj.get('images', {}).items():
+            self.imports.images[name] = common.decode_image(raw)
         self.imports.batch_update()
 
 class ContextMenu(tk.Menu):
@@ -1024,6 +1048,7 @@ from turtle import Screen as _Screen
 _Screen().setup(1280, 720)
 from netsblox.turtle import *
 from netsblox.concurrency import *
+import netsblox.common as _common
 setup_yielding()
 import time as _time
 def _yield_(x):
@@ -1032,7 +1057,7 @@ def _yield_(x):
 setup_stdio()
 
 '''.lstrip()
-    BASE_PREFIX_LINES = 14
+    BASE_PREFIX_LINES = 15
 
     prefix = BASE_PREFIX
     prefix_lines = BASE_PREFIX_LINES
@@ -1200,10 +1225,13 @@ class MainMenu(tk.Menu):
 
         submenu = tk.Menu(self, **MENU_STYLE)
         imp = content.project.imports
-        for pkg, item in imp.items.items():
+        for pkg, item in imp.packages.items():
             label = pkg if pkg == item['ident'] else f'{pkg} ({item["ident"]})'
             submenu.add_checkbutton(label = label, variable = item['tkvar'], command = imp.batch_update)
         self.add_cascade(label = 'Imports', menu = submenu)
+
+        self.images_dropdown = tk.Menu(self, **MENU_STYLE)
+        self.add_cascade(label = 'Images', menu = self.images_dropdown)
 
         root.bind_all('<Control-b>', lambda e: self.toggle_blocks())
 
@@ -1255,7 +1283,7 @@ class MainMenu(tk.Menu):
         if not self.try_close_project():
             return
 
-        p = filedialog.askopenfilename(defaultextension = '.json')
+        p = filedialog.askopenfilename(filetypes = [('Project Files', '.json'), ('All Files', '.*')])
         if type(p) is not str or not p:
             return
 
@@ -1279,6 +1307,61 @@ class MainMenu(tk.Menu):
 
     def toggle_blocks(self):
         content.project.show_blocks = not content.project.show_blocks
+
+    def import_image(self):
+        p = filedialog.askopenfilename(filetypes = [('Images', '.png .jpg .jpeg'), ('All Files', '.*')])
+        if type(p) is not str or not p:
+            return
+
+        img = None
+        try:
+            # make sure it can round-trip to b64 (also, this ensures any import format is converted to png)
+            img = common.decode_image(common.encode_image(Image.open(p)))
+        except Exception as e:
+            messagebox.showerror(title = 'Failed to load image', message = str(e))
+            return
+
+        name = None
+        while True:
+            name = simpledialog.askstring('Name Image', 'Enter the name of the image, which is used to access it from code')
+            if name is None:
+                return
+            if not is_valid_ident(name):
+                messagebox.showerror(title = 'Invalid name', message = f'"{name}" is not a valid python variable name')
+                continue
+            if name in content.project.imports.images:
+                messagebox.showerror(title = 'Invalid name', message = f'An image named "{name}" already exists')
+                continue
+            break
+
+        content.project.imports.images[name] = img
+        content.project.imports.batch_update()
+
+    def update_images(self):
+        self.images_dropdown.delete(0, 'end')
+        self.images_dropdown.add_command(label = 'Import', command = self.import_image)
+
+        if len(content.project.imports.images) != 0:
+            self.images_dropdown.add_separator()
+
+        for name, img in content.project.imports.images.items():
+            submenu = tk.Menu(**MENU_STYLE)
+
+            def get_viewer(img):
+                return lambda: img.show()
+            submenu.add_command(label = 'View', command = get_viewer(img))
+
+            def get_deleter(name):
+                def deleter():
+                    title = f'Delete {name}'
+                    msg = f'Are you sure you would like to delete {name}? This operation cannot be undone.'
+                    if messagebox.askyesno(title, msg, icon = 'warning', default = 'no'):
+                        del content.project.imports.images[name]
+                        content.project.imports.batch_update()
+                return deleter
+            submenu.add_command(label = 'Delete', command = get_deleter(name))
+
+            self.images_dropdown.add_cascade(label = f'{name} {img.width}x{img.height}', menu = submenu)
 
 def main():
     global root, main_menu, toolbar, content
