@@ -828,7 +828,14 @@ class CodeEditor(ScrolledText):
             # source: https://stackoverflow.com/questions/38594978/tkinter-syntax-highlighting-for-text-widget
             cdg = colorizer.ColorDelegator()
 
+            props = set()
+            for T in [netsblox.turtle.TurtleBase, netsblox.turtle.StageBase]:
+                for key in dir(T):
+                    if not key.startswith('_') and not key.endswith('_') and isinstance(getattr(T, key), property):
+                        props.add(key)
+
             patterns = [
+                rf'\.(?P<MYPROP>{"|".join(props)})\b',
                 r'(?P<MYDECO>@(\w+\.)*\w+)\b',
                 r'\b(?P<MYSELF>self)\b',
                 r'\b(?P<MYNUMBER>(\d+\.?|\.\d)\d*(e[-+]?\d+)?)\b',
@@ -838,7 +845,8 @@ class CodeEditor(ScrolledText):
 
             cdg.tagdefs['COMMENT']    = {'foreground': '#a3a3a3', 'background': '#ffffff'}
             cdg.tagdefs['MYNUMBER']   = {'foreground': '#c26910', 'background': '#ffffff'}
-            cdg.tagdefs['MYSELF']     = {'foreground': '#a023a6', 'background': '#ffffff'}
+            cdg.tagdefs['MYSELF']     = {'foreground': '#d943aa', 'background': '#ffffff'}
+            cdg.tagdefs['MYPROP']     = {'foreground': '#d943aa', 'background': '#ffffff'}
             cdg.tagdefs['BUILTIN']    = {'foreground': '#6414b5', 'background': '#ffffff'}
             cdg.tagdefs['DEFINITION'] = {'foreground': '#6414b5', 'background': '#ffffff'}
             cdg.tagdefs['MYDECO']     = {'foreground': '#6414b5', 'background': '#ffffff'}
