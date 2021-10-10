@@ -215,7 +215,13 @@ def _make_turtle(extra_fn = None):
         return t, tid
     return _qinvoke_wait(batcher)
 
-class StageBase:
+class _Ref:
+    def __copy__(self):
+        return self
+    def __deepcopy__(self, memo):
+        return self
+
+class StageBase(_Ref):
     '''
     The base class for any custom stage.
     Custom stages should use this as their base class, and additionally use the `@stage` decorator.
@@ -310,7 +316,7 @@ class StageBase:
                 return Image.frombytes('RGB', raw.size, raw.bgra, 'raw', 'BGRX')
         return _qinvoke_wait(batcher)
 
-class TurtleBase:
+class TurtleBase(_Ref):
     '''
     The base class for any custom turtle.
     Custom turtles should use this as their base class, and additionally use the `@turtle` decorator.
