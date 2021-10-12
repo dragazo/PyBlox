@@ -1052,8 +1052,7 @@ class GlobalEditor(CodeEditor):
 import netsblox
 nb = netsblox.Client()
 'A connection to NetsBlox, which allows you to use services and RPCs from python.'
-from turtle import Screen as _Screen
-_Screen().setup(1280, 720)
+netsblox.turtle._set_window_size(1280, 720)
 from netsblox.turtle import *
 from netsblox.concurrency import *
 import netsblox.common as _common
@@ -1065,7 +1064,7 @@ def _yield_(x):
 setup_stdio()
 
 '''.lstrip()
-    BASE_PREFIX_LINES = 15
+    BASE_PREFIX_LINES = 14
 
     prefix = BASE_PREFIX
     prefix_lines = BASE_PREFIX_LINES

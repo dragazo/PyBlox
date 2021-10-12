@@ -215,6 +215,73 @@ def _make_turtle(extra_fn = None):
         return t, tid
     return _qinvoke_wait(batcher)
 
+_window_size_cached = None
+_logical_size_cached = None
+_logical_scale_cached = None
+_registered_resize_hook = False
+_all_turtles = []
+def _get_logical_scale() -> float:
+    if _logical_scale_cached is not None:
+        return _logical_scale_cached
+
+    def batcher():
+        global _logical_scale_cached
+        wsize = _get_window_size()
+        lsize = _get_logical_size()
+        _logical_scale_cached = min(wsize[0] / lsize[0], wsize[1] / lsize[1])
+        return _logical_scale_cached
+    return _qinvoke_wait(batcher)
+def _perform_resize_ui() -> None:
+    def batcher():
+        global _logical_scale_cached
+        wsize = _get_window_size()
+        lsize = _get_logical_size()
+        scale = _logical_scale_cached = min(wsize[0] / lsize[0], wsize[1] / lsize[1])
+
+        for t in _all_turtles:
+            x, y = t.pos
+            getattr(t, '_TurtleBase__turtle').goto(x * scale, y * scale)
+    _qinvoke_wait(batcher)
+
+def _register_resize_hook() -> None:
+    if _registered_resize_hook: return
+
+    def batcher():
+        global _registered_resize_hook
+        if _registered_resize_hook: return # double checked lock now that we're on the ui thread
+        _registered_resize_hook = True
+
+        def update(e):
+            global _window_size_cached
+            if _window_size_cached is None or _window_size_cached[0] != e.width or _window_size_cached[1] != e.height:
+                _window_size_cached = (e.width + 2, e.height + 2) # add back the 1px outline from tkinter
+                _perform_resize_ui()
+        _turtle.Screen().getcanvas().bind('<Configure>', update)
+    _qinvoke_wait(batcher)
+def _get_window_size() -> Tuple[int, int]:
+    global _window_size_cached
+    _register_resize_hook()
+
+    if _window_size_cached is not None:
+        return _window_size_cached
+    else:
+        _window_size_cached = _qinvoke_wait(lambda: _turtle.Screen().screensize())
+        return _window_size_cached
+def _set_window_size(width: int, height: int) -> None:
+    def batcher():
+        global _logical_size_cached
+        _logical_size_cached = (width, height)
+        _register_resize_hook()
+        _turtle.setup(width, height)
+    _qinvoke_wait(batcher)
+def _get_logical_size() -> Tuple[int, int]:
+    global _logical_size_cached
+    if _logical_size_cached is not None:
+        return _logical_size_cached
+
+    _logical_size_cached = _get_window_size()
+    return _logical_size_cached
+
 class _Ref:
     def __copy__(self):
         return self
@@ -262,20 +329,24 @@ class StageBase(_Ref):
         self.__costume = new_costume
 
     @property
-    def size(self) -> Tuple[float, float]:
+    def size(self) -> Tuple[int, int]:
+        return _get_logical_size()
+    @size.setter
+    def size(self, new_size: Tuple[int, int]) -> None:
         '''
-        Get the size of the stage (width, height) in pixels.
+        Gets or sets the logical size of the stage (width, height).
+        This controls the space in which turtles are visible.
+        Setting the logical size of the turtle space also changes the physical size of the window.
 
         ```
         width, height = self.size
+        self.size = (800, 600)
         ```
         '''
-        def batcher():
-            return _turtle.window_width(), _turtle.window_height()
-        return _qinvoke_wait(batcher)
+        _set_window_size(*map(int, new_size))
 
     @property
-    def width(self) -> float:
+    def width(self) -> int:
         '''
         Get the width of the stage in pixels.
 
@@ -283,10 +354,10 @@ class StageBase(_Ref):
         print('width:', self.width)
         ```
         '''
-        return _qinvoke_wait(_turtle.window_width)
+        return _get_logical_size()[0]
 
     @property
-    def height(self) -> float:
+    def height(self) -> int:
         '''
         Get the height of the stage in pixels.
 
@@ -294,7 +365,7 @@ class StageBase(_Ref):
         print('height:', self.height)
         ```
         '''
-        return _qinvoke_wait(_turtle.window_height)
+        return _get_logical_size()[1]
     
     def grab_image(self) -> Any:
         '''
@@ -347,6 +418,8 @@ class TurtleBase(_Ref):
         self.__degrees = 360.0
         self.__costume = 'classic'
         self.__pen_size = 1.0
+
+        _all_turtles.append(self)
 
     def __clone_from(self, src):
         def batcher():
@@ -410,8 +483,9 @@ class TurtleBase(_Ref):
         '''
         self.__setpos(*map(float, new_pos))
     def __setpos(self, x: float, y: float) -> None:
+        scale = _get_logical_scale()
         self.__x, self.__y = x, y
-        _qinvoke(self.__turtle.goto, x, y)
+        _qinvoke(self.__turtle.goto, x * scale, y * scale)
 
     @property
     def x_pos(self) -> float:
