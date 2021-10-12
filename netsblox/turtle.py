@@ -315,9 +315,6 @@ class StageBase(_Ref):
 
     @property
     def costume(self) -> Any:
-        return self.__costume
-    @costume.setter
-    def costume(self, new_costume: Any) -> None:
         '''
         Get or set the current stage costume (background).
 
@@ -325,14 +322,14 @@ class StageBase(_Ref):
         self.costume = img
         ```
         '''
+        return self.__costume
+    @costume.setter
+    def costume(self, new_costume: Any) -> None:
         _setcostume(self.__turtle, self.__tid, new_costume)
         self.__costume = new_costume
 
     @property
     def size(self) -> Tuple[int, int]:
-        return _get_logical_size()
-    @size.setter
-    def size(self, new_size: Tuple[int, int]) -> None:
         '''
         Gets or sets the logical size of the stage (width, height).
         This controls the space in which turtles are visible.
@@ -343,6 +340,9 @@ class StageBase(_Ref):
         self.size = (800, 600)
         ```
         '''
+        return _get_logical_size()
+    @size.setter
+    def size(self, new_size: Tuple[int, int]) -> None:
         _set_window_size(*map(int, new_size))
 
     @property
@@ -456,9 +456,6 @@ class TurtleBase(_Ref):
 
     @property
     def costume(self) -> Any:
-        return self.__costume
-    @costume.setter
-    def costume(self, new_costume: Any) -> None:
         '''
         Get or set the current turtle costume.
 
@@ -466,14 +463,14 @@ class TurtleBase(_Ref):
         self.costume = img
         ```
         '''
+        return self.__costume
+    @costume.setter
+    def costume(self, new_costume: Any) -> None:
         _setcostume(self.__turtle, self.__tid, new_costume)
         self.__costume = new_costume
 
     @property
     def pos(self) -> Tuple[float, float]:
-        return self.__x, self.__y
-    @pos.setter
-    def pos(self, new_pos: Tuple[float, float]) -> None:
         '''
         Get or set the position of the turtle, which is a pair of (x, y) coordinates.
 
@@ -481,6 +478,9 @@ class TurtleBase(_Ref):
         self.pos = (10, 45)
         ```
         '''
+        return self.__x, self.__y
+    @pos.setter
+    def pos(self, new_pos: Tuple[float, float]) -> None:
         self.__setpos(*map(float, new_pos))
     def __setpos(self, x: float, y: float) -> None:
         scale = _get_logical_scale()
@@ -489,9 +489,6 @@ class TurtleBase(_Ref):
 
     @property
     def x_pos(self) -> float:
-        return self.__x
-    @x_pos.setter
-    def x_pos(self, new_x: float) -> None:
         '''
         Get or set the x position of the turtle.
 
@@ -499,13 +496,13 @@ class TurtleBase(_Ref):
         self.x_pos = 60
         ```
         '''
+        return self.__x
+    @x_pos.setter
+    def x_pos(self, new_x: float) -> None:
         self.__setpos(float(new_x), self.__y)
 
     @property
     def y_pos(self) -> float:
-        return self.__y
-    @y_pos.setter
-    def y_pos(self, new_y: float) -> None:
         '''
         Get or set the y position of the turtle.
 
@@ -513,13 +510,13 @@ class TurtleBase(_Ref):
         self.y_pos = -10
         ```
         '''
+        return self.__y
+    @y_pos.setter
+    def y_pos(self, new_y: float) -> None:
         self.__setpos(self.__x, float(new_y))
 
     @property
     def heading(self) -> float:
-        return self.__rot * self.__degrees
-    @heading.setter
-    def heading(self, new_heading: float) -> None:
         '''
         Get or set the heading (direction) of the turtle.
         Note that this is affected by the current degrees mode.
@@ -528,6 +525,9 @@ class TurtleBase(_Ref):
         self.heading = 0 # face north
         ```
         '''
+        return self.__rot * self.__degrees
+    @heading.setter
+    def heading(self, new_heading: float) -> None:
         self.__setheading(float(new_heading))
     def __setheading(self, new_heading: float) -> None:
         self.__rot = (new_heading / self.__degrees) % 1.0
@@ -535,9 +535,6 @@ class TurtleBase(_Ref):
 
     @property
     def degrees(self) -> float:
-        return self.__degrees
-    @degrees.setter
-    def degrees(self, full_circle: float = 360.0) -> None:
         '''
         Get or set how many "degrees" are in a circle (default 360).
         This is useful if you want to draw pie charts (100 "degrees" per circle) or work in radians (2*pi "degrees" per circle).
@@ -549,13 +546,13 @@ class TurtleBase(_Ref):
         self.degress = 2 * math.pi # switch to radians mode
         ```
         '''
+        return self.__degrees
+    @degrees.setter
+    def degrees(self, full_circle: float = 360.0) -> None:
         self.__degrees = float(full_circle)
 
     @property
     def visible(self) -> bool:
-        return self.__visible
-    @visible.setter
-    def visible(self, is_visible: bool) -> None:
         '''
         Get or set whether or not the turtle is visible
 
@@ -564,14 +561,14 @@ class TurtleBase(_Ref):
         self.visible = False # hide the turtle
         ```
         '''
+        return self.__visible
+    @visible.setter
+    def visible(self, is_visible: bool) -> None:
         self.__visible = bool(is_visible)
         _qinvoke(self.__turtle.showturtle if self.__visible else self.__turtle.hideturtle)
 
     @property
     def drawing(self) -> bool:
-        return self.__drawing
-    @drawing.setter
-    def drawing(self, is_drawing: bool) -> None:
         '''
         Get or set whether or not the turtle should draw a trail behind it as it moves.
 
@@ -580,14 +577,14 @@ class TurtleBase(_Ref):
         self.drawing = False # stop drawing
         ```
         '''
+        return self.__drawing
+    @drawing.setter
+    def drawing(self, is_drawing: bool) -> None:
         self.__drawing = bool(is_drawing)
         _qinvoke(self.__turtle.pendown if self.__drawing else self.__turtle.penup)
 
     @property
     def pen_size(self) -> float:
-        return self.__pen_size
-    @pen_size.setter
-    def pen_size(self, new_size: float) -> None:
         '''
         Get or set the width of the drawing pen (in pixels).
         This affects the width of drawn trails when `drawing` is set to `True`.
@@ -597,14 +594,14 @@ class TurtleBase(_Ref):
         self.pen_size = 4 # larger pen size
         ```
         '''
+        return self.__pen_size
+    @pen_size.setter
+    def pen_size(self, new_size: float) -> None:
         self.__pen_size = float(new_size)
         _qinvoke(self.__turtle.pensize, self.__pen_size)
 
     @property
     def pen_color(self) -> Any:
-        return _qinvoke_wait(self.__turtle.color)[0]
-    @pen_color.setter
-    def pen_color(self, new_color: Any) -> None:
         '''
         Get or set the current pen color.
         For getting, this is returned as three integers representing the red, green, and blue components: (red, green, blue).
@@ -619,6 +616,9 @@ class TurtleBase(_Ref):
         self.pen_color = '#a0c8f0'
         ```
         '''
+        return _qinvoke_wait(self.__turtle.color)[0]
+    @pen_color.setter
+    def pen_color(self, new_color: Any) -> None:
         _qinvoke(self.__turtle.color, new_color)
 
     # -------------------------------------------------------

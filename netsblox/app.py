@@ -118,7 +118,27 @@ IDENT_REGEX = re.compile('^[a-zA-Z_][0-9a-zA-Z_]*$')
 def is_valid_ident(ident: str) -> bool:
     return bool(IDENT_REGEX.match(ident))
 
-DOC_REMAPS = {
+def normalize_strip(content: str) -> str:
+    raw_lines = [x.rstrip() for x in content.splitlines()]
+    raw_pos = 0
+    while True:
+        while raw_pos < len(raw_lines) and not raw_lines[raw_pos]:
+            raw_pos += 1
+        if raw_pos >= len(raw_lines):
+            break
+        target = raw_lines[raw_pos][0]
+        if not target.isspace():
+            break
+
+        if any(t and not t.startswith(target) for t in raw_lines):
+            break
+
+        for i in range(len(raw_lines)):
+            raw_lines[i] = raw_lines[i][1:]
+
+    return '\n'.join(raw_lines)
+
+FULL_NAME_DOC_REMAPS = {
     'builtins.input': '''
 input(prompt: Any=...) -> str
 
@@ -129,6 +149,18 @@ Note that calling this function will pause the turtle simulation
 while the user decides what to enter.
 '''.strip(),
 }
+PROP_DOC_REMAPS = {}
+
+for T in [netsblox.turtle.StageBase, netsblox.turtle.TurtleBase]:
+    for k in dir(T):
+        if k.startswith('_') or k.startswith('_'):
+            continue
+        field = getattr(T, k)
+        assert field.__doc__
+        if type(field) is property:
+            doc = normalize_strip(field.__doc__)
+            PROP_DOC_REMAPS[k] = doc
+            FULL_NAME_DOC_REMAPS[f'netsblox.turtle.{T.__name__}.{k}'] = doc
 
 INLINE_CODE_REGEX = re.compile(r'`([^`]+)`')
 def clean_docstring(content: str) -> str:
@@ -919,13 +951,19 @@ class CodeEditor(ScrolledText):
         docs = script.help(edit_line, edit_col)
 
         def get_docstring(item):
-            mapped = DOC_REMAPS.get(item.full_name, None)
+            mapped = FULL_NAME_DOC_REMAPS.get(item.full_name)
             if mapped is not None:
                 return mapped
+
+            if item.column is not None and item.column > 0 and item.get_line_code()[item.column - 1] == '.':
+                mapped = PROP_DOC_REMAPS.get(item.name)
+                if mapped is not None:
+                    return mapped
 
             desc = item.description
             if desc.startswith('keyword') or desc.startswith('instance'):
                 return ''
+
             return item.docstring()
         docs = [get_docstring(x) for x in docs]
         docs = [x for x in docs if x] # don't show empty items
