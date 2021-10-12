@@ -763,6 +763,19 @@ class ScrolledText(tk.Frame):
         self.text.bind('<Control-Key-a>', on_select_all)
         self.text.bind('<Control-Key-A>', on_select_all)
 
+        def on_home(*, do_select: bool):
+            white, _ = get_white_nonwhite(self.text.get('insert linestart', 'insert lineend'))
+            target = f'insert linestart +{len(white)}c'
+            if do_select:
+                col = int(self.text.index('insert').split('.')[1])
+                self.text.tag_add(tk.SEL, *((target, 'insert') if col >= len(white) else ('insert', target)))
+            else:
+                self.text.selection_clear()
+            self.text.mark_set('insert', target)
+            return 'break'
+        self.text.bind('<Home>',       lambda e: on_home(do_select = False))
+        self.text.bind('<Shift-Home>', lambda e: on_home(do_select = True))
+
         self.linenumbers = None # default to none - conditionally created
         self.blocks = None
 
