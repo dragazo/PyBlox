@@ -231,17 +231,16 @@ def _get_logical_scale() -> float:
         _logical_scale_cached = min(wsize[0] / lsize[0], wsize[1] / lsize[1])
         return _logical_scale_cached
     return _qinvoke_wait(batcher)
-def _perform_resize_ui() -> None:
-    def batcher():
-        global _logical_scale_cached
-        wsize = _get_window_size()
-        lsize = _get_logical_size()
-        scale = _logical_scale_cached = min(wsize[0] / lsize[0], wsize[1] / lsize[1])
 
-        for t in _all_turtles:
-            x, y = t.pos
-            getattr(t, '_TurtleBase__turtle').goto(x * scale, y * scale)
-    _qinvoke_wait(batcher)
+def _perform_resize_ui() -> None:
+    global _logical_scale_cached
+    wsize = _get_window_size()
+    lsize = _get_logical_size()
+    scale = _logical_scale_cached = min(wsize[0] / lsize[0], wsize[1] / lsize[1])
+
+    for t in _all_turtles:
+        x, y = t.pos
+        getattr(t, '_TurtleBase__turtle').goto(x * scale, y * scale)
 
 def _register_resize_hook() -> None:
     if _registered_resize_hook: return
@@ -255,9 +254,10 @@ def _register_resize_hook() -> None:
             global _window_size_cached
             if _window_size_cached is None or _window_size_cached[0] != e.width or _window_size_cached[1] != e.height:
                 _window_size_cached = (e.width + 2, e.height + 2) # add back the 1px outline from tkinter
-                _perform_resize_ui()
+                _turtle.Screen().getcanvas().after(0, _perform_resize_ui)
         _turtle.Screen().getcanvas().bind('<Configure>', update)
     _qinvoke_wait(batcher)
+
 def _get_window_size() -> Tuple[int, int]:
     global _window_size_cached
     _register_resize_hook()
