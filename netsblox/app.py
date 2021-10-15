@@ -8,6 +8,7 @@ import tkinter.filedialog as filedialog
 import tkinter.messagebox as messagebox
 import multiprocessing as mproc
 import subprocess
+import darkdetect
 import threading
 import traceback
 import requests
@@ -25,6 +26,8 @@ from typing import List, Tuple
 import netsblox
 from netsblox import transform
 from netsblox import common
+
+NETSBLOX_PY_PATH = os.path.dirname(netsblox.__file__)
 
 IMG_ROOT = 'https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img'
 
@@ -46,9 +49,14 @@ try:
 except:
     pass
 
+IS_DARK = darkdetect.isDark()
+COLOR_INFO = {
+    'text-background':          '#1f1e1e' if IS_DARK else '#ffffff',
+    'text-background-disabled': '#1f1e1e' if IS_DARK else '#ffffff',
+}
+
 root = None
 main_menu = None
-toolbar = None
 content = None
 
 _print_queue = mproc.Queue(maxsize = 256)
@@ -244,15 +252,20 @@ def play_button():
     global _exec_process
     start_exec_monitor()
 
+    run_entry = main_menu.run_menu_entries['run-project']
+    stop_entry = main_menu.run_menu_entries['stop-project']
+
     # if already running, just kill it - the only locks they can have were made by them, so no deadlocking issues.
     # the messaging pipe is broken, but we won't be using it anymore.
     if _exec_process is not None:
         _exec_process.terminate()
         _exec_process = None
-        toolbar.run_button.show_play()
+        main_menu.run_menu.entryconfig(run_entry, state = tk.ACTIVE)
+        main_menu.run_menu.entryconfig(stop_entry, state = tk.DISABLED)
         return
 
-    toolbar.run_button.show_stop()
+    main_menu.run_menu.entryconfig(run_entry, state = tk.DISABLED)
+    main_menu.run_menu.entryconfig(stop_entry, state = tk.ACTIVE)
 
     content.display.terminal.text.set_text('')
 
@@ -273,25 +286,6 @@ def play_button():
 _package_dir = netsblox.__path__[0]
 def module_path(path: str) -> str:
     return f'{_package_dir}/{path}'
-
-class Toolbar(tk.Frame):
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.pack(side = tk.TOP, fill = tk.X)
-
-        self.run_button = StartStopButton(self, command = play_button)
-        self.run_button.pack()
-
-class StartStopButton(tk.Button):
-    def __init__(self, parent, **kwargs):
-        font = tkfont.Font(size = 16)
-        super().__init__(parent, width = 5, font = font, padx = 0, pady = 0, **kwargs)
-        self.show_play()
-
-    def show_play(self):
-        self.config(text = '⚑', bg = '#2d9e29', activebackground = '#23b81d', fg = 'white', activeforeground = 'white')
-    def show_stop(self):
-        self.config(text = '◾', bg = '#b31515', activebackground = '#d10d0d', fg = 'white', activeforeground = 'white')
 
 class Content(tk.Frame):
     def __init__(self, parent):
@@ -322,7 +316,6 @@ class DndManager:
         widget.bind('<ButtonPress-1>', self.on_start)
         widget.bind('<B1-Motion>', self.on_drag)
         widget.bind('<ButtonRelease-1>', self.on_drop)
-        widget.configure(cursor = 'hand1')
     
     def on_start(self, e):
         for target in self.targets:
@@ -346,10 +339,8 @@ class BlocksList(tk.Frame):
     def __init__(self, parent, blocks, text_target):
         super().__init__(parent)
 
-        self.disabled_color = '#d9d9d9'
-
-        self.scrollbar = tk.Scrollbar(self)
-        self.text = tk.Text(self, wrap = tk.NONE, width = 24, yscrollcommand = self.scrollbar.set, bg = self.disabled_color)
+        self.scrollbar = ttk.Scrollbar(self)
+        self.text = tk.Text(self, wrap = tk.NONE, width = 24, yscrollcommand = self.scrollbar.set, bg = COLOR_INFO['text-background-disabled'])
         self.scrollbar.configure(command = self.text.yview)
 
         self.scrollbar.pack(side = tk.RIGHT, fill = tk.Y)
@@ -364,11 +355,11 @@ class BlocksList(tk.Frame):
         def make_dnd_manager(widget, code):
             focused = [None]
             def on_start(e):
-                # store focused widget and steal focus so that the red outline will always show
+                # store focused widget and steal focus so that the colored outline will always show
                 focused[0] = root.focus_get()
                 widget.focus()
 
-                text_target.configure(highlightbackground = 'red')
+                text_target.configure(highlightbackground = '#156fe6')
             def on_stop(e):
                 # restore saved focus
                 if focused[0] is not None:
@@ -391,7 +382,7 @@ class BlocksList(tk.Frame):
         self.imgs = [] # for some reason we need to keep a reference to the images or they disappear
         for block in blocks:
             img = load_image(block['url'], scale = block['scale'])
-            label = tk.Label(self, image = img, bg = self.disabled_color)
+            label = tk.Label(self.text, image = img, bg = COLOR_INFO['text-background-disabled'])
 
             self.text.window_create('end', window = label)
             self.text.insert('end', '\n')
@@ -718,6 +709,8 @@ class TextLineNumbers(tk.Canvas):
         self.textwidget = target
         self.line_num_offset = 0
 
+        self.font = tkfont.nametofont('TkFixedFont')
+
     def redraw(self):
         self.delete('all')
 
@@ -729,7 +722,7 @@ class TextLineNumbers(tk.Canvas):
 
             y = dline[1]
             linenum = int(str(i).split('.')[0]) + self.line_num_offset
-            self.create_text(self.width - 2, y, anchor = 'ne', text = str(linenum))
+            self.create_text(self.width - 2, y, anchor = 'ne', text = str(linenum), font = self.font)
             i = self.textwidget.index(f'{i}+1line')
 
 # source: https://stackoverflow.com/questions/16369470/tkinter-adding-line-number-to-text-widget
@@ -773,8 +766,10 @@ class ScrolledText(tk.Frame):
         super().__init__(parent)
         undo_args = { 'undo': True, 'maxundo': -1, 'autoseparators': True }
 
-        self.scrollbar = tk.Scrollbar(self)
-        self.text = ChangedText(self, yscrollcommand = self.scrollbar.set, **({} if readonly else undo_args), **kwargs)
+        self.font = tkfont.nametofont('TkFixedFont')
+
+        self.scrollbar = ttk.Scrollbar(self)
+        self.text = ChangedText(self, font = self.font, yscrollcommand = self.scrollbar.set, **({} if readonly else undo_args), **kwargs)
         self.scrollbar.config(command = self.text.yview)
 
         self.custom_on_change = []
@@ -910,15 +905,15 @@ class CodeEditor(ScrolledText):
             ]
             cdg.prog = re.compile('|'.join(patterns))
 
-            cdg.tagdefs['COMMENT']    = {'foreground': '#a3a3a3', 'background': '#ffffff'}
-            cdg.tagdefs['MYNUMBER']   = {'foreground': '#c26910', 'background': '#ffffff'}
-            cdg.tagdefs['MYSELF']     = {'foreground': '#d943aa', 'background': '#ffffff'}
-            cdg.tagdefs['MYPROP']     = {'foreground': '#d943aa', 'background': '#ffffff'}
-            cdg.tagdefs['BUILTIN']    = {'foreground': '#6414b5', 'background': '#ffffff'}
-            cdg.tagdefs['DEFINITION'] = {'foreground': '#6414b5', 'background': '#ffffff'}
-            cdg.tagdefs['MYDECO']     = {'foreground': '#6414b5', 'background': '#ffffff'}
-            cdg.tagdefs['KEYWORD']    = {'foreground': '#0d15b8', 'background': '#ffffff'}
-            cdg.tagdefs['STRING']     = {'foreground': '#961a1a', 'background': '#ffffff'}
+            cdg.tagdefs['COMMENT']    = {'foreground': '#a3a3a3', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['MYNUMBER']   = {'foreground': '#c26910', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['MYSELF']     = {'foreground': '#d943aa', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['MYPROP']     = {'foreground': '#d943aa', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['BUILTIN']    = {'foreground': '#6414b5', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['DEFINITION'] = {'foreground': '#6414b5', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['MYDECO']     = {'foreground': '#6414b5', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['KEYWORD']    = {'foreground': '#0d15b8', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['STRING']     = {'foreground': '#961a1a', 'background': COLOR_INFO['text-background']}
 
             percolator.Percolator(self.text).insertfilter(cdg)
 
@@ -1198,12 +1193,11 @@ class TerminalOutput(tk.Frame):
         super().__init__(parent)
         self.__last_line_len = 0
 
-        font = tkfont.Font(family = 'monospace', size = 10)
-        self.text = ScrolledText(self, readonly = True, font = font)
+        self.text = ScrolledText(self, readonly = True)
         self.text.pack(side = tk.TOP, fill = tk.BOTH, expand = True)
         self.text.text.config(bg = '#1a1a1a', fg = '#bdbdbd', insertbackground = '#bdbdbd')
 
-        self.__char_width = font.measure('m')
+        self.__char_width = self.text.font.measure('m')
 
     def wrap_stdio(self, *, tee: bool):
         _print_targets.append(self)
@@ -1303,6 +1297,8 @@ class MainMenu(tk.Menu):
         submenu.add_checkbutton(label = 'Blocks', variable = content.project.show_blocks_tkvar, command = content.project.update_show_blocks, accelerator = 'Ctrl+B')
         self.add_cascade(label = 'View', menu = submenu)
 
+        root.bind_all('<Control-b>', lambda e: self.toggle_blocks())
+
         submenu = tk.Menu(self, **MENU_STYLE)
         imp = content.project.imports
         for pkg, item in imp.packages.items():
@@ -1313,7 +1309,17 @@ class MainMenu(tk.Menu):
         self.images_dropdown = tk.Menu(self, **MENU_STYLE)
         self.add_cascade(label = 'Images', menu = self.images_dropdown)
 
-        root.bind_all('<Control-b>', lambda e: self.toggle_blocks())
+        self.run_menu_entries = {}
+        self.run_menu = tk.Menu(self, **MENU_STYLE)
+        def add_run_menu_command(name: str, **kwargs):
+            self.run_menu_entries[name] = len(self.run_menu_entries)
+            self.run_menu.add_command(**kwargs)
+
+        add_run_menu_command('run-project', label = 'Run Project', command = play_button, accelerator = 'F5')
+        add_run_menu_command('stop-project', label = 'Stop Project', command = play_button, state = tk.DISABLED)
+        self.add_cascade(label = 'Run', menu = self.run_menu)
+
+        root.bind_all('<F5>', lambda e: play_button())
 
     @property
     def project_path(self):
@@ -1444,17 +1450,15 @@ class MainMenu(tk.Menu):
             self.images_dropdown.add_cascade(label = f'{name} {img.width}x{img.height}', menu = submenu)
 
 def main():
-    global root, main_menu, toolbar, content
+    global root, main_menu, content
 
     root = tk.Tk()
     root.geometry('1200x600')
     root.minsize(width = 800, height = 400)
-    ttk.Style().theme_use('clam')
 
     logo = load_image(f'{IMG_ROOT}/logo/logo-256.png')
     root.iconphoto(True, logo)
 
-    toolbar = Toolbar(root)
     content = Content(root)
     main_menu = MainMenu(root)
 

@@ -20,14 +20,13 @@ setup(
     packages = [ 'netsblox' ],
     install_requires = [
         'websocket-client',
+        'darkdetect',
         'requests',
         'pillow',
+        'numpy',
         'parso',
         'jedi',
         'mss',
-
-        # the following deps are just for turtle ide optional imports (we want them to already be installed)
-        'numpy',
     ],
     classifiers = [
         'Development Status :: 1 - Planning',
