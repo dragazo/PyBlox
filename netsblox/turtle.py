@@ -741,13 +741,17 @@ def _derive(bases, cls):
                 self.__Derived_kwargs = src.__Derived_kwargs
 
                 self.__clone_from(src)
+                self.__is_clone = src
                 cls.__init__(self, *self.__Derived_args, **self.__Derived_kwargs)
             else:
                 self.__Derived_args = args
                 self.__Derived_kwargs = kwargs
+
+                self.__is_clone = None
                 cls.__init__(self, *args, **kwargs)
 
-            start_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_start'))
+            start_tag = '__run_on_start' if not self.__is_clone else '__run_on_start_clone'
+            start_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, start_tag))
             for _, start_script in start_scripts:
                 thread = _threading.Thread(target = _traceback_wrapped(start_script))
                 thread.setDaemon(True)
@@ -823,6 +827,8 @@ def onstart(f):
     The `@onstart` decorator can be applied to a method definition inside a stage or turtle
     to make that function run whenever the stage/turtle is created.
 
+    Turtles created via cloning will not run onstart events; instead, use the `@onstartclone` decorator.
+
     `@onstart` can also be applied to a function at global scope (not a method),
     in which case the function is called when the project is started.
 
@@ -838,6 +844,23 @@ def onstart(f):
         t = _threading.Thread(target = _traceback_wrapped(f))
         t.setDaemon(True)
         t.start()
+    return f
+
+def onstartclone(f):
+    '''
+    The `@onstartclone` decorator can be applied to turtle methods, and is
+    equivalent to `@onstart` except that it runs when a clone is created.
+
+    ```
+    @onstartclone
+    def clonestart(self):
+        self.forawrd(75)
+    ```
+    '''
+    if _common.is_method(f):
+        setattr(f, '__run_on_start_clone', True)
+    else:
+        raise TypeError('Attempt to use @onstartclone on a non-method')
     return f
 
 def _add_gui_event_wrapper(field, register, keys):
