@@ -12,13 +12,39 @@ import math as _math
 import copy as _copy
 import sys as _sys
 
+import numpy as _np
+
 import netsblox.common as _common
 import netsblox.events as _events
 
-from typing import Any, Union, Tuple, Iterable
+from typing import Any, Union, Tuple, Iterable, Optional
 
 from PIL import Image, ImageTk
 import mss
+
+VIS_THRESH = 20
+def _image_alpha(img: Image.Image) -> Image.Image:
+    assert img.mode == 'RGBA'
+    return img.getchannel('A')
+def _area(size: Tuple[int, int]) -> int:
+    return size[0] * size[1]
+def _intersects(a: Tuple[Image.Image, int, int], b: Tuple[Image.Image, int, int]) -> bool:
+    asize, bsize = _area(a[0].size), _area(b[0].size)
+    if asize == 0 or bsize == 0:
+        return False
+    if bsize < asize:
+        a, b = b, a
+
+    base, other = _image_alpha(a[0]), _image_alpha(b[0])
+    other_center_x = float(b[1] - a[1])
+    other_center_y = -float(b[2] - a[2])
+    other_x = base.width / 2 + other_center_x - other.width / 2
+    other_y = base.height / 2 + other_center_y - other.height / 2
+
+    other_trans = Image.new('L', base.size, 0)
+    other_trans.paste(other, (other_x, other_y))
+
+    return _np.bitwise_and(_np.array(base) >= VIS_THRESH, _np.array(other_trans) >= VIS_THRESH).any()
 
 def _traceback_wrapped(fn):
     def wrapped(*args, **kwargs):
@@ -182,24 +208,30 @@ class _ImgWrapper:
         self._data = ImageTk.PhotoImage(img)
 
 _blank_img = Image.new('RGBA', (10, 10))
-def _setcostume(t, tid, costume: Union[None, str, Any]):
+def _setcostume(t, rawt, tid, costume: Union[None, Image.Image]) -> None:
     def batcher():
         if costume is not None:
-            if type(costume) == str:
-                t.shape(costume)
-            else:
-                name = f'custom-costume-{tid}'
-                _turtle.register_shape(name, costume if type(costume) == str else _ImgWrapper(costume))
-                t.shape(name)
+            name = f'custom-costume-{tid}'
+            _turtle.register_shape(name, _ImgWrapper(costume))
+            rawt.shape(name)
+        elif isinstance(t, TurtleBase):
+            rawt.shape('classic')
         else:
             _turtle.register_shape('blank', _ImgWrapper(_blank_img))
-            t.shape('blank')
-    return _qinvoke(batcher)
+            rawt.shape('blank')
+    _qinvoke(batcher)
+
+def _apply_transforms(img: Optional[Image.Image], scale: float, rot: float) -> Image.Image:
+    if img is None: return None
+
+    w, h = img.size
+    img = img.resize((round(w * scale), round(h * scale)))
+    return img.rotate((0.25 - rot) * 360, expand = True)
 
 # if set to non-none, will use RawTurtle with this as its TurtleScreen parent
 _raw_turtle_target = None
 _turtle_count = 0
-def _make_turtle(extra_fn = None):
+def _make_turtle(wrapper):
     def batcher():
         global _turtle_count
         tid = _turtle_count
@@ -209,8 +241,7 @@ def _make_turtle(extra_fn = None):
         t.speed('fastest')
         t.penup()
 
-        if extra_fn is not None:
-            extra_fn(t, tid)
+        _setcostume(wrapper, t, tid, None)
 
         return t, tid
     return _qinvoke_wait(batcher)
@@ -241,6 +272,7 @@ def _perform_resize_ui() -> None:
     for t in _all_turtles:
         x, y = t.pos
         getattr(t, '_TurtleBase__turtle').goto(x * scale, y * scale)
+        getattr(t, '_TurtleBase__update_costume')()
 
 def _register_resize_hook() -> None:
     if _registered_resize_hook: return
@@ -310,8 +342,13 @@ class StageBase(_Ref):
         except:
             self.__initialized = True
 
-        self.__turtle, self.__tid = _make_turtle(lambda t, tid: _setcostume(t, tid, None)) # default to blank costume
         self.__costume = None
+
+        self.__turtle, self.__tid = _make_turtle(self)
+
+    def __update_costume(self):
+        img = _apply_transforms(self.__costume, _get_logical_scale(), 0.25)
+        _setcostume(self, self.__turtle, self.__tid, img)
 
     @property
     def costume(self) -> Any:
@@ -324,9 +361,14 @@ class StageBase(_Ref):
         '''
         return self.__costume
     @costume.setter
-    def costume(self, new_costume: Any) -> None:
-        _setcostume(self.__turtle, self.__tid, new_costume)
+    def costume(self, new_costume: Image.Image) -> None:
+        if new_costume is not None:
+            if not isinstance(new_costume, Image.Image):
+                raise TypeError(f'attempt to set costume to a non-image type: {type(new_costume)}')
+            new_costume = new_costume.convert('RGBA')
+
         self.__costume = new_costume
+        self.__update_costume()
 
     @property
     def size(self) -> Tuple[int, int]:
@@ -409,15 +451,17 @@ class TurtleBase(_Ref):
         except:
             self.__initialized = True
 
-        self.__turtle, self.__tid = _make_turtle()
         self.__drawing = False
         self.__visible = True
         self.__x = 0.0
         self.__y = 0.0
         self.__rot = 0.25 # angle [0, 1)
+        self.__scale = 1.0
         self.__degrees = 360.0
-        self.__costume = 'classic'
         self.__pen_size = 1.0
+        self.__costume = None
+
+        self.__turtle, self.__tid = _make_turtle(self)
 
         _all_turtles.append(self)
 
@@ -432,6 +476,10 @@ class TurtleBase(_Ref):
             self.pen_size = src.pen_size
             self.pen_color = src.pen_color
         _qinvoke(batcher)
+
+    def __update_costume(self):
+        img = _apply_transforms(self.__costume, self.__scale * _get_logical_scale(), self.__rot)
+        _setcostume(self, self.__turtle, self.__tid, img)
 
     def clone(self) -> Any:
         '''
@@ -465,9 +513,35 @@ class TurtleBase(_Ref):
         '''
         return self.__costume
     @costume.setter
-    def costume(self, new_costume: Any) -> None:
-        _setcostume(self.__turtle, self.__tid, new_costume)
+    def costume(self, new_costume: Image.Image) -> None:
+        if new_costume is not None:
+            if not isinstance(new_costume, Image.Image):
+                raise TypeError(f'attempt to set costume to a non-image type: {type(new_costume)}')
+            new_costume = new_costume.convert('RGBA')
+
         self.__costume = new_costume
+        self.__update_costume()
+
+    @property
+    def scale(self) -> float:
+        '''
+        Get or set the current turtle scale.
+        Larger values make the turtle larger.
+
+        This should be a positive number
+
+        ```
+        self.scale = 2.5
+        ```
+        '''
+        return self.__scale
+    @scale.setter
+    def scale(self, new_scale: float) -> None:
+        new_scale = float(new_scale)
+        if new_scale <= 0:
+            raise RuntimeError(f'attempt to set turtle scale to non-positive value: {new_scale}')
+        self.__scale = new_scale
+        self.__update_costume()
 
     @property
     def pos(self) -> Tuple[float, float]:
@@ -531,6 +605,7 @@ class TurtleBase(_Ref):
         self.__setheading(float(new_heading))
     def __setheading(self, new_heading: float) -> None:
         self.__rot = (new_heading / self.__degrees) % 1.0
+        self.__update_costume()
         _qinvoke(self.__turtle.setheading, (0.25 - self.__rot) % 1.0 * 360.0) # raw turtle is always in degrees mode
 
     @property
