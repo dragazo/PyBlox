@@ -545,16 +545,38 @@ class ProjectEditor(tk.Frame):
     DEFAULT_GLOBAL_BLOCKS = [
         { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name():\n    pass' },
         { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name():\n    pass' },
-        { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick\ndef function_name(x, y):\n    pass' },
-        { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(): # add arguments to receive values\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass' },
+
         { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass' },
+
+        { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(): # add arguments to receive values\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message_type\', fields = 4, go = 2, here = 7)' },
+        { 'url': f'{IMG_ROOT}/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in list_goes_here:\n    pass' },
     ]
-    DEFAULT_TURTLE_BLOCKS = DEFAULT_STAGE_BLOCKS = [
+    DEFAULT_STAGE_BLOCKS = [
         { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name(self):\n    pass' },
         { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name(self):\n    pass' },
         { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick\ndef function_name(self, x, y):\n    pass' },
-        { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(self): # add arguments to receive values\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass' },
+
         { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass' },
+
+        { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(self): # add arguments to receive values\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message_type\', fields = 4, go = 2, here = 7)' },
+        { 'url': f'{IMG_ROOT}/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in list_goes_here:\n    pass' },
+    ]
+    DEFAULT_TURTLE_BLOCKS = [
+        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name(self):\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/onstartclone.png', 'scale': 1, 'replace': '@onstartclone\ndef function_name(self):\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name(self):\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick\ndef function_name(self, x, y):\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass' },
+
+        { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass' },
+        
+        { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(self): # add arguments to receive values\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message_type\', fields = 4, go = 2, here = 7)' },
+        { 'url': f'{IMG_ROOT}/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in list_goes_here:\n    pass' },
     ]
     DEFAULT_PROJECT = {
         'global_blocks': DEFAULT_GLOBAL_BLOCKS,
@@ -568,7 +590,7 @@ class ProjectEditor(tk.Frame):
                 'name': 'global',
                 'value': '''
 someval = 'hello world' # create a global variable
-'''.strip(),
+'''.lstrip(),
             },
             {
                 'type': 'stage',
@@ -581,7 +603,7 @@ def start(self):
 
     for i in range(10):
         print(i ** 2)
-'''.strip(),
+'''.lstrip(),
             },
             {
                 'type': 'turtle',
@@ -594,7 +616,7 @@ def start(self):
     for i in range(400):
         self.forward(self.myvar) # access sprite variable
         self.turn_right(90)
-'''.strip(),
+'''.lstrip(),
             },
         ],
         'imports': [],
