@@ -74,6 +74,8 @@ def _add_click_event(key, event):
     if key not in _click_events:
         entry = [None, []]
         def raw_handler(x, y):
+            scale = _get_logical_scale()
+            x, y = x / scale, y / scale
             for handler in entry[1]:
                 handler.schedule_no_queueing(x, y)
         entry[0] = raw_handler
@@ -460,6 +462,7 @@ class TurtleBase(_Ref):
         self.__degrees = 360.0
         self.__pen_size = 1.0
         self.__costume = None
+        self.__display_image = None # managed by costume transforms logic
 
         self.__turtle, self.__tid = _make_turtle(self)
 
@@ -478,8 +481,8 @@ class TurtleBase(_Ref):
         _qinvoke(batcher)
 
     def __update_costume(self):
-        img = _apply_transforms(self.__costume, self.__scale * _get_logical_scale(), self.__rot)
-        _setcostume(self, self.__turtle, self.__tid, img)
+        self.__display_image = _apply_transforms(self.__costume, self.__scale * _get_logical_scale(), self.__rot)
+        _setcostume(self, self.__turtle, self.__tid, self.__display_image)
 
     def clone(self) -> Any:
         '''

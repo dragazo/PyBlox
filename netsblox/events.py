@@ -13,6 +13,9 @@ class EventWrapper:
         t.setDaemon(True)
         t.start()
     
+    def wrapped(self):
+        return self.__fn
+
     def schedule(self, *args, **kwargs) -> None:
         self.__queue.put((args, kwargs))
     def schedule_no_queueing(self, *args, **kwargs) -> None:

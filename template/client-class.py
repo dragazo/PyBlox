@@ -118,7 +118,7 @@ $service_instances
 
     @staticmethod
     def _check_handler(handler, content):
-        argspec = _inspect.getfullargspec(handler.fn)
+        argspec = _inspect.getfullargspec(handler.wrapped())
         unused_params = set(content.keys())
         for arg in argspec.args + argspec.kwonlyargs:
             if arg not in content and arg != 'self':
