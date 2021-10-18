@@ -42,7 +42,7 @@ def _intersects(a: Tuple[Image.Image, int, int], b: Tuple[Image.Image, int, int]
     other_y = base.height / 2 + other_center_y - other.height / 2
 
     other_trans = Image.new('L', base.size, 0)
-    other_trans.paste(other, (other_x, other_y))
+    other_trans.paste(other, (round(other_x), round(other_y)))
 
     return _np.bitwise_and(_np.array(base) >= VIS_THRESH, _np.array(other_trans) >= VIS_THRESH).any()
 
@@ -73,11 +73,19 @@ _click_events = {} # maps key to [raw handler, event[]]
 def _add_click_event(key, event):
     if key not in _click_events:
         entry = [None, []]
-        def raw_handler(x, y):
+        def raw_handler(rawx, rawy):
             scale = _get_logical_scale()
-            x, y = x / scale, y / scale
+            x, y = rawx / scale, rawy / scale
             for handler in entry[1]:
-                handler.schedule_no_queueing(x, y)
+                should_handle = True
+                obj = getattr(handler.wrapped(), '__self__', None)
+                if isinstance(obj, TurtleBase):
+                    obj_disp_img = getattr(obj, '_TurtleBase__display_image')
+                    obj_x, obj_y = obj.x_pos * scale, obj.y_pos * scale
+                    should_handle = _intersects((obj_disp_img, obj_x, obj_y), (_CURSOR_KERNEL, rawx, rawy))
+
+                if should_handle:
+                    handler.schedule_no_queueing(x, y)
         entry[0] = raw_handler
 
         _click_events[key] = entry
@@ -209,7 +217,9 @@ class _ImgWrapper:
     def __init__(self, img):
         self._data = ImageTk.PhotoImage(img)
 
-_blank_img = Image.new('RGBA', (10, 10))
+_BLANK_IMG = Image.new('RGBA', (1, 1)) # fully transparent
+_CURSOR_KERNEL = Image.new('RGBA', (3, 3), 'black') # used for cursor click collision detection on sprites - should be roughly circleish
+
 def _setcostume(t, rawt, tid, costume: Union[None, Image.Image]) -> None:
     def batcher():
         if costume is not None:
@@ -219,7 +229,7 @@ def _setcostume(t, rawt, tid, costume: Union[None, Image.Image]) -> None:
         elif isinstance(t, TurtleBase):
             rawt.shape('classic')
         else:
-            _turtle.register_shape('blank', _ImgWrapper(_blank_img))
+            _turtle.register_shape('blank', _ImgWrapper(_BLANK_IMG))
             rawt.shape('blank')
     _qinvoke(batcher)
 
