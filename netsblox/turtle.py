@@ -18,7 +18,7 @@ import numpy as _np
 import netsblox.common as _common
 import netsblox.events as _events
 
-from typing import Any, Union, Tuple, Iterable, Optional
+from typing import Any, Union, Tuple, Iterable, Optional, List
 
 from PIL import Image, ImageTk, ImageDraw
 import mss
@@ -837,6 +837,34 @@ class TurtleBase(_Ref):
             self.__turtle.write(str(text), bool(move), align, ('Arial', int(size), 'normal'))
             return self.__turtle.position()
         self.__x, self.__y = _qinvoke_wait(batcher)
+    
+    # -----------------------------------
+
+    def is_touching(self, other: Any) -> bool:
+        '''
+        Checks if this turtle is touching the other turtle, that is, they are both visible overlapping.
+
+        ```
+        if self.is_touching(other_turtle):
+            self.turn_right(180)
+        ```
+        '''
+        if not isinstance(other, TurtleBase):
+            raise TypeError(f'Attempt to check if a turtle is touching a non-turtle (type {type(other)})')
+
+        scale = _get_logical_scale()
+        return self.__visible and other.__visible and _intersects(
+            (self.__display_image, self.__x * scale, self.__y * scale),
+            (other.__display_image, other.__x * scale, other.__y * scale))
+    def get_all_touching(self) -> List[Any]:
+        '''
+        Gets a list of all the turtles that this turtle is touching, other than itself.
+
+        ```
+        touch_count = len(self.get_all_touching())
+        ```
+        '''
+        return [other for other in _all_turtles if other is not self and self.is_touching(other)]
 
 class _CloneTag:
     def __init__(self, src):
