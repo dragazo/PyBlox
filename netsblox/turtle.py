@@ -11,6 +11,7 @@ import queue as _queue
 import math as _math
 import copy as _copy
 import sys as _sys
+import re as _re
 
 import numpy as _np
 
@@ -19,7 +20,7 @@ import netsblox.events as _events
 
 from typing import Any, Union, Tuple, Iterable, Optional
 
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw
 import mss
 
 VIS_THRESH = 20
@@ -220,6 +221,22 @@ class _ImgWrapper:
 _BLANK_IMG = Image.new('RGBA', (1, 1)) # fully transparent
 _CURSOR_KERNEL = Image.new('RGBA', (3, 3), 'black') # used for cursor click collision detection on sprites - should be roughly circleish
 
+_HEX_COLOR_REGEX = _re.compile(r'^#?([0-9a-fA-F]{6})$')
+def _parse_hex_color(color: str) -> Tuple[int, int, int]:
+    m = _HEX_COLOR_REGEX.match(color)
+    if m is None:
+        raise ValueError(f'Invalid hex color code: \'{color}\'\nshould be a hash followed by 3 2-digit hex values like \'#f5c4ee\'')
+    m = m[1]
+    x = lambda s: int(s, 16)
+    return x(m[0:2]), x(m[2:4]), x(m[4:6])
+
+def _turtle_image(color: Tuple[int, int, int], scale: float) -> Image.Image:
+    w, h = round(40 * scale), round(30 * scale)
+    img = Image.new('RGBA', (w, h))
+    draw = ImageDraw.Draw(img)
+    draw.polygon([(0, 0), (w, h / 2), (0, h), (w * 0.25, h / 2)], fill = color, outline = 'black')
+    return img
+
 def _setcostume(t, rawt, tid, costume: Union[None, Image.Image]) -> None:
     def batcher():
         if costume is not None:
@@ -238,7 +255,7 @@ def _apply_transforms(img: Optional[Image.Image], scale: float, rot: float) -> I
 
     w, h = img.size
     img = img.resize((round(w * scale), round(h * scale)))
-    return img.rotate((0.25 - rot) * 360, expand = True)
+    return img.rotate((0.25 - rot) * 360, expand = True, resample = Image.BICUBIC)
 
 # if set to non-none, will use RawTurtle with this as its TurtleScreen parent
 _raw_turtle_target = None
@@ -363,7 +380,7 @@ class StageBase(_Ref):
         _setcostume(self, self.__turtle, self.__tid, img)
 
     @property
-    def costume(self) -> Any:
+    def costume(self) -> Union[None, Image.Image]:
         '''
         Get or set the current stage costume (background).
 
@@ -373,7 +390,7 @@ class StageBase(_Ref):
         '''
         return self.__costume
     @costume.setter
-    def costume(self, new_costume: Image.Image) -> None:
+    def costume(self, new_costume: Union[None, Image.Image]) -> None:
         if new_costume is not None:
             if not isinstance(new_costume, Image.Image):
                 raise TypeError(f'attempt to set costume to a non-image type: {type(new_costume)}')
@@ -471,10 +488,12 @@ class TurtleBase(_Ref):
         self.__scale = 1.0
         self.__degrees = 360.0
         self.__pen_size = 1.0
+        self.__pen_color = (0, 0, 0) # [0,255] rgb (defaults to black)
         self.__costume = None
         self.__display_image = None # managed by costume transforms logic
 
         self.__turtle, self.__tid = _make_turtle(self)
+        self.__update_costume() # update display image based on color/scale
 
         _all_turtles.append(self)
 
@@ -491,8 +510,12 @@ class TurtleBase(_Ref):
         _qinvoke(batcher)
 
     def __update_costume(self):
-        self.__display_image = _apply_transforms(self.__costume, self.__scale * _get_logical_scale(), self.__rot)
-        _setcostume(self, self.__turtle, self.__tid, self.__display_image)
+        src = self.__costume
+        scale = self.__scale * _get_logical_scale()
+        res = _apply_transforms(src, scale, self.__rot) if src is not None else _apply_transforms(_turtle_image(self.__pen_color, scale), 1.0, self.__rot)
+
+        self.__display_image = res
+        _setcostume(self, self.__turtle, self.__tid, res)
 
     def clone(self) -> Any:
         '''
@@ -689,25 +712,29 @@ class TurtleBase(_Ref):
         _qinvoke(self.__turtle.pensize, self.__pen_size)
 
     @property
-    def pen_color(self) -> Any:
+    def pen_color(self) -> Tuple[int, int, int]:
         '''
         Get or set the current pen color.
-        For getting, this is returned as three integers representing the red, green, and blue components: (red, green, blue).
-        For setting, this can be specified in several ways:
-            - A color name string like `'red'`
-            - A tuple of three integers representing the red, green, and blue components like `(34, 23, 104)`
-            - A hexadecimal color string like `'#a0c8f0'`
+        For getting, this is returned as three integers [0,255] representing the red, green, and blue (RGB) components.
+        For setting, this can be specified as either an RGB tuple, or as a hex color code like `'#a0c8f0'`.
 
         ```
-        self.pen_color = 'red'
         self.pen_color = (34, 23, 104)
         self.pen_color = '#a0c8f0'
         ```
         '''
-        return _qinvoke_wait(self.__turtle.color)[0]
+        return self.__pen_color
     @pen_color.setter
-    def pen_color(self, new_color: Any) -> None:
-        _qinvoke(self.__turtle.color, new_color)
+    def pen_color(self, new_color: Union[str, Tuple[int, int, int]]) -> None:
+        vals = _parse_hex_color(new_color) if type(new_color) is str else [int(v) for v in new_color]
+        if len(vals) != 3:
+            raise ValueError(f'RGB color tuple needs 3 values, got {len(vals)} from {new_color}')
+        if any(v < 0 or v > 255 for v in vals):
+            raise ValueError(f'RGB color tuple components must all be [0,255], got {vals}')
+        self.__pen_color = tuple(vals)
+
+        if self.__costume is None:
+            self.__update_costume()
 
     # -------------------------------------------------------
 
