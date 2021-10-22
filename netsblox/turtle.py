@@ -499,15 +499,15 @@ class TurtleBase(_Ref):
 
     def __clone_from(self, src):
         def batcher():
-            self.drawing = src.drawing
-            self.visible = src.visible
             self.pos = src.pos
             self.heading = src.heading
-            self.degrees = src.degrees
+            self.visible = src.visible
             self.costume = src.costume
             self.pen_size = src.pen_size
             self.pen_color = src.pen_color
-        _qinvoke(batcher)
+            self.drawing = src.drawing
+            self.degrees = src.degrees
+        _qinvoke_wait(batcher)
 
     def __update_costume(self):
         src = self.__costume
@@ -923,7 +923,7 @@ def _derive(bases, cls):
                 setattr(self, field, _copy.deepcopy(getattr(src, field)))
             
             for base in bases: # recurse to child types for specialized cloning logic (like turtle repositioning)
-                getattr(base, f'_{base.__name__}__clone_from')(self, src)
+                getattr(self, f'_{base.__name__}__clone_from')(src)
 
     return Derived
 
