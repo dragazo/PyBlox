@@ -11,8 +11,8 @@ import subprocess
 import darkdetect
 import threading
 import traceback
+import platform
 import requests
-import turtle
 import json
 import sys
 import io
@@ -54,6 +54,27 @@ COLOR_INFO = {
     'text-background':          '#1f1e1e' if IS_DARK else '#ffffff',
     'text-background-disabled': '#1f1e1e' if IS_DARK else '#ffffff',
 }
+
+SYS_INFO = None
+if platform.system() == 'Darwin':
+    SYS_INFO = {
+        'mod-str': 'Cmd',
+        'mod': 'Command',
+
+        'redo-binds': [
+            '<Command-Key-Z>',
+        ],
+    }
+else:
+    SYS_INFO = {
+        'mod-str': 'Ctrl',
+        'mod': 'Control',
+
+        'redo-binds': [
+            '<Control-Key-y>',
+            '<Control-Key-Y>',
+        ],
+    }
 
 root = None
 main_menu = None
@@ -483,14 +504,22 @@ class ProjectEditor(tk.Frame):
         add_command('new-turtle', label = 'New Turtle', command = lambda: self.newturtle())
         add_command('delete', label = 'Delete', command = lambda: self.delete_tab(self.ctx_tab_idx))
 
-        def on_change(e):
-            for editor in self.editors:
-                editor.hide_suggestion()
+        self.notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
+
+    def on_tab_change(self, e = None):
+        for editor in self.editors:
+            editor.hide_suggestion()
+        if e is None: return
+
+        tab = None
+        try:
             tab = e.widget.tab('current')['text']
-            editors = [x for x in self.editors if x.name == tab]
-            assert len(editors) == 1
-            editors[0].on_content_change()
-        self.notebook.bind('<<NotebookTabChanged>>', on_change)
+        except:
+            return
+
+        editors = [x for x in self.editors if x.name == tab]
+        assert len(editors) == 1
+        editors[0].on_content_change()
 
     @property
     def show_blocks(self) -> bool:
@@ -777,8 +806,8 @@ class ScrolledText(tk.Frame):
         def on_select_all(e):
             self.text.tag_add(tk.SEL, '1.0', tk.END)
             return 'break'
-        self.text.bind('<Control-Key-a>', on_select_all)
-        self.text.bind('<Control-Key-A>', on_select_all)
+        self.text.bind(f'<{SYS_INFO["mod"]}-Key-a>', on_select_all)
+        self.text.bind(f'<{SYS_INFO["mod"]}-Key-A>', on_select_all)
 
         def on_home(*, do_select: bool):
             white, _ = get_white_nonwhite(self.text.get('insert linestart', 'insert lineend'))
@@ -805,21 +834,25 @@ class ScrolledText(tk.Frame):
                 self.clipboard_clear()
                 self.clipboard_append(self.text.selection_get())
                 return 'break'
-            self.text.bind('<Control-Key-c>', on_copy)
-            self.text.bind('<Control-Key-C>', on_copy)
+            self.text.bind(f'<{SYS_INFO["mod"]}-Key-c>', on_copy)
+            self.text.bind(f'<{SYS_INFO["mod"]}-Key-C>', on_copy)
         else:
             def on_redo(e):
                 self.text.edit_redo()
                 return 'break'
-            self.text.bind('<Control-Key-y>', on_redo)
-            self.text.bind('<Control-Key-Y>', on_redo)
+            for bind in SYS_INFO['redo-binds']:
+                self.text.bind(bind, on_redo)
 
             # default paste behavior doesn't delete selection first
             def on_paste(e):
                 if self.text.tag_ranges(tk.SEL):
                     self.text.delete(tk.SEL_FIRST, tk.SEL_LAST)
-            self.text.bind('<Control-Key-v>', on_paste)
-            self.text.bind('<Control-Key-V>', on_paste)
+                
+                # some versions of tcl/tk on mac are broken and crash here, so impl manually
+                self.text.insert(tk.INSERT, self.clipboard_get())
+                return 'break'
+            self.text.bind(f'<{SYS_INFO["mod"]}-Key-v>', on_paste)
+            self.text.bind(f'<{SYS_INFO["mod"]}-Key-V>', on_paste)
 
         if linenumbers:
             self.linenumbers = TextLineNumbers(self, target = self.text, width = 40)
@@ -843,6 +876,8 @@ class ScrolledText(tk.Frame):
         if self.linenumbers is not None:
             self.linenumbers.pack(side = tk.LEFT, fill = tk.Y)
         self.text.pack(side = tk.RIGHT, fill = tk.BOTH, expand = True)
+
+        self.update() # needed on mac
 
     def on_content_change(self):
         for handler in self.custom_on_change:
@@ -880,7 +915,7 @@ class CodeEditor(ScrolledText):
         except:
             self.text.bind('<Shift-Tab>', lambda e: self.do_untab())
 
-        self.text.bind('<Control-slash>', lambda e: self.do_autocomment())
+        self.text.bind(f'<{SYS_INFO["mod"]}-slash>', lambda e: self.do_autocomment())
 
         self.text.bind('<Tab>', lambda e: self.do_tab())
         self.text.bind('<BackSpace>', lambda e: self.do_backspace())
@@ -927,6 +962,7 @@ class CodeEditor(ScrolledText):
                 self.update_timer = self.after(SUGGESTION_UPDATE_INTERVAL, trigger)
             self.custom_on_change.append(delayed_show_full_help)
 
+            # this one really should be ctrl+space on all platforms
             self.text.bind('<Control-Key-space>', lambda e: self.show_suggestion())
 
     def line_count(self):
@@ -1253,18 +1289,6 @@ class TerminalOutput(tk.Frame):
     def write_line(self, txt):
         self.write(f'{txt}\n')
 
-class TurtleDisplay(tk.Frame):
-    def __init__(self, parent):
-        super().__init__(parent)
-
-        self.canvas = turtle.ScrolledCanvas(self)
-        self.canvas.pack(fill = tk.BOTH, expand = True)
-
-        self.screen = turtle.TurtleScreen(self.canvas)
-
-        # ScrolledCanvas has better behavior, but we dont actually want scrollbars, so always match display size
-        self.canvas.bind('<Configure>', lambda e: self.screen.screensize(canvwidth = e.width, canvheight = e.height))
-
 MENU_STYLE = { 'tearoff': False, 'relief': 'flat', 'bg': '#bdbdbd' }
 class MainMenu(tk.Menu):
     def __init__(self, parent):
@@ -1278,26 +1302,27 @@ class MainMenu(tk.Menu):
         root.protocol('WM_DELETE_WINDOW', kill)
 
         submenu = tk.Menu(self, **MENU_STYLE)
-        submenu.add_command(label = 'New', command = self.new_project, accelerator = 'Ctrl+N')
-        submenu.add_command(label = 'Open', command = self.open_project, accelerator = 'Ctrl+O')
+        submenu.add_command(label = 'New', command = self.new_project, accelerator = f'{SYS_INFO["mod-str"]}+N')
+        submenu.add_command(label = 'Open', command = self.open_project, accelerator = f'{SYS_INFO["mod-str"]}+O')
         submenu.add_separator()
-        submenu.add_command(label = 'Save', command = self.save, accelerator = 'Ctrl+S')
-        submenu.add_command(label = 'Save As', command = self.save_as)
+        submenu.add_command(label = 'Save', command = self.save, accelerator = f'{SYS_INFO["mod-str"]}+S')
+        submenu.add_command(label = 'Save As', command = self.save_as, accelerator = f'Shift+{SYS_INFO["mod-str"]}+S')
         submenu.add_separator()
         submenu.add_command(label = 'Export', command = self.export_as)
         submenu.add_separator()
         submenu.add_command(label = 'Exit', command = kill)
         self.add_cascade(label = 'File', menu = submenu)
 
-        root.bind_all('<Control-n>', lambda e: self.new_project())
-        root.bind_all('<Control-o>', lambda e: self.open_project())
-        root.bind_all('<Control-s>', lambda e: self.save())
+        root.bind_all(f'<{SYS_INFO["mod"]}-n>', lambda e: self.new_project())
+        root.bind_all(f'<{SYS_INFO["mod"]}-o>', lambda e: self.open_project())
+        root.bind_all(f'<{SYS_INFO["mod"]}-s>', lambda e: self.save())
+        root.bind_all(f'<{SYS_INFO["mod"]}-S>', lambda e: self.save_as())
 
         submenu = tk.Menu(self, **MENU_STYLE)
-        submenu.add_checkbutton(label = 'Blocks', variable = content.project.show_blocks_tkvar, command = content.project.update_show_blocks, accelerator = 'Ctrl+B')
+        submenu.add_checkbutton(label = 'Blocks', variable = content.project.show_blocks_tkvar, command = content.project.update_show_blocks, accelerator = f'{SYS_INFO["mod-str"]}+B')
         self.add_cascade(label = 'View', menu = submenu)
 
-        root.bind_all('<Control-b>', lambda e: self.toggle_blocks())
+        root.bind_all(f'<{SYS_INFO["mod"]}-b>', lambda e: self.toggle_blocks())
 
         submenu = tk.Menu(self, **MENU_STYLE)
         imp = content.project.imports
@@ -1366,6 +1391,8 @@ class MainMenu(tk.Menu):
         content.project.load(ProjectEditor.DEFAULT_PROJECT)
 
     def open_project(self):
+        content.project.on_tab_change()
+
         if not self.try_close_project():
             return
 
