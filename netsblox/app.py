@@ -931,12 +931,14 @@ class CodeEditor(ScrolledText):
                     if not key.startswith('_') and not key.endswith('_') and isinstance(getattr(T, key), property):
                         props.add(key)
 
+            def get_pattern(p): # newer versions of python don't allow concatenating pattern objects directly
+                return getattr(p, 'pattern') if hasattr(p, 'pattern') else p
             patterns = [
                 rf'\.(?P<MYPROP>{"|".join(props)})\b',
                 r'(?P<MYDECO>@(\w+\.)*\w+)\b',
                 r'\b(?P<MYSELF>self)\b',
                 r'\b(?P<MYNUMBER>(\d+\.?|\.\d)\d*(e[-+]?\d+)?)\b',
-                colorizer.make_pat().pattern,
+                get_pattern(colorizer.make_pat()),
             ]
             cdg.prog = re.compile('|'.join(patterns))
 
