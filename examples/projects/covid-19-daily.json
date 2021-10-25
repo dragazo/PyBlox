@@ -67,7 +67,7 @@
     {
       "type": "turtle", 
       "name": "turtle", 
-      "value": "@onstart\ndef start(self):\n    self.visible = False\n    \n    self.pos = (0, 120)\n    self.pen_color = 'red'\n    self.write('COVID-19 Daily Cases in NetsBlox-python', size = 24, align = 'center')\n    \n    lines = [\n        'Use the arrow keys or wasd to pan and +/- to zoom',\n        'When on the map, press Q to search for places',\n        'Click on the map to get daily covid statistics',\n    ]\n    self.y_pos -= 60\n    self.pen_color = 'blue'\n    for line in lines:\n        self.y_pos -= 40\n        self.write(line, size = 16, align = 'center')\n    \n    self.y_pos -= 100\n    self.pen_color = 'red'\n    self.write('Click anywhere or press any key to continue', size = 20, align = 'center')\n\n@onclick\n@onkey('any')\ndef do_continue(self, *args):\n    if stage.mode is None:\n        stage.mode = 'Map'\n        self.clear()\n        stage.update_map()\n"
+      "value": "@onstart\ndef start(self):\n    self.visible = False\n    \n    self.pos = (0, 120)\n    self.pen_color = 'red'\n    self.write('COVID-19 Daily Cases in NetsBlox-python', size = 24, align = 'center')\n    \n    lines = [\n        'Use the arrow keys or wasd to pan and +/- to zoom',\n        'When on the map, press Q to search for places',\n        'Click on the map to get daily covid statistics',\n    ]\n    self.y_pos -= 60\n    self.pen_color = 'blue'\n    for line in lines:\n        self.y_pos -= 40\n        self.write(line, size = 16, align = 'center')\n    \n    self.y_pos -= 100\n    self.pen_color = 'red'\n    self.write('Click anywhere or press any key to continue', size = 20, align = 'center')\n\n@onclickanywhere\n@onkey('any')\ndef do_continue(self, *args):\n    if stage.mode is None:\n        stage.mode = 'Map'\n        self.clear()\n        stage.update_map()\n"
     }, 
     {
       "type": "turtle", 
@@ -79,5 +79,6 @@
       "name": "turtle3", 
       "value": "@onstart\ndef start(self):\n    self.visible = False\n\n@nb.on_message('update charts')\ndef update_chart(self, x, y):\n    lat = nb.google_maps.get_latitude_from_y(y)\n    long = nb.google_maps.get_longitude_from_x(x)\n    country = nb.geolocation.country(lat, long)\n    state = nb.geolocation.state(lat, long)\n    \n    options = {\n        'isTimeSeries': True,\n        'timeInputFormat': '%m/%d/%Y',\n        'timeDisplayFormat': '%m/%d',\n        'types': ['boxes'],\n        'height': stage.height / 2,\n        'width': stage.width,\n    }\n    \n    cases = None\n    if country == 'United States':\n        cases = process_data(nb.covid19.get_death_counts('US', state), days_averaged)\n        options['title'] = f'Number of Daily COVID-19 Deaths in {state} (averaged over {days_averaged} days)'\n    else:\n        cases = process_data(nb.covid19.get_death_counts(country), days_averaged)\n        options['title'] = f'Number of Daily COVID-19 Deaths in {country} (averaged over {days_averaged} days)'\n    \n    self.pos = (0, -stage.height / 4)\n    self.costume = nb.chart.draw([cases], options)\n    self.visible = True"
     }
-  ]
+  ], 
+  "images": {}
 }

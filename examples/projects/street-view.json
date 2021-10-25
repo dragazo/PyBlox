@@ -67,7 +67,8 @@
     {
       "type": "turtle", 
       "name": "turtle", 
-      "value": "@onstart\ndef start(self):\n    self.visible = False\n    \n    self.pos = (0, 170)\n    self.pen_color = 'red'\n    self.write('Google Street View in NetsBlox-python', size = 24, align = 'center')\n    \n    lines = [\n        'Use the arrow keys or wasd to pan and +/- to zoom',\n        'Press x to toggle between map and satellite view',\n        'When on the map, press Q to search for places',\n        'Click on the map to get street view',\n        'The arrow keys/wasd and +/- work here too',\n    ]\n    self.y_pos -= 60\n    self.pen_color = 'blue'\n    for line in lines:\n        self.y_pos -= 40\n        self.write(line, size = 16, align = 'center')\n    \n    self.y_pos -= 100\n    self.pen_color = 'red'\n    self.write('Click anywhere or press any key to continue', size = 20, align = 'center')\n\n@onclick\n@onkey('any')\ndef do_continue(self, *args):\n    if stage.mode is None:\n        stage.mode = stage.view = 'Map'\n        self.clear()\n        stage.update_map()\n"
+      "value": "@onstart\ndef start(self):\n    self.visible = False\n    \n    self.pos = (0, 170)\n    self.pen_color = 'red'\n    self.write('Google Street View in NetsBlox-python', size = 24, align = 'center')\n    \n    lines = [\n        'Use the arrow keys or wasd to pan and +/- to zoom',\n        'Press x to toggle between map and satellite view',\n        'When on the map, press Q to search for places',\n        'Click on the map to get street view',\n        'The arrow keys/wasd and +/- work here too',\n    ]\n    self.y_pos -= 60\n    self.pen_color = 'blue'\n    for line in lines:\n        self.y_pos -= 40\n        self.write(line, size = 16, align = 'center')\n    \n    self.y_pos -= 100\n    self.pen_color = 'red'\n    self.write('Click anywhere or press any key to continue', size = 20, align = 'center')\n\n@onclickanywhere\n@onkey('any')\ndef do_continue(self, *args):\n    if stage.mode is None:\n        stage.mode = stage.view = 'Map'\n        self.clear()\n        stage.update_map()\n"
     }
-  ]
+  ], 
+  "images": {}
 }

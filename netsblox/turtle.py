@@ -17,6 +17,7 @@ import numpy as _np
 
 import netsblox.common as _common
 import netsblox.events as _events
+import netsblox.colors as _colors
 
 from typing import Any, Union, Tuple, Iterable, Optional, List
 
@@ -79,8 +80,9 @@ def _add_click_event(key, event):
             x, y = rawx / scale, rawy / scale
             for handler in entry[1]:
                 should_handle = True
-                obj = getattr(handler.wrapped(), '__self__', None)
-                if isinstance(obj, TurtleBase):
+                wrapped = handler.wrapped()
+                obj = getattr(wrapped, '__self__', None)
+                if isinstance(obj, TurtleBase) and not hasattr(wrapped, '__click_anywhere'):
                     obj_disp_img = getattr(obj, '_TurtleBase__display_image')
                     obj_x, obj_y = obj.x_pos * scale, obj.y_pos * scale
                     should_handle = _intersects((obj_disp_img, obj_x, obj_y), (_CURSOR_KERNEL, rawx, rawy))
@@ -220,15 +222,6 @@ class _ImgWrapper:
 
 _BLANK_IMG = Image.new('RGBA', (1, 1)) # fully transparent
 _CURSOR_KERNEL = Image.new('RGBA', (3, 3), 'black') # used for cursor click collision detection on sprites - should be roughly circleish
-
-_HEX_COLOR_REGEX = _re.compile(r'^#?([0-9a-fA-F]{6})$')
-def _parse_hex_color(color: str) -> Tuple[int, int, int]:
-    m = _HEX_COLOR_REGEX.match(color)
-    if m is None:
-        raise ValueError(f'Invalid hex color code: \'{color}\'\nshould be a hash followed by 3 2-digit hex values like \'#f5c4ee\'')
-    m = m[1]
-    x = lambda s: int(s, 16)
-    return x(m[0:2]), x(m[2:4]), x(m[4:6])
 
 def _turtle_image(color: Tuple[int, int, int], scale: float) -> Image.Image:
     w, h = round(40 * scale), round(30 * scale)
@@ -726,12 +719,11 @@ class TurtleBase(_Ref):
         return self.__pen_color
     @pen_color.setter
     def pen_color(self, new_color: Union[str, Tuple[int, int, int]]) -> None:
-        vals = _parse_hex_color(new_color) if type(new_color) is str else [int(v) for v in new_color]
-        if len(vals) != 3:
-            raise ValueError(f'RGB color tuple needs 3 values, got {len(vals)} from {new_color}')
-        if any(v < 0 or v > 255 for v in vals):
-            raise ValueError(f'RGB color tuple components must all be [0,255], got {vals}')
-        self.__pen_color = tuple(vals)
+        new_color = _colors.parse_color(new_color)
+        assert type(new_color) is tuple # sanity check so users can't modify colors
+
+        self.__pen_color = new_color
+        _qinvoke(self.__turtle.pencolor, tuple(x / 255 for x in new_color))
 
         if self.__costume is None:
             self.__update_costume()
@@ -1102,16 +1094,31 @@ def onclick(f):
     make that function run whenever the user clicks on the display.
     The function you apply it to will receive the `x` and `y` position of the click.
 
-    This can also be applied to turtle/stage methods, however note that they
-    will be called when the user clicks _anywhere_ on the display, not specifically on the stage/turtle.
+    This can also be applied to turtle/stage methods, however note that when used on turtles
+    the function will only be called when the user clicks on the turtle itself.
+    If you want to have a turtle run a function when the user clicks anywhere, use `@onclickanywhere` instead.
 
     ```
     @onclick
-    def mouse_click(x, y):
+    def mouse_click(self, x, y):
         print('user clicked at', x, y)
     ```
     '''
     return _add_gui_event_wrapper('__run_on_click', _add_click_event, [1])(f) # call wrapper immediately cause we take no args
+
+def onclickanywhere(f):
+    '''
+    Equivalent to `@onclick` except that it is triggered when the user clicks anywhere on the display,
+    even when used on a turtle.
+
+    ```
+    @onclickanywhere
+    def mouse_click(self, x, y):
+        print('user clicked at', x, y)
+    ```
+    '''
+    setattr(f, '__click_anywhere', True)
+    return onclick(f)
 
 _did_setup_stdio = False
 _print_lock = _threading.Lock()
