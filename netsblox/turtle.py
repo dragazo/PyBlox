@@ -273,6 +273,8 @@ _logical_size_cached = None
 _logical_scale_cached = None
 _registered_resize_hook = False
 _all_turtles = []
+_all_stages = [] # ide enforces only one stage, but in general could have multiple
+
 def _get_logical_scale() -> float:
     if _logical_scale_cached is not None:
         return _logical_scale_cached
@@ -295,6 +297,8 @@ def _perform_resize_ui() -> None:
         x, y = t.pos
         getattr(t, '_TurtleBase__turtle').goto(x * scale, y * scale)
         getattr(t, '_TurtleBase__update_costume')()
+    for s in _all_stages:
+        getattr(s, '_StageBase__update_costume')()
 
 def _register_resize_hook() -> None:
     if _registered_resize_hook: return
@@ -367,6 +371,8 @@ class StageBase(_Ref):
         self.__costume = None
 
         self.__turtle, self.__tid = _make_turtle(self)
+
+        _all_stages.append(self)
 
     def __update_costume(self):
         img = _apply_transforms(self.__costume, _get_logical_scale(), 0.25)
