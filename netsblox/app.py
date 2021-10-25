@@ -936,7 +936,7 @@ class CodeEditor(ScrolledText):
                 r'(?P<MYDECO>@(\w+\.)*\w+)\b',
                 r'\b(?P<MYSELF>self)\b',
                 r'\b(?P<MYNUMBER>(\d+\.?|\.\d)\d*(e[-+]?\d+)?)\b',
-                colorizer.make_pat(),
+                colorizer.make_pat().pattern,
             ]
             cdg.prog = re.compile('|'.join(patterns))
 

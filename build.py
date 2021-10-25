@@ -152,7 +152,7 @@ async def generate_client(base_url, client_name):
 
 async def generate_client_save(base_url, client_name, save_path):
     content = await generate_client(base_url, client_name)
-    with open(save_path, 'w') as f:
+    with open(save_path, 'w', encoding = 'utf-8') as f: # explicit encoding needed on windows
         f.write(content)
 async def main():
     args = [
@@ -163,4 +163,7 @@ async def main():
     ]
     await asyncio.gather(*[asyncio.ensure_future(generate_client_save(*x)) for x in args])
 
-asyncio.run(main())
+loop = asyncio.new_event_loop()
+loop.run_until_complete(main())
+loop.run_until_complete(asyncio.sleep(1)) # workaround needed on windows - for some reason they close the proactor event loop early otherwise
+loop.close()
