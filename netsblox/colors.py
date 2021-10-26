@@ -168,7 +168,7 @@ _COLORS = {
     'yellowgreen': (154, 205, 50),
 }
 
-_HEX_COLOR_REGEX = _re.compile(r'^#?([0-9a-fA-F]{6})$')
+_HEX_COLOR_REGEX = _re.compile(r'^#([0-9a-fA-F]{6})$')
 def parse_color(color: Union[str, Tuple[int, int, int]]) -> Tuple[int, int, int]:
     if type(color) in [tuple, list]:
         if len(color) != 3:
@@ -178,14 +178,17 @@ def parse_color(color: Union[str, Tuple[int, int, int]]) -> Tuple[int, int, int]
             raise ValueError(f'color tuple components should 0-255')
         return res
     elif type(color) is str:
-        if color in _COLORS:
+        color = color.strip().lower()
+        if color.startswith('#'):
+            m = _HEX_COLOR_REGEX.match(color)
+            if m is None:
+                raise ValueError(f'invalid hex color code: \'{color}\'\nshould be a hash (#) followed by three 2-digit hex values like \'#f5c4ee\'')
+            m = m[1]
+            x = lambda s: int(s, 16)
+            return x(m[0:2]), x(m[2:4]), x(m[4:6])
+        elif color in _COLORS:
             return _COLORS[color]
-
-        m = _HEX_COLOR_REGEX.match(color)
-        if m is None:
-            raise ValueError(f'invalid hex color code: \'{color}\'\nshould be a hash (#) followed by three 2-digit hex values like \'#f5c4ee\'')
-        m = m[1]
-        x = lambda s: int(s, 16)
-        return x(m[0:2]), x(m[2:4]), x(m[4:6])
+        else:
+            raise ValueError(f'unknown named color \'{color}\'\nif this is meant to be a hex color code, it should be prefixed with a hash (#)')
     else:
         raise TypeError(f'color should be str or tuple, but got {type(color)}')

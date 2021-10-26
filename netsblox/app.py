@@ -642,7 +642,7 @@ def start(self):
         'imports': [],
     }
 
-    def save(self) -> dict:
+    def get_save_dict(self) -> dict:
         res = {}
         res['global_blocks'] = [x.copy() for x in GlobalEditor.blocks]
         res['stage_blocks'] = [x.copy() for x in  StageEditor.blocks]
@@ -1297,6 +1297,7 @@ class MainMenu(tk.Menu):
         super().__init__(parent, **MENU_STYLE)
 
         self.project_path = None
+        self.saved_project_dict = None
 
         def kill():
             if self.try_close_project():
@@ -1356,23 +1357,25 @@ class MainMenu(tk.Menu):
         self._project_path = p
         root.title(f'NetsBlox-Python - {"Untitled" if p is None else p}')
 
-    def save(self) -> bool:
+    def save(self, save_dict = None) -> bool:
         if self.project_path is not None:
             try:
-                proj = content.project.save()
+                if save_dict is None:
+                    save_dict = content.project.get_save_dict()
                 with open(self.project_path, 'w') as f:
-                    json.dump(proj, f, separators = (', ', ': '), indent = 2)
+                    json.dump(save_dict, f, separators = (', ', ': '), indent = 2)
+                self.saved_project_dict = save_dict
                 return True
             except Exception as e:
                 messagebox.showerror('Failed to save project', str(e))
                 return False
         else:
-            return self.save_as()
-    def save_as(self) -> bool:
+            return self.save_as(save_dict)
+    def save_as(self, save_dict = None) -> bool:
         p = filedialog.asksaveasfilename(defaultextension = '.json')
         if type(p) is str and p: # despite the type hints, above returns empty tuple on cancel
             self.project_path = p
-            return self.save()
+            return self.save(save_dict)
         return False
 
     def export_as(self) -> None:
@@ -1389,8 +1392,9 @@ class MainMenu(tk.Menu):
         if not self.try_close_project():
             return
 
-        self.project_path = None
         content.project.load(ProjectEditor.DEFAULT_PROJECT)
+        self.project_path = None
+        self.saved_project_dict = None
 
     def open_project(self):
         content.project.on_tab_change()
@@ -1406,19 +1410,24 @@ class MainMenu(tk.Menu):
         try:
             with open(p, 'r') as f:
                 proj = json.load(f)
-                rstor = content.project.save() # in case load fails
+                rstor = content.project.get_save_dict() # in case load fails
                 content.project.load(proj)
                 self.project_path = p
+                self.saved_project_dict = proj
         except Exception as e:
             messagebox.showerror('Failed to load project', str(e))
             if rstor is not None:
                 content.project.load(rstor)
 
     def try_close_project(self) -> bool: # true if user accepted close
+        save_dict = content.project.get_save_dict()
+        if save_dict == self.saved_project_dict:
+            return True # if saved project content is equal, no need to do anything
+
         title = 'Save before closing'
         msg = 'Would you like to save your project before closing?'
         res = messagebox.askyesnocancel(title, msg)
-        return res == False or (res == True and self.save())
+        return res == False or (res == True and self.save(save_dict))
 
     def toggle_blocks(self):
         content.project.show_blocks = not content.project.show_blocks
@@ -1495,8 +1504,10 @@ def main():
         content.project.load(ProjectEditor.DEFAULT_PROJECT)
     elif len(sys.argv) == 2:
         with open(sys.argv[1], 'r') as f:
-            content.project.load(json.load(f))
+            save_dict = json.load(f)
+            content.project.load(save_dict)
             main_menu.project_path = os.path.abspath(sys.argv[1])
+            main_menu.saved_project_dict = save_dict
     else:
         print(f'usage: {sys.argv[0]} (project)', file = sys.stderr)
         sys.exit(1)

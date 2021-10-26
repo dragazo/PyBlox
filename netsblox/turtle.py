@@ -11,7 +11,6 @@ import queue as _queue
 import math as _math
 import copy as _copy
 import sys as _sys
-import re as _re
 
 import numpy as _np
 
