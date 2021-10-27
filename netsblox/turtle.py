@@ -17,6 +17,7 @@ import numpy as _np
 import netsblox.common as _common
 import netsblox.events as _events
 import netsblox.colors as _colors
+import netsblox.concurrency as _concurrency
 
 from typing import Any, Union, Tuple, Iterable, Optional, List
 
@@ -143,6 +144,12 @@ def _new_game():
     _game_running = False
     _game_stopped = False
 
+_start_signal = _concurrency.Signal()
+def _start_signal_wrapped(f):
+    def wrapped(*args, **kwargs):
+        _start_signal.wait()
+        return f(*args, **kwargs)
+    return wrapped
 def start_project():
     '''
     Run turtle game logic.
@@ -161,6 +168,7 @@ def start_project():
         raise GameStateError('start_project() was called when the game had previously been stopped')
     _game_running = True
 
+    _start_signal.send()
     _turtle.delay(0)
     _turtle.listen()
     _turtle.Screen().ontimer(_process_queue, _action_queue_interval)
@@ -893,7 +901,7 @@ def _derive(bases, cls):
             start_tag = '__run_on_start' if not self.__is_clone else '__run_on_start_clone'
             start_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, start_tag))
             for _, start_script in start_scripts:
-                thread = _threading.Thread(target = _traceback_wrapped(start_script))
+                thread = _threading.Thread(target = _traceback_wrapped(_start_signal_wrapped(start_script)))
                 thread.setDaemon(True)
                 thread.start()
 
