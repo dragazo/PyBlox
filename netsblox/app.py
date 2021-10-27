@@ -33,6 +33,10 @@ IMG_ROOT = 'https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img
 
 SUGGESTION_UPDATE_INTERVAL = 200
 
+xux = lambda x: f'{x} {x.upper()}'
+PROJECT_FILETYPES = [('Project Files', xux('.json')), ('All Files', '.*')]
+IMAGE_FILETYPES = [('Images', xux('.png .jpg .jpeg')), ('All Files', '.*')]
+
 color_enabled = False
 try:
     # idle gives us syntax highlighting, but we don't require it otherwise
@@ -1054,7 +1058,12 @@ class CodeEditor(ScrolledText):
         if should_show:
             if self.help_popup is not None:
                 self.help_popup.destroy()
-            x, y, w, h = self.text.bbox(tk.INSERT)
+            
+            try:
+                x, y, w, h = self.text.bbox(tk.INSERT)
+            except:
+                return
+
             self.help_popup = tk.Listbox()
             self.help_completions = {}
 
@@ -1372,7 +1381,7 @@ class MainMenu(tk.Menu):
         else:
             return self.save_as(save_dict)
     def save_as(self, save_dict = None) -> bool:
-        p = filedialog.asksaveasfilename(defaultextension = '.json')
+        p = filedialog.asksaveasfilename(filetypes = PROJECT_FILETYPES, defaultextension = '.json')
         if type(p) is str and p: # despite the type hints, above returns empty tuple on cancel
             self.project_path = p
             return self.save(save_dict)
@@ -1402,7 +1411,7 @@ class MainMenu(tk.Menu):
         if not self.try_close_project():
             return
 
-        p = filedialog.askopenfilename(filetypes = [('Project Files', '.json'), ('All Files', '.*')])
+        p = filedialog.askopenfilename(filetypes = PROJECT_FILETYPES)
         if type(p) is not str or not p:
             return
 
@@ -1433,7 +1442,7 @@ class MainMenu(tk.Menu):
         content.project.show_blocks = not content.project.show_blocks
 
     def import_image(self):
-        p = filedialog.askopenfilename(filetypes = [('Images', '.png .jpg .jpeg'), ('All Files', '.*')])
+        p = filedialog.askopenfilename(filetypes = IMAGE_FILETYPES)
         if type(p) is not str or not p:
             return
 

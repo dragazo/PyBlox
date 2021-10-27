@@ -597,10 +597,9 @@ class TurtleBase(_Ref):
         return self.__x, self.__y
     @pos.setter
     def pos(self, new_pos: Tuple[float, float]) -> None:
-        self.__setpos(*map(float, new_pos))
-    def __setpos(self, x: float, y: float) -> None:
-        scale = _get_logical_scale()
+        x, y = map(float, new_pos)
         self.__x, self.__y = x, y
+        scale = _get_logical_scale()
         _qinvoke(self.__turtle.goto, x * scale, y * scale)
 
     @property
@@ -615,7 +614,10 @@ class TurtleBase(_Ref):
         return self.__x
     @x_pos.setter
     def x_pos(self, new_x: float) -> None:
-        self.__setpos(float(new_x), self.__y)
+        x = float(new_x)
+        self.__x = x
+        scale = _get_logical_scale()
+        _qinvoke(self.__turtle.setx, x * scale)
 
     @property
     def y_pos(self) -> float:
@@ -629,7 +631,10 @@ class TurtleBase(_Ref):
         return self.__y
     @y_pos.setter
     def y_pos(self, new_y: float) -> None:
-        self.__setpos(self.__x, float(new_y))
+        y = float(new_y)
+        self.__y = y
+        scale = _get_logical_scale()
+        _qinvoke(self.__turtle.sety, y * scale)
 
     @property
     def heading(self) -> float:
@@ -644,11 +649,8 @@ class TurtleBase(_Ref):
         return self.__rot * self.__degrees
     @heading.setter
     def heading(self, new_heading: float) -> None:
-        self.__setheading(float(new_heading))
-    def __setheading(self, new_heading: float) -> None:
-        self.__rot = (new_heading / self.__degrees) % 1.0
+        self.__rot = (float(new_heading) / self.__degrees) % 1.0
         self.__update_costume()
-        _qinvoke(self.__turtle.setheading, (0.25 - self.__rot) % 1.0 * 360.0) # raw turtle is always in degrees mode
 
     @property
     def degrees(self) -> float:
@@ -753,7 +755,7 @@ class TurtleBase(_Ref):
         '''
         distance = float(distance)
         h = self.__rot * 2 * _math.pi
-        self.__setpos(self.__x + _math.sin(h) * distance, self.__y + _math.cos(h) * distance)
+        self.pos = (self.__x + _math.sin(h) * distance, self.__y + _math.cos(h) * distance)
 
     def turn_left(self, angle: float = None) -> None:
         '''
@@ -765,7 +767,7 @@ class TurtleBase(_Ref):
         self.turn_left(45)
         ```
         '''
-        self.__setheading(self.heading - float(angle) if angle is not None else self.__degrees / 4)
+        self.heading -= float(angle) if angle is not None else self.__degrees / 4
     def turn_right(self, angle: float = None) -> None:
         '''
         Turn the turtle to the right by the given angle.
@@ -776,7 +778,7 @@ class TurtleBase(_Ref):
         self.turn_right(45)
         ```
         '''
-        self.__setheading(self.heading + float(angle) if angle is not None else self.__degrees / 4)
+        self.heading += float(angle) if angle is not None else self.__degrees / 4
     
     # -------------------------------------------------------
 
