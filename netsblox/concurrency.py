@@ -1,6 +1,8 @@
 import threading as _threading
 import time as _time
 
+from typing import Any
+
 class Signal:
     '''
     A signal is a tool that can be used to control program execution.
@@ -104,6 +106,60 @@ class Warp:
             _warp_counters[self.tid] = v
         else:
             del _warp_counters[self.tid]
+
+class Mutex:
+    '''
+    Mutex is short for "Mutual Exclusion" which means that multiple scripts that
+    try to access the content will automatically be forced to wait so that only one script has access at a time.
+
+    A Mutex object "wraps" (holds) the actual data that you want to protect.
+    When you want to access the data, you need to use the mutex in a `with` clause like so:
+
+    ```
+    data_mutex = Mutex([])   # wrap a list
+    with data_mutex as data: # access the wrapped data
+        data.append(5)
+    ```
+
+    Note that the wrapped data object given by a with clause should not be used outside of the with clause.
+    Python will allow you to violate this, but it is up to you not to do so.
+
+    If you want to actually overwrite (replace) the wrapped value,
+    you can use the `set` function on the mutex, but you must do this within a `with` clause.
+
+    ```
+    with data_mutex as data:
+        data_mutex.set('something completely different')
+    ```
+    '''
+    def __init__(self, wrapped):
+        self.__wrapped = wrapped
+        self.__owner = None
+        self.__lock = _threading.RLock()
+
+    def __enter__(self):
+        self.__lock.acquire()
+        self.__owner = _threading.get_ident()
+        return self.__wrapped
+    def __exit__(self, *args):
+        self.__owner = None
+        self.__lock.release()
+
+    def set(self, new_value: Any) -> None:
+        '''
+        Sets the wrapped object to an entirely new value.
+
+        Just like for accessing the wrapped object, you must have the
+        mutex in a with clause in order to call this.
+
+        ```
+        with data_mutex as data:
+            data_mutex.set('something completely different')
+        ```
+        '''
+        if self.__owner != _threading.get_ident():
+            raise RuntimeError(f'attempt to use Mutex.set() outside of a with clause')
+        self.__wrapped = new_value
 
 _did_yield_setup = False
 def setup_yielding() -> None:
