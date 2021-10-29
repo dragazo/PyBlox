@@ -419,10 +419,52 @@ class BlocksList(tk.Frame):
 
 class Imports:
     RAW_INFO = [
-        ['time', 'time'],
-        ['math', 'math'],
-        ['random', 'random'],
-        ['numpy', 'np'],
+        ['time', 'time', '''
+            The `time` package brings in several utilities related to measuring time.
+
+            Here is a list of especially useful functions:
+             - `time.sleep(t)` lets your scripts wait a certain number of seconds before resuming.
+             - `time.time()` gives you the current timestamp. You can subtract two times to get the time interval in seconds.
+        '''],
+        ['math', 'math', '''
+            The `math` module brings in many common mathematical functions such as `sin`, `cos`, `tan`,
+            inverse trig, exponentiation, and many more specialized tools.
+
+            This is useful if you need to compute a handful of operations in your scripts.
+            However, if you need to do a lot of number crunching, consider using the `numpy` package instead.
+        '''],
+        ['random', 'random', '''
+            The `random` module allows you to generate random numbers.
+
+            Here is a list of especially useful functions:
+             - `random.random()` gives you a float (decimal) number between 0.0 and 1.0 (not including 1.0).
+             - `random.randrange(a,b)` gives you a random integer in `range(a,b)`.
+            Just like the `range` function, you can pass a single argument to default the first to 0.
+        '''],
+        ['numpy', 'np', '''
+            The `numpy` package is a highly specialized tool for doing a lot of number crunching very very quickly.
+            By convention, `numpy` is typically imported as `np` for brevity.
+
+            Most `numpy` functions work on arrays (lists). To make a `numpy` array, simply use `np.array(some_list)`.
+            `numpy` arrays perform their operations in batches.
+            For instance, if you have two `numpy` arrays `p` and `q`, each of which is an array of three numbers like 3D coordinates,
+            you can simply write `p+q` and numpy will add the components together and give you a new array.
+            Many operations are supported, for instance `np.sin(p + 2 * q**2)` will square all the elements of `q`, double them,
+            add them to the elements of `p`, then take the `sin` of each element and give the result as a new array.
+
+            `numpy` arrays are actually multi-dimensional arrays.
+            A 1D array is a "normal" array (list).
+            A 2D array is a matrix.
+            In higher dimensions (and in general) these are called tensors, and are commonly used in advanced applications like machine learning.
+            If you pass `np.array()` a list of lists, you will get an N-dimensional array (tensor) with the same structure.
+
+            Python supports list slicing. For instance `p[3:5]` gets the sublist of elements with index 3 up to (but not including) 5.
+            However, python lists do not support higher-dimensional slicing (even if they are lists of lists).
+            But `numpy` arrays allow this, with each dimension separated by a comma.
+            For instance if `p` is a 5x5 matrix, `p[1,2:4]` gives row index 1 elements 2 up to 4, and `p[1:-1,1:-1]` gives you the 3x3 matrix in the middle.
+
+            As you can see, `numpy` lets you do a lot of work very quickly and without much typing.
+        '''],
     ]
     def __init__(self, *, on_update = None):
         self.packages = {}
@@ -430,7 +472,8 @@ class Imports:
             self.packages[item[0]] = {
                 'tkvar': tk.BooleanVar(),
                 'ident': item[1],
-                'code': f'import {item[0]}' if item[0] == item[1] else f'import {item[0]} as {item[1]}'
+                'info': clean_docstring(normalize_strip(item[2])),
+                'code': f'import {item[0]}' if item[0] == item[1] else f'import {item[0]} as {item[1]}',
             }
         
         self.images = {}
@@ -1338,10 +1381,23 @@ class MainMenu(tk.Menu):
 
         submenu = tk.Menu(self, **MENU_STYLE)
         imp = content.project.imports
-        for pkg, item in imp.packages.items():
+        imp_packages = list(imp.packages.items())
+        for pkg, item in imp_packages:
             label = pkg if pkg == item['ident'] else f'{pkg} ({item["ident"]})'
             submenu.add_checkbutton(label = label, variable = item['tkvar'], command = imp.batch_update)
         self.add_cascade(label = 'Imports', menu = submenu)
+
+        def get_info_shower(submenu):
+            def show_info(e):
+                entries = len(imp.packages)
+                entry = int(e.y / (submenu.winfo_reqheight() / entries))
+                if entry < 0 or entry >= entries: return
+
+                pkg, item = imp_packages[entry]
+                info = item['info']
+                if info: content.display.docs.set_text(item['info'])
+            return show_info
+        submenu.bind('<Motion>', get_info_shower(submenu))
 
         self.images_dropdown = tk.Menu(self, **MENU_STYLE)
         self.add_cascade(label = 'Images', menu = self.images_dropdown)
