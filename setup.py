@@ -9,7 +9,7 @@ with open(path.join(path.dirname(__file__), 'README.md'), encoding = 'utf-8') as
 
 setup(
     name = 'netsblox',
-    version = '0.4.6',
+    version = '0.4.7',
     description = 'A python interface for accessing NetsBlox services',
     long_description = long_description,
     long_description_content_type = 'text/markdown',
@@ -21,6 +21,7 @@ setup(
     install_requires = [
         'websocket-client',
         'darkdetect',
+        'shortuuid',
         'requests',
         'pillow',
         'numpy',

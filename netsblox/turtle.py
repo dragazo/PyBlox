@@ -1004,7 +1004,7 @@ def onstartclone(f):
     ```
     @onstartclone
     def clonestart(self):
-        self.forawrd(75)
+        self.forward(75)
     ```
     '''
     if _common.is_method(f):

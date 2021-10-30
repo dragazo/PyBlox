@@ -19,22 +19,31 @@ import netsblox.events as _events
 
 _websocket.enableTrace(False) # disable auto-outputting of socket events
 
+_SEND_RETARGETS = {
+    'myself': 'everyone in room',
+}
+
 class $client_name:
     '''
     Holds all the information and plumbing required to connect to netsblox, exchange messages, and call RPCs.
     '''
 
-    def __init__(self, *, run_forever = False):
+    def __init__(self, *, proj_name: Optional[str] = None, proj_id: Optional[str] = None, run_forever: bool = False):
         '''
         Opens a new client connection to NetsBlox, allowing you to access any of the NetsBlox services from python.
 
-        run_forever prevents the python program from terminating even after the end of your script.
+        `proj_name` and `proj_id` control the public name of your project from other programs.
+        For instance, these are needed for other programs to send a message to your project.
+        If you do not provide them, defaults will be generated (which will work),
+        but the public id will change every time, which could be annoying if you need to frequently start/stop your project to make changes.
+
+        `run_forever` prevents the python program from terminating even after the end of your script.
         This is useful if you have long-running programs that are based on message-passing rather than looping.
         Note: this does not stop the main thread of execution from terminating, which could be a problem in environments like Google Colab;
-        instead, you can explicitly call wait_till_disconnect() at the end of your program.
+        instead, you can explicitly call `wait_till_disconnect()` at the end of your program.
         '''
 
-        self._client_id = f'_pyblox{round(_time.time() * 1000)}'
+        self._client_id = proj_id or _common.generate_proj_id()
         self._base_url = '$base_url'
 
         # set these up before the websocket since it might send us messages
@@ -57,14 +66,17 @@ class $client_name:
         self._message_thread.setDaemon(True)
         self._message_thread.start()
 
-        res = _requests.post(f'{self._base_url}/api/newProject',
-            _common.small_json({ 'clientId': self._client_id, 'name': None }),
-            headers = { 'Content-Type': 'application/json' })
-        res = _json.loads(res.text)
+        res = _json.loads(_requests.post(f'{self._base_url}/api/newProject',
+            _common.small_json({ 'clientId': self._client_id, 'roleName': 'monad' }),
+            headers = { 'Content-Type': 'application/json' }).text)
         self._project_id = res['projectId']
-        self._project_name = res['name']
         self._role_id = res['roleId']
         self._role_name = res['roleName']
+
+        res = _json.loads(_requests.post(f'{self._base_url}/api/setProjectName',
+            _common.small_json({ 'projectId': self._project_id, 'name': proj_name or 'untitled' }),
+            headers = { 'Content-Type': 'application/json' }).text)
+        self._project_name = res['name']
 
 $service_instances
 
@@ -95,25 +107,26 @@ $service_instances
         except:
             pass
     
-    def get_public_role_id(self):
+    def get_public_id(self):
         '''
-        Returns the public role id, which can be used as a target for send_message() to send a message directly to yourself.
-        This can be given to another client so that they can send messages directly to you.
+        Gets the public id, which can be used as a target for `send_message()` to directly send a message to you.
         '''
-        return f'{self._role_name}@{self._project_name}@{self._client_id}'
-    def send_message(self, msg_type, target='everyone in room', **values):
+        return f'{self._project_name}@{self._client_id}'
+    def send_message(self, msg_type, target='myself', **values):
         '''
         Sends a message of the given type to the target, which might represent multiple recipients.
-        The default value for target, 'everyone in room', will send the message to everyone connected to this project (including yourself).
+        The default value for target, `'myself'`, will send the message to yourself.
         You can receive messages by registering a receiver with on_message().
         '''
+        if target in _SEND_RETARGETS:
+            target = _SEND_RETARGETS[target]
         with self._ws_lock:
             self._ws.send(_common.small_json({
                 'type': 'message',
                 'msgType': msg_type,
                 'content': values,
                 'dstId': target,
-                'srcId': self.get_public_role_id()
+                'srcId': self.get_public_id(),
             }))
 
     @staticmethod

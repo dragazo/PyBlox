@@ -1,5 +1,6 @@
 #!/user/bin/env python
 
+import shortuuid as _shortuuid
 import requests as _requests
 import inspect as _inspect
 import base64 as _base64
@@ -18,6 +19,9 @@ class InvokeError(Exception):
     pass
 class ServerError(Exception):
     pass
+
+def generate_proj_id() -> str:
+    return f'py-{_shortuuid.uuid()[:8]}'
 
 def small_json(obj):
     return _json.dumps(obj, separators=(',', ':'))

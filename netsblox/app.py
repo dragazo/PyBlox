@@ -35,6 +35,7 @@ SUGGESTION_UPDATE_INTERVAL = 200
 
 xux = lambda x: f'{x} {x.upper()}'
 PROJECT_FILETYPES = [('Project Files', xux('.json')), ('All Files', '.*')]
+PYTHON_FILETYPES = [('Python Files', xux('.py')), ('All Files', '.*')]
 IMAGE_FILETYPES = [('Images', xux('.png .jpg .jpeg')), ('All Files', '.*')]
 
 color_enabled = False
@@ -98,6 +99,11 @@ def _process_print_queue():
             except:
                 pass # throwing would break print queue
     root.after(33, _process_print_queue)
+
+def basename_noext(path: str) -> str:
+    file = os.path.basename(path)
+    p = file.find('.')
+    return (file[:p] if p >= 0 else file).strip()
 
 def get_white_nonwhite(line: str) -> Tuple[str, str]:
     i = 0
@@ -511,6 +517,11 @@ class Imports:
 class ProjectEditor(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
+
+        # this is randomly generated and is valid while the ide is open accross multiple program runs.
+        # it is not stored in project files or exports because conflicting ids would break messaging.
+        self.project_id = common.generate_proj_id()
+
         self.turtle_index = 0
         self.editors: List[CodeEditor] = []
         self.show_blocks_tkvar = tk.BooleanVar()
@@ -601,10 +612,10 @@ class ProjectEditor(tk.Frame):
             self.notebook.add(editor, text = name)
             self.editors.append(editor)
     
-    def get_full_script(self) -> str:
+    def get_full_script(self, *, is_export: bool = False) -> str:
         scripts = []
         for editor in self.editors:
-            scripts.append(editor.get_script())
+            scripts.append(editor.get_script(is_export = is_export))
             scripts.append('\n\n')
         scripts.append('start_project()')
         return ''.join(scripts)
@@ -1208,21 +1219,21 @@ class CodeEditor(ScrolledText):
 class GlobalEditor(CodeEditor):
     BASE_PREFIX = '''
 import netsblox
-nb = netsblox.Client()
-'A connection to NetsBlox, which allows you to use services and RPCs from python.'
-netsblox.turtle._set_window_size(1280, 720)
 from netsblox.turtle import *
 from netsblox.concurrency import *
-import netsblox.common as _common
+nb = netsblox.Client(proj_name = """$proj_name""", proj_id = $proj_id)
+'A connection to NetsBlox, which allows you to use services and RPCs from python.'
+netsblox.turtle._set_window_size(1280, 720)
+netsblox.turtle._turtle.title(f'NetsBlox-Python - {nb.get_public_id()}')
+setup_stdio()
 setup_yielding()
 import time as _time
 def _yield_(x):
     _time.sleep(0)
     return x
-setup_stdio()
 
 '''.lstrip()
-    BASE_PREFIX_LINES = 14
+    BASE_PREFIX_LINES = 13
 
     prefix = BASE_PREFIX
     prefix_lines = BASE_PREFIX_LINES
@@ -1233,8 +1244,11 @@ setup_stdio()
         super().__init__(parent, blocks = GlobalEditor.blocks)
         self.set_text(value)
 
-    def get_script(self):
-        return GlobalEditor.prefix + self.text.get('1.0', 'end-1c')
+    def get_script(self, *, is_export: bool = False):
+        pre = GlobalEditor.prefix
+        pre = pre.replace('$proj_name', main_menu.project_name)
+        pre = pre.replace('$proj_id', 'None' if is_export else f'\'{content.project.project_id}\'')
+        return pre + self.text.get('1.0', 'end-1c')
 
 class StageEditor(CodeEditor):
     prefix_lines = 3
@@ -1245,7 +1259,7 @@ class StageEditor(CodeEditor):
         self.name = name
         self.set_text(value)
 
-    def get_script(self):
+    def get_script(self, *, is_export: bool = False):
         raw = self.text.get('1.0', 'end-1c')
         return f'@netsblox.turtle.stage\nclass {self.name}(netsblox.turtle.StageBase):\n    pass\n{indent(raw)}\n{self.name} = {self.name}()'
 
@@ -1258,7 +1272,7 @@ class TurtleEditor(CodeEditor):
         self.name = name
         self.set_text(value)
 
-    def get_script(self):
+    def get_script(self, *, is_export: bool = False):
         raw = self.text.get('1.0', 'end-1c')
         return f'@netsblox.turtle.turtle\nclass {self.name}(netsblox.turtle.TurtleBase):\n    pass\n{indent(raw)}\n{self.name} = {self.name}()'
 
@@ -1420,7 +1434,11 @@ class MainMenu(tk.Menu):
     @project_path.setter
     def project_path(self, p):
         self._project_path = p
-        root.title(f'NetsBlox-Python - {"Untitled" if p is None else p}')
+        self._project_name = 'untitled' if p is None else basename_noext(p)
+        root.title(f'NetsBlox-Python - {"untitled" if p is None else p}')
+    @property
+    def project_name(self):
+        return self._project_name
 
     def save(self, save_dict = None) -> bool:
         if self.project_path is not None:
@@ -1444,10 +1462,10 @@ class MainMenu(tk.Menu):
         return False
 
     def export_as(self) -> None:
-        p = filedialog.asksaveasfilename(defaultextension = '.py')
+        p = filedialog.asksaveasfilename(filetypes = PYTHON_FILETYPES, defaultextension = '.py')
         if type(p) is str and p: # despite the type hints, above returns empty tuple on cancel
             try:
-                res = transform.add_yields(content.project.get_full_script())
+                res = transform.add_yields(content.project.get_full_script(is_export = True))
                 with open(p, 'w') as f:
                     f.write(res)
             except Exception as e:
