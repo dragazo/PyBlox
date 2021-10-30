@@ -329,7 +329,7 @@ class Content(tk.Frame):
         self.project.grid(row = 0, column = 0, sticky = tk.NSEW)
         self.display.grid(row = 0, column = 1, sticky = tk.NSEW)
 
-        self.grid_columnconfigure(0, weight = 4, uniform = 'content')
+        self.grid_columnconfigure(0, weight = 5, uniform = 'content')
         self.grid_columnconfigure(1, weight = 3, uniform = 'content')
         self.grid_rowconfigure(0, weight = 1)
 
@@ -621,40 +621,40 @@ class ProjectEditor(tk.Frame):
         return ''.join(scripts)
 
     DEFAULT_GLOBAL_BLOCKS = [
-        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name():\n    pass' },
-        { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name():\n    pass' },
-        { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef my_onstart(): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
 
-        { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass # replace with your code' },
 
-        { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(): # add arguments to receive values\n    pass' },
-        { 'url': f'{IMG_ROOT}/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message_type\', fields = 4, go = 2, here = 7)' },
-        { 'url': f'{IMG_ROOT}/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in list_goes_here:\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(msg): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
+        { 'url': f'{IMG_ROOT}/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in my_list:\n    pass # replace with your code' },
     ]
     DEFAULT_STAGE_BLOCKS = [
-        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name(self):\n    pass' },
-        { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name(self):\n    pass' },
-        { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick\ndef function_name(self, x, y):\n    pass' },
-        { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef my_onstart(self): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
 
-        { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass # replace with your code' },
 
-        { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(self): # add arguments to receive values\n    pass' },
-        { 'url': f'{IMG_ROOT}/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message_type\', fields = 4, go = 2, here = 7)' },
-        { 'url': f'{IMG_ROOT}/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in list_goes_here:\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
+        { 'url': f'{IMG_ROOT}/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in my_list:\n    pass # replace with your code' },
     ]
     DEFAULT_TURTLE_BLOCKS = [
-        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef function_name(self):\n    pass' },
-        { 'url': f'{IMG_ROOT}/blocks/onstartclone.png', 'scale': 1, 'replace': '@onstartclone\ndef function_name(self):\n    pass' },
-        { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef function_name(self):\n    pass' },
-        { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick\ndef function_name(self, x, y):\n    pass' },
-        { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef my_onstart(self): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/onstartclone.png', 'scale': 1, 'replace': '@onstartclone\ndef my_onstartclone(self): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
 
-        { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass # replace with your code' },
         
-        { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message_type\')\ndef function_name(self): # add arguments to receive values\n    pass' },
-        { 'url': f'{IMG_ROOT}/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message_type\', fields = 4, go = 2, here = 7)' },
-        { 'url': f'{IMG_ROOT}/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in list_goes_here:\n    pass' },
+        { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
+        { 'url': f'{IMG_ROOT}/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in my_list:\n    pass # replace with your code' },
     ]
     DEFAULT_PROJECT = {
         'global_blocks': DEFAULT_GLOBAL_BLOCKS,
@@ -1076,27 +1076,30 @@ class CodeEditor(ScrolledText):
         edit_line, edit_col = self.total_pos()
         docs = script.help(edit_line, edit_col)
 
-        def get_docstring(item):
-            mapped = FULL_NAME_DOC_REMAPS.get(item.full_name)
-            if mapped is not None:
-                return mapped
-
-            if item.column is not None and item.column > 0 and item.get_line_code()[item.column - 1] == '.':
-                mapped = PROP_DOC_REMAPS.get(item.name)
+        def get_docstring(items) -> str:
+            res = []
+            for item in items:
+                mapped = FULL_NAME_DOC_REMAPS.get(item.full_name)
                 if mapped is not None:
                     return mapped
 
-            desc = item.description
-            if desc.startswith('keyword') or desc.startswith('instance'):
-                return ''
+                if item.column is not None and item.column > 0 and item.get_line_code()[item.column - 1] == '.':
+                    mapped = PROP_DOC_REMAPS.get(item.name)
+                    if mapped is not None:
+                        return mapped
 
-            return item.docstring()
-        docs = [get_docstring(x) for x in docs]
-        docs = [x for x in docs if x] # don't show empty items
+                desc = item.description
+                if desc.startswith('keyword') or desc.startswith('instance'):
+                    continue
+
+                x = item.docstring()
+                if x:
+                    res.append(x)
+            return '\n\n----------\n\n'.join(res)
+        docs = get_docstring(docs)
 
         if docs: # if nothing to show, don't change the display
-            raw = '\n\n----------\n\n'.join(docs)
-            clean = clean_docstring(raw)
+            clean = clean_docstring(docs)
             content.display.docs.set_text(clean)
 
     def show_suggestion(self, script = None):
@@ -1233,7 +1236,7 @@ def _yield_(x):
     return x
 
 '''.lstrip()
-    BASE_PREFIX_LINES = 13
+    BASE_PREFIX_LINES = 14
 
     prefix = BASE_PREFIX
     prefix_lines = BASE_PREFIX_LINES

@@ -9,7 +9,7 @@ import io as _io
 
 from PIL import Image
 
-from typing import Optional, Any, List
+from typing import Optional, Any, List, Union
 
 import websocket as _websocket
 import requests as _requests
@@ -112,11 +112,12 @@ $service_instances
         Gets the public id, which can be used as a target for `send_message()` to directly send a message to you.
         '''
         return f'{self._project_name}@{self._client_id}'
-    def send_message(self, msg_type, target='myself', **values):
+    def send_message(self, msg_type: str, target: Union[str, List[str]] = 'myself', **values):
         '''
-        Sends a message of the given type to the target, which might represent multiple recipients.
+        Sends a message of the given type to the target(s), which is either the public id of a single target
+        or a list of multiple ids for multiple targets.
         The default value for target, `'myself'`, will send the message to yourself.
-        You can receive messages by registering a receiver with on_message().
+        You can receive messages with `@nb.on_message`.
         '''
         if target in _SEND_RETARGETS:
             target = _SEND_RETARGETS[target]
