@@ -21,7 +21,7 @@ import os
 
 from PIL import Image, ImageTk
 
-from typing import List, Tuple
+from typing import List, Tuple, Any
 
 import netsblox
 from netsblox import transform
@@ -548,7 +548,9 @@ class ProjectEditor(tk.Frame):
             self.ctx_tab_idx = idx
             e_idx = idx if idx is not None else -1
 
-            self.ctx_menu.entryconfigure(self.ctx_menu_entries['delete'], state = tk.NORMAL if e_idx >= 2 else tk.DISABLED)
+            turtle_option_state = tk.NORMAL if e_idx >= 2 else tk.DISABLED
+            for key in ['dupe', 'rename', 'delete']:
+                self.ctx_menu.entryconfigure(self.ctx_menu_entries[key], state = turtle_option_state)
 
             return idx is not None
 
@@ -560,6 +562,8 @@ class ProjectEditor(tk.Frame):
             self.ctx_menu_entries[id] = idx
         
         add_command('new-turtle', label = 'New Turtle', command = lambda: self.newturtle())
+        add_command('dupe', label = 'Clone Turtle', command = lambda: self.dupe_turtle(self.ctx_tab_idx))
+        add_command('rename', label = 'Rename', command = lambda: self.rename_turtle(self.ctx_tab_idx))
         add_command('delete', label = 'Delete', command = lambda: self.delete_tab(self.ctx_tab_idx))
 
         self.notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
@@ -602,15 +606,51 @@ class ProjectEditor(tk.Frame):
             self.notebook.forget(idx)
             editor.destroy()
 
-    def newturtle(self, name = None) -> None:
-        if name is None:
-            self.turtle_index += 1
-            name = f'turtle{self.turtle_index}'
+    def is_unique_name(self, name: str) -> bool:
+        return not any(x.name == name for x in self.editors)
 
-        if not any(x.name == name for x in self.editors):
-            editor = TurtleEditor(self.notebook, name = name, value = '')
-            self.notebook.add(editor, text = name)
-            self.editors.append(editor)
+    def dupe_turtle(self, idx) -> Any:
+        editor = self.editors[idx]
+        if not isinstance(editor, TurtleEditor):
+            return # only turtle editors can be duped
+
+        return self.newturtle(base_name = editor.name, value = editor.text.get('1.0', 'end-1c'))
+
+    def rename_turtle(self, idx) -> None:
+        editor = self.editors[idx]
+        if not isinstance(editor, TurtleEditor):
+            return # only turtle editors can be renamed
+
+        name = None
+        while True:
+            title = 'Rename Turtle'
+            msg = f'Enter the new name for turtle "{editor.name}" (must not already be taken).\nNote that any references to this turtle in your code must be manually updated to the new name.'
+            name = simpledialog.askstring(title, msg)
+            if name is None:
+                return
+            if not is_valid_ident(name):
+                messagebox.showerror(title = 'Invalid name', message = f'"{name}" is not a valid python variable name')
+                continue
+            if not self.is_unique_name(name):
+                messagebox.showerror(title = 'Invalid name', message = f'A tab named "{name}" already exists')
+                continue
+            break
+        
+        editor.name = name
+        self.notebook.tab(idx, text = name)
+
+    def newturtle(self, *, base_name = 'turtle', value = None) -> Any:
+        while True:
+            self.turtle_index += 1
+            name = f'{base_name}{self.turtle_index}'
+            if self.is_unique_name(name):
+                break
+
+        assert self.is_unique_name(name) and is_valid_ident(name) # sanity check
+        editor = TurtleEditor(self.notebook, name = name, value = value or ProjectEditor.DEFAULT_PROJECT['editors'][2]['value'])
+        self.notebook.add(editor, text = name)
+        self.editors.append(editor)
+        return editor
     
     def get_full_script(self, *, is_export: bool = False) -> str:
         scripts = []
