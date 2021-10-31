@@ -65,20 +65,20 @@ if platform.system() == 'Darwin':
     SYS_INFO = {
         'mod-str': 'Cmd',
         'mod': 'Command',
-
         'redo-binds': [
             '<Command-Key-Z>',
         ],
+        'right-click': 'Button-2',
     }
 else:
     SYS_INFO = {
         'mod-str': 'Ctrl',
         'mod': 'Control',
-
         'redo-binds': [
             '<Control-Key-y>',
             '<Control-Key-Y>',
         ],
+        'right-click': 'Button-3',
     }
 
 root = None
@@ -803,7 +803,7 @@ def start(self):
 class ContextMenu(tk.Menu):
     def __init__(self, parent, *, on_show = None):
         super().__init__(parent, tearoff = False)
-        parent.bind('<Button-3>', lambda e: self.show(e.x_root, e.y_root))
+        parent.bind(f'<{SYS_INFO["right-click"]}>', lambda e: self.show(e.x_root, e.y_root))
         self.bind('<FocusOut>', lambda e: self.hide())
         self.visible = False
         self.on_show = on_show
