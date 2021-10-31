@@ -707,7 +707,7 @@ class ProjectEditor(tk.Frame):
                 'type': 'global',
                 'name': 'global',
                 'value': '''
-someval = 'hello world' # create a global variable
+my_global_var = 'hello world' # create a global variable
 '''.lstrip(),
             },
             {
@@ -716,11 +716,7 @@ someval = 'hello world' # create a global variable
                 'value': '''
 @onstart
 def start(self):
-    self.myvar = 5                 # create a stage variable
-    print('value is:', self.myvar) # access stage variable
-
-    for i in range(10):
-        print(i ** 2)
+    self.my_list = [1, 2, 3] # create a stage variable
 '''.lstrip(),
             },
             {
@@ -729,15 +725,17 @@ def start(self):
                 'value': '''
 @onstart
 def start(self):
-    self.myvar = 40 # create a sprite variable
+    self.my_distance = 40 # create a turtle variable
 
-    for i in range(400):
-        self.forward(self.myvar) # access sprite variable
-        self.turn_right(90)
+    for i in range(4): # repeat code 4 times
+        time.sleep(0.5) # wait half a second
+        self.forward(self.my_distance)
+        time.sleep(0.5)
+        self.turn_right()
 '''.lstrip(),
             },
         ],
-        'imports': [],
+        'imports': ['time'],
     }
 
     def get_save_dict(self) -> dict:
@@ -1478,7 +1476,7 @@ class MainMenu(tk.Menu):
     def project_path(self, p):
         self._project_path = p
         self._project_name = 'untitled' if p is None else basename_noext(p)
-        root.title(f'NetsBlox-Python - {"untitled" if p is None else p}')
+        root.title(f'NetsBlox-Python - {self._project_name}@{content.project.project_id} ({"unsaved" if p is None else p})')
     @property
     def project_name(self):
         return self._project_name
