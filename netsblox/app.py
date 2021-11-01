@@ -494,11 +494,13 @@ class Imports:
 
         image_lines = []
         if len(self.images) != 0:
+            image_lines.append('import gelidum as _gelidum')
             image_lines.append('class images:')
         for name, img in self.images.items():
-            image_lines.append(f'    {name} = _common.decode_image(\'{common.encode_image(img)}\')')
+            image_lines.append(f'    {name} = netsblox.common.decode_image(\'{common.encode_image(img)}\')')
         if len(self.images) != 0:
             image_lines.append('images = images()')
+            image_lines.append('_gelidum.freeze(images, on_freeze = \'inplace\')')
 
         needs_sep = len(import_lines) != 0 and len(image_lines) != 0
         lines = [*import_lines, *([''] if needs_sep else []), *image_lines]
@@ -725,7 +727,7 @@ def start(self):
                 'value': '''
 @onstart
 def start(self):
-    self.my_distance = 40 # create a turtle variable
+    self.my_distance = 100 # create a turtle variable
 
     for i in range(4): # repeat code 4 times
         time.sleep(0.5) # wait half a second
