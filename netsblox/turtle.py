@@ -137,6 +137,8 @@ def _process_queue():
                     _action_queue_ret_cv.notify_all()
 
         _turtle.Screen().ontimer(_process_queue, _action_queue_interval)
+    else:
+        _turtle.Screen().bye()
 
 # this should only be used internally, not by user code
 def _new_game():
@@ -172,6 +174,7 @@ def start_project():
     _turtle.delay(0)
     _turtle.listen()
     _turtle.Screen().ontimer(_process_queue, _action_queue_interval)
+    _turtle.Screen()._root.protocol('WM_DELETE_WINDOW', stop_project)
     _turtle.done()
 
 def stop_project():
@@ -182,10 +185,9 @@ def stop_project():
     '''
     global _game_running, _game_stopped
     if _game_running:
+        # just mark game as stopped - process queue will kill the window when it gets a chance
         _game_running = False
         _game_stopped = True
-
-        _turtle.Screen().ontimer(_turtle.bye, 1000)
 
 def _qinvoke(fn, *args) -> None:
     # if we're running on the action queue thread, we can just do it directly
