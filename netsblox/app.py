@@ -1040,15 +1040,15 @@ class CodeEditor(ScrolledText):
             ]
             cdg.prog = re.compile('|'.join(patterns))
 
-            cdg.tagdefs['COMMENT']    = {'foreground': '#a3a3a3', 'background': COLOR_INFO['text-background']}
-            cdg.tagdefs['MYNUMBER']   = {'foreground': '#c26910', 'background': COLOR_INFO['text-background']}
-            cdg.tagdefs['MYSELF']     = {'foreground': '#d943aa', 'background': COLOR_INFO['text-background']}
-            cdg.tagdefs['MYPROP']     = {'foreground': '#d943aa', 'background': COLOR_INFO['text-background']}
-            cdg.tagdefs['BUILTIN']    = {'foreground': '#6414b5', 'background': COLOR_INFO['text-background']}
-            cdg.tagdefs['DEFINITION'] = {'foreground': '#6414b5', 'background': COLOR_INFO['text-background']}
-            cdg.tagdefs['MYDECO']     = {'foreground': '#6414b5', 'background': COLOR_INFO['text-background']}
-            cdg.tagdefs['KEYWORD']    = {'foreground': '#0d15b8', 'background': COLOR_INFO['text-background']}
-            cdg.tagdefs['STRING']     = {'foreground': '#961a1a', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['COMMENT']    = {'foreground': '#a3a3a3' if IS_DARK else '#a3a3a3', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['MYNUMBER']   = {'foreground': '#e8821c' if IS_DARK else '#c26910', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['MYSELF']     = {'foreground': '#fc72d0' if IS_DARK else '#d943aa', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['MYPROP']     = {'foreground': '#fc72d0' if IS_DARK else '#d943aa', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['BUILTIN']    = {'foreground': '#b576f5' if IS_DARK else '#6414b5', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['DEFINITION'] = {'foreground': '#b576f5' if IS_DARK else '#6414b5', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['MYDECO']     = {'foreground': '#b576f5' if IS_DARK else '#6414b5', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['KEYWORD']    = {'foreground': '#5b96f5' if IS_DARK else '#0d15b8', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['STRING']     = {'foreground': '#f24141' if IS_DARK else '#961a1a', 'background': COLOR_INFO['text-background']}
 
             percolator.Percolator(self.text).insertfilter(cdg)
 
