@@ -2,20 +2,17 @@
 
 from setuptools import setup
 
-# source: https://packaging.python.org/guides/making-a-pypi-friendly-readme/
-from os import path
-with open(path.join(path.dirname(__file__), 'README.md'), encoding = 'utf-8') as f:
-    long_description = f.read()
+import meta
 
 setup(
-    name = 'netsblox',
-    version = '0.4.13',
-    description = 'A python interface for accessing NetsBlox services',
-    long_description = long_description,
+    name = meta.name,
+    version = meta.version,
+    description = meta.description,
+    long_description = meta.long_description,
     long_description_content_type = 'text/markdown',
-    url = 'https://github.com/dragazo/NetsBlox-python',
-    author = 'Devin Jean',
-    author_email = 'devin.c.jean@vanderbilt.edu',
+    url = meta.url,
+    author = meta.author,
+    author_email = meta.author_email,
     license = 'Apache 2.0',
     packages = [ 'netsblox' ],
     install_requires = [

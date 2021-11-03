@@ -4,13 +4,14 @@ import aiohttp
 import asyncio
 import re
 
+import meta
+
 from string import Template
 
-SERVICE_CLASS_TEMPLATE = None
+with open('template/init.py', 'r') as f:
+    INIT_TEMPLATE = Template(f.read())
 with open('template/service-class.py', 'r') as f:
     SERVICE_CLASS_TEMPLATE = Template(f.read())
-
-CLIENT_CLASS_TEMPLATE = None
 with open('template/client-class.py', 'r') as f:
     CLIENT_CLASS_TEMPLATE = Template(f.read())
 
@@ -155,6 +156,10 @@ async def generate_client_save(base_url, client_name, save_path):
     with open(save_path, 'w', encoding = 'utf-8') as f: # explicit encoding needed on windows
         f.write(content)
 async def main():
+    init_content = INIT_TEMPLATE.substitute({ 'description': meta.description, 'version': meta.version, 'author': meta.author, 'credits': meta.credits })
+    with open('netsblox/__init__.py', 'w', encoding = 'utf-8') as f: # explicit encoding needed on windows
+        f.write(init_content)
+
     args = [
         ('https://editor.netsblox.org', 'Client', 'netsblox/editor.py'),
         ('https://dev.netsblox.org', 'Client', 'netsblox/dev.py'),
