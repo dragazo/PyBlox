@@ -97,7 +97,7 @@ def parse_arg(arg_meta, types_meta, override_name: str = None):
         for param_meta in arg_meta['type'].get('params') or []:
             desc.append(f'  - :{param_meta["name"]}: ({parse_type(param_meta.get("type"), types_meta)[0]}) {param_meta.get("description") or ""}')
 
-    return arg_meta, t, '\n'.join(desc), t_parser
+    return arg_meta, t, '\n\n'.join(desc), t_parser
 
 # returns either a string containing a class definition for the given service, or None if it should be omitted
 async def generate_service(session, base_url: str, service_name: str, types_meta):
@@ -163,7 +163,11 @@ async def main():
     ]
     await asyncio.gather(*[asyncio.ensure_future(generate_client_save(*x)) for x in args])
 
-loop = asyncio.new_event_loop()
-loop.run_until_complete(main())
-loop.run_until_complete(asyncio.sleep(1)) # workaround needed on windows - for some reason they close the proactor event loop early otherwise
-loop.close()
+def main_sync():
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(main())
+    loop.run_until_complete(asyncio.sleep(1)) # workaround needed on windows - for some reason they close the proactor event loop early otherwise
+    loop.close()
+
+if __name__ == '__main__':
+    main_sync()
