@@ -3,54 +3,129 @@
     {
       "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/onstart.png", 
       "scale": 1, 
-      "replace": "@onstart\ndef function_name():\n    pass"
+      "replace": "@onstart\ndef my_onstart(): # functions need different names\n    pass # replace with your code"
     }, 
     {
       "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/keypress.png", 
       "scale": 1, 
-      "replace": "@onkey('space')\ndef function_name():\n    pass"
+      "replace": "@onkey('space')\ndef my_onkey(): # functions need different names\n    pass # replace with your code"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/loop-forever.png", 
+      "scale": 1, 
+      "replace": "while True:\n    pass # replace with your code"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/warp.png", 
+      "scale": 1, 
+      "replace": "with Warp():\n    pass # replace with your code"
     }, 
     {
       "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/msgrecv.png", 
       "scale": 1, 
-      "replace": "@nb.on_message('message_type')\ndef function_name(): # add arguments to receive values\n    pass"
+      "replace": "@nb.on_message('message')\ndef my_on_message(msg): # functions need different names\n    pass # replace with your code"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/sendmsg.png", 
+      "scale": 1, 
+      "replace": "nb.send_message('message', 'myself', msg = 'Hello World!')"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/loop-foreach.png", 
+      "scale": 1, 
+      "replace": "for item in my_list:\n    pass # replace with your code"
     }
   ], 
   "stage_blocks": [
     {
       "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/onstart.png", 
       "scale": 1, 
-      "replace": "@onstart\ndef function_name(self):\n    pass"
+      "replace": "@onstart\ndef my_onstart(self): # functions need different names\n    pass # replace with your code"
     }, 
     {
       "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/keypress.png", 
       "scale": 1, 
-      "replace": "@onkey('space')\ndef function_name(self):\n    pass"
+      "replace": "@onkey('space')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/onclick.png", 
+      "scale": 1, 
+      "replace": "@onclick\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/loop-forever.png", 
+      "scale": 1, 
+      "replace": "while True:\n    pass # replace with your code"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/warp.png", 
+      "scale": 1, 
+      "replace": "with Warp():\n    pass # replace with your code"
     }, 
     {
       "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/msgrecv.png", 
       "scale": 1, 
-      "replace": "@nb.on_message('message_type')\ndef function_name(self): # add arguments to receive values\n    pass"
+      "replace": "@nb.on_message('message')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/sendmsg.png", 
+      "scale": 1, 
+      "replace": "nb.send_message('message', 'myself', msg = 'Hello World!')"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/loop-foreach.png", 
+      "scale": 1, 
+      "replace": "for item in my_list:\n    pass # replace with your code"
     }
   ], 
   "turtle_blocks": [
     {
       "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/onstart.png", 
       "scale": 1, 
-      "replace": "@onstart\ndef function_name(self):\n    pass"
+      "replace": "@onstart\ndef my_onstart(self): # functions need different names\n    pass # replace with your code"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/onstartclone.png", 
+      "scale": 1, 
+      "replace": "@onstartclone\ndef my_onstartclone(self): # functions need different names\n    pass # replace with your code"
     }, 
     {
       "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/keypress.png", 
       "scale": 1, 
-      "replace": "@onkey('space')\ndef function_name(self):\n    pass"
+      "replace": "@onkey('space')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/onclick.png", 
+      "scale": 1, 
+      "replace": "@onclick\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/loop-forever.png", 
+      "scale": 1, 
+      "replace": "while True:\n    pass # replace with your code"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/warp.png", 
+      "scale": 1, 
+      "replace": "with Warp():\n    pass # replace with your code"
     }, 
     {
       "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/msgrecv.png", 
       "scale": 1, 
-      "replace": "@nb.on_message('message_type')\ndef function_name(self): # add arguments to receive values\n    pass"
+      "replace": "@nb.on_message('message')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/sendmsg.png", 
+      "scale": 1, 
+      "replace": "nb.send_message('message', 'myself', msg = 'Hello World!')"
+    }, 
+    {
+      "url": "https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img/blocks/loop-foreach.png", 
+      "scale": 1, 
+      "replace": "for item in my_list:\n    pass # replace with your code"
     }
   ], 
-  "show_blocks": false, 
+  "show_blocks": true, 
   "turtle_index": 3, 
   "imports": [], 
   "editors": [

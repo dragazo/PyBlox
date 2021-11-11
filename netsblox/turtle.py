@@ -8,8 +8,9 @@ import threading as _threading
 import traceback as _traceback
 import inspect as _inspect
 import queue as _queue
-import math as _math
 import copy as _copy
+import math as _math
+import time as _time
 import sys as _sys
 
 import numpy as _np
@@ -23,6 +24,8 @@ from typing import Any, Union, Tuple, Iterable, Optional, List
 
 from PIL import Image, ImageTk, ImageDraw
 import mss
+
+_GUI_PAUSE_TIME = 0.001 # time to pause after gui stuff like sprite movement
 
 VIS_THRESH = 20
 def _image_alpha(img: Image.Image) -> Image.Image:
@@ -507,14 +510,14 @@ class TurtleBase(_Ref):
 
     def __clone_from(self, src):
         def batcher():
-            self.pos = src.pos
-            self.heading = src.heading
+            self.__raw_set_pos(*src.pos)        # avoid motion sleep
+            self.degrees = src.degrees          # needed for heading
+            self.__raw_set_heading(src.heading) # avoid motion sleep
             self.visible = src.visible
             self.costume = src.costume
             self.pen_size = src.pen_size
             self.pen_color = src.pen_color
             self.drawing = src.drawing
-            self.degrees = src.degrees
         _qinvoke_wait(batcher)
 
     def __update_costume(self):
@@ -599,7 +602,9 @@ class TurtleBase(_Ref):
         return self.__x, self.__y
     @pos.setter
     def pos(self, new_pos: Tuple[float, float]) -> None:
-        x, y = map(float, new_pos)
+        self.__raw_set_pos(*map(float, new_pos))
+        _time.sleep(_GUI_PAUSE_TIME)
+    def __raw_set_pos(self, x: float, y: float) -> None:
         self.__x, self.__y = x, y
         scale = _get_logical_scale()
         _qinvoke(self.__turtle.goto, x * scale, y * scale)
@@ -616,7 +621,9 @@ class TurtleBase(_Ref):
         return self.__x
     @x_pos.setter
     def x_pos(self, new_x: float) -> None:
-        x = float(new_x)
+        self.__raw_set_x_pos(float(new_x))
+        _time.sleep(_GUI_PAUSE_TIME)
+    def __raw_set_x_pos(self, x: float) -> None:
         self.__x = x
         scale = _get_logical_scale()
         _qinvoke(self.__turtle.setx, x * scale)
@@ -633,7 +640,9 @@ class TurtleBase(_Ref):
         return self.__y
     @y_pos.setter
     def y_pos(self, new_y: float) -> None:
-        y = float(new_y)
+        self.__raw_set_y_pos(float(new_y))
+        _time.sleep(_GUI_PAUSE_TIME)
+    def __raw_set_y_pos(self, y: float) -> None:
         self.__y = y
         scale = _get_logical_scale()
         _qinvoke(self.__turtle.sety, y * scale)
@@ -651,7 +660,10 @@ class TurtleBase(_Ref):
         return self.__rot * self.__degrees
     @heading.setter
     def heading(self, new_heading: float) -> None:
-        self.__rot = (float(new_heading) / self.__degrees) % 1.0
+        self.__raw_set_heading(float(new_heading))
+        _time.sleep(_GUI_PAUSE_TIME)
+    def __raw_set_heading(self, heading: float) -> None:
+        self.__rot = (heading / self.__degrees) % 1.0
         self.__update_costume()
 
     @property
