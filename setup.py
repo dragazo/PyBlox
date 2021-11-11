@@ -18,7 +18,7 @@ setup(
     install_requires = [
         'websocket-client',
         'darkdetect',
-        'shortuuid',
+        'randomname',
         'requests',
         'gelidum',
         'pillow',

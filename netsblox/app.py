@@ -746,17 +746,15 @@ def my_onstart(self): # functions need different names
                 'value': '''
 @onstart
 def my_onstart(self): # functions need different names
-    self.my_distance = 100 # create a turtle variable
+    self.my_distance = 2 # create a turtle variable
 
-    for i in range(4): # repeat code 4 times
-        time.sleep(0.5) # wait half a second
+    for i in range(360): # repeat code 360 times
         self.forward(self.my_distance)
-        time.sleep(0.5)
-        self.turn_right()
+        self.turn_right(1)
 '''.lstrip(),
             },
         ],
-        'imports': ['time'],
+        'imports': [],
     }
 
     def get_save_dict(self) -> dict:
@@ -1479,17 +1477,29 @@ class MainMenu(tk.Menu):
         self.add_cascade(label = 'Images', menu = self.images_dropdown)
 
         self.run_menu_entries = {}
+        self.run_menu_seps = 0
         self.run_menu = tk.Menu(self, **MENU_STYLE)
         def add_run_menu_command(name: str, **kwargs):
-            self.run_menu_entries[name] = len(self.run_menu_entries)
+            self.run_menu_entries[name] = len(self.run_menu_entries) + self.run_menu_seps
             self.run_menu.add_command(**kwargs)
+        def add_run_menu_sep():
+            self.run_menu.add_separator()
+            self.run_menu_seps += 1
 
+        def copy_pub_id():
+            root.clipboard_clear()
+            root.clipboard_append(self.public_id)
         add_run_menu_command('run-project', label = 'Run Project', command = play_button, accelerator = 'F5')
         add_run_menu_command('stop-project', label = 'Stop Project', command = play_button, state = tk.DISABLED)
+        add_run_menu_sep()
+        add_run_menu_command('copy-pub-id', label = 'Copy Public ID', command = copy_pub_id)
         self.add_cascade(label = 'Run', menu = self.run_menu)
 
         root.bind_all('<F5>', lambda e: play_button())
 
+    @property
+    def public_id(self):
+        return f'{self._project_name}@{content.project.project_id}'
     @property
     def project_path(self):
         return self._project_path
@@ -1497,7 +1507,7 @@ class MainMenu(tk.Menu):
     def project_path(self, p):
         self._project_path = p
         self._project_name = 'untitled' if p is None else basename_noext(p)
-        root.title(f'NetsBlox-Python - {self._project_name}@{content.project.project_id} ({"unsaved" if p is None else p})')
+        root.title(f'NetsBlox-Python - {self.public_id} ({"unsaved" if p is None else p})')
     @property
     def project_name(self):
         return self._project_name
