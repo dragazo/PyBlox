@@ -2,11 +2,15 @@
 
 import aiohttp
 import asyncio
+import certifi
+import ssl
 import re
 
 import meta
 
 from string import Template
+
+ssl_context = ssl.create_default_context(cafile=certifi.where())
 
 with open('template/init.py', 'r') as f:
     INIT_TEMPLATE = Template(f.read())
@@ -102,7 +106,7 @@ def parse_arg(arg_meta, types_meta, override_name: str = None):
 
 # returns either a string containing a class definition for the given service, or None if it should be omitted
 async def generate_service(session, base_url: str, service_name: str, types_meta):
-    async with session.get(f'{base_url}/services/{service_name}') as res:
+    async with session.get(f'{base_url}/services/{service_name}', ssl = ssl_context) as res:
         meta = await res.json(content_type=None) # ignore content type in case response mime type is wrong
         if 'servicePath' not in meta or not meta['servicePath']:
             return None # only generate code for fs services
@@ -138,9 +142,9 @@ async def generate_service(session, base_url: str, service_name: str, types_meta
 
 async def generate_client(base_url, client_name):
     async with aiohttp.ClientSession() as session:
-        async with session.get(f'{base_url}/services') as res:
+        async with session.get(f'{base_url}/services', ssl = ssl_context) as res:
             services_meta = await res.json(content_type=None) # ignore content type in case response mime type is wrong
-            async with session.get(f'{base_url}/services/input-types') as tres:
+            async with session.get(f'{base_url}/services/input-types', ssl = ssl_context) as tres:
                 types_meta = await tres.json(content_type=None) # ignore content type in case response mime type is wrong
                 services = await asyncio.gather(*[asyncio.ensure_future(generate_service(session, base_url, x['name'], types_meta)) for x in services_meta])
                 services = sorted([x for x in services if x]) # remove None values (omitted services) and sort to make sure they're in a consistent order

@@ -14,6 +14,9 @@ from typing import Optional, Any, List, Union
 import websocket as _websocket
 import requests as _requests
 
+import ssl
+import certifi
+
 import netsblox.common as _common
 import netsblox.events as _events
 
@@ -52,12 +55,18 @@ class $client_name:
         self._message_handlers = {}
         self._message_last = {} # maps msg type to {received_count, last_content, waiters (count)}
         self._message_stream_stopped = False
-
+        
         # create a websocket and start it before anything non-essential (has some warmup communication)
         self._ws_lock = _threading.Lock()
         self._ws = _websocket.WebSocketApp(self._base_url.replace('http', 'ws'),
-            on_open = self._ws_open, on_close = self._ws_close, on_error = self._ws_error, on_message = self._ws_message)
-        self._ws_thread = _threading.Thread(target = self._ws.run_forever)
+            on_open=self._ws_open, on_close=self._ws_close, on_error=self._ws_error, on_message=self._ws_message)
+        def run_ws():
+            opt = {
+                'cert_reqs': ssl.CERT_OPTIONAL,
+                'ca_certs': certifi.where(),
+            }
+            self._ws.run_forever(sslopt = opt)
+        self._ws_thread = _threading.Thread(target = run_ws)
         self._ws_thread.setDaemon(not run_forever)
         self._ws_thread.start()
 
