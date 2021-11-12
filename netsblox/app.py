@@ -184,7 +184,7 @@ input(prompt: Any=...) -> str
 Prompt the user to input a string (which might be empty).
 If the prompt is closed or canceled, `None` is returned.
 
-Note that calling this function will pause the turtle simulation
+Note that calling this function will pause the simulation
 while the user decides what to enter.
 '''.strip(),
 }
@@ -543,7 +543,6 @@ class ProjectEditor(tk.Frame):
         # it is not stored in project files or exports because conflicting ids would break messaging.
         self.project_id = common.generate_proj_id()
 
-        self.turtle_index = 0
         self.editors: List[CodeEditor] = []
         self.show_blocks_tkvar = tk.BooleanVar()
 
@@ -581,9 +580,9 @@ class ProjectEditor(tk.Frame):
             self.ctx_menu.add_command(label = label, command = command)
             idx = len(self.ctx_menu_entries)
             self.ctx_menu_entries[id] = idx
-        
-        add_command('new-turtle', label = 'New Turtle', command = lambda: self.newturtle())
-        add_command('dupe', label = 'Clone Turtle', command = lambda: self.dupe_turtle(self.ctx_tab_idx))
+
+        add_command('new-turtle', label = 'New Sprite', command = lambda: self.newturtle())
+        add_command('dupe', label = 'Clone Sprite', command = lambda: self.dupe_turtle(self.ctx_tab_idx))
         add_command('rename', label = 'Rename', command = lambda: self.rename_turtle(self.ctx_tab_idx))
         add_command('delete', label = 'Delete', command = lambda: self.delete_tab(self.ctx_tab_idx))
 
@@ -635,7 +634,7 @@ class ProjectEditor(tk.Frame):
         if not isinstance(editor, TurtleEditor):
             return # only turtle editors can be duped
 
-        return self.newturtle(base_name = editor.name, value = editor.text.get('1.0', 'end-1c'))
+        return self.newturtle(base_name = f'{editor.name}_copy', value = editor.text.get('1.0', 'end-1c'))
 
     def rename_turtle(self, idx) -> None:
         editor = self.editors[idx]
@@ -644,8 +643,8 @@ class ProjectEditor(tk.Frame):
 
         name = None
         while True:
-            title = 'Rename Turtle'
-            msg = f'Enter the new name for turtle "{editor.name}" (must not already be taken).\nNote that any references to this turtle in your code must be manually updated to the new name.'
+            title = 'Rename Sprite'
+            msg = f'Enter the new name for "{editor.name}" (must not already be taken).\nNote that any references to this sprite in your code must be manually updated to the new name.'
             name = simpledialog.askstring(title, msg)
             if name is None:
                 return
@@ -660,12 +659,12 @@ class ProjectEditor(tk.Frame):
         editor.name = name
         self.notebook.tab(idx, text = name)
 
-    def newturtle(self, *, base_name = 'turtle', value = None) -> Any:
-        while True:
-            self.turtle_index += 1
-            name = f'{base_name}{self.turtle_index}'
-            if self.is_unique_name(name):
-                break
+    def newturtle(self, *, base_name = 'sprite', value = None) -> Any:
+        name_counter = 0
+        name = base_name
+        while not self.is_unique_name(name):
+            name_counter += 1
+            name = f'{base_name}{name_counter}'
 
         assert self.is_unique_name(name) and is_valid_ident(name) # sanity check
         editor = TurtleEditor(self.notebook, name = name, value = value or ProjectEditor.DEFAULT_PROJECT['editors'][2]['value'])
@@ -722,7 +721,6 @@ class ProjectEditor(tk.Frame):
         'stage_blocks': DEFAULT_STAGE_BLOCKS,
         'turtle_blocks': DEFAULT_TURTLE_BLOCKS,
         'show_blocks': True,
-        'turtle_index': 0,
         'editors': [
             {
                 'type': 'global',
@@ -742,11 +740,11 @@ def my_onstart(self): # functions need different names
             },
             {
                 'type': 'turtle',
-                'name': 'turtle',
+                'name': 'sprite',
                 'value': '''
 @onstart
 def my_onstart(self): # functions need different names
-    self.my_distance = 2 # create a turtle variable
+    self.my_distance = 2 # create a sprite variable
 
     for i in range(360): # repeat code 360 times
         self.forward(self.my_distance)
@@ -763,7 +761,6 @@ def my_onstart(self): # functions need different names
         res['stage_blocks'] = [x.copy() for x in  StageEditor.blocks]
         res['turtle_blocks'] = [x.copy() for x in TurtleEditor.blocks]
         res['show_blocks'] = self.show_blocks
-        res['turtle_index'] = self.turtle_index
         res['imports'] = []
         for pkg, item in self.imports.packages.items():
             if item['tkvar'].get():
@@ -794,7 +791,6 @@ def my_onstart(self): # functions need different names
 
         self.show_blocks = proj['show_blocks']
 
-        self.turtle_index = proj['turtle_index']
         for info in proj['editors']:
             ty = info['type']
             name = info['name']
