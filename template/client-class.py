@@ -22,10 +22,6 @@ import netsblox.events as _events
 
 _websocket.enableTrace(False) # disable auto-outputting of socket events
 
-_SEND_RETARGETS = {
-    'myself': 'everyone in room',
-}
-
 class $client_name:
     '''
     Holds all the information and plumbing required to connect to netsblox, exchange messages, and call RPCs.
@@ -128,16 +124,22 @@ $service_instances
         The default value for target, `'myself'`, will send the message to yourself.
         You can receive messages with `@nb.on_message`.
         '''
-        if target in _SEND_RETARGETS:
-            target = _SEND_RETARGETS[target]
-        with self._ws_lock:
-            self._ws.send(_common.small_json({
-                'type': 'message',
-                'msgType': msg_type,
-                'content': values,
-                'dstId': target,
-                'srcId': self.get_public_id(),
-            }))
+        if target == 'myself':
+            with self._message_cv:
+                self._message_queue.append({
+                    'msgType': msg_type,
+                    'content': values,
+                })
+                self._message_cv.notify()
+        else:
+            with self._ws_lock:
+                self._ws.send(_common.small_json({
+                    'type': 'message',
+                    'msgType': msg_type,
+                    'content': values,
+                    'dstId': target,
+                    'srcId': self.get_public_id(),
+                }))
 
     @staticmethod
     def _check_handler(handler, content):
