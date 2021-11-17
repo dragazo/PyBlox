@@ -121,8 +121,17 @@ $service_instances
         '''
         Sends a message of the given type to the target(s), which is either the public id of a single target
         or a list of multiple ids for multiple targets.
-        The default value for target, `'myself'`, will send the message to yourself.
+        The default value for target, `'myself'`, will send the message to your own project (not just the sprite that sends the message).
         You can receive messages with `@nb.on_message`.
+
+        This is similar to broadcast/receive in Snap! except that you can send messages over the internet
+        and the messages can contain fields/values.
+        To send a field, simply pass it as a keyword argument in the function call.
+        For instance, the following example sends a message called `'message'` with a field called `'msg'`:
+
+        ```
+        nb.send_message('message', 'myself', msg = 'hello world')
+        ```
         '''
         if target == 'myself':
             with self._message_cv:

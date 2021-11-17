@@ -683,6 +683,8 @@ class ProjectEditor(tk.Frame):
     DEFAULT_GLOBAL_BLOCKS = [
         { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef my_onstart(): # functions need different names\n    pass # replace with your code' },
         { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/msgrecv-snap.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(msg): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/sendmsg-snap.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
         { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
 
         { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass # replace with your code' },
@@ -695,6 +697,8 @@ class ProjectEditor(tk.Frame):
         { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef my_onstart(self): # functions need different names\n    pass # replace with your code' },
         { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code' },
         { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/msgrecv-snap.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/sendmsg-snap.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
         { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
 
         { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass # replace with your code' },
@@ -708,10 +712,12 @@ class ProjectEditor(tk.Frame):
         { 'url': f'{IMG_ROOT}/blocks/onstartclone.png', 'scale': 1, 'replace': '@onstartclone\ndef my_onstartclone(self): # functions need different names\n    pass # replace with your code' },
         { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code' },
         { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/msgrecv-snap.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/sendmsg-snap.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
         { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
 
         { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass # replace with your code' },
-        
+
         { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
         { 'url': f'{IMG_ROOT}/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
         { 'url': f'{IMG_ROOT}/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in my_list:\n    pass # replace with your code' },
