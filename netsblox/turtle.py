@@ -25,7 +25,11 @@ from typing import Any, Union, Tuple, Iterable, Optional, List
 from PIL import Image, ImageTk, ImageDraw
 import mss
 
-_GUI_PAUSE_TIME = 0.001 # time to pause after gui stuff like sprite movement
+_GRAPHICS_SLEEP_TIME = 0.001 # time to pause after gui stuff like sprite movement
+_do_graphics_sleep = True
+def _graphics_sleep():
+    if _do_graphics_sleep:
+        _time.sleep(_GRAPHICS_SLEEP_TIME)
 
 VIS_THRESH = 20
 def _image_alpha(img: Image.Image) -> Image.Image:
@@ -448,7 +452,25 @@ class StageBase(_Ref):
         ```
         '''
         return _get_logical_size()[1]
-    
+
+    @property
+    def turbo(self) -> bool:
+        '''
+        Get or set whether or not turbo mode is enabled (for all sprites).
+        Turbo mode disables all implicit sleeping between calls to graphical functions like moving turtles.
+        If you are doing a lot of graphical operations like movement or drawing, enabling turbo mode will speed it up.
+
+        ```
+        stage.turbo = True
+        stage.turbo = False
+        ```
+        '''
+        return _do_graphics_sleep
+    @turbo.setter
+    def turbo(self, value: bool) -> None:
+        global _do_graphics_sleep
+        _do_graphics_sleep = not bool(value)
+
     def grab_image(self) -> Any:
         '''
         Grabs and returns an image of the stage and everything one it.
@@ -603,7 +625,7 @@ class TurtleBase(_Ref):
     @pos.setter
     def pos(self, new_pos: Tuple[float, float]) -> None:
         self.__raw_set_pos(*map(float, new_pos))
-        _time.sleep(_GUI_PAUSE_TIME)
+        _graphics_sleep()
     def __raw_set_pos(self, x: float, y: float) -> None:
         self.__x, self.__y = x, y
         scale = _get_logical_scale()
@@ -622,7 +644,7 @@ class TurtleBase(_Ref):
     @x_pos.setter
     def x_pos(self, new_x: float) -> None:
         self.__raw_set_x_pos(float(new_x))
-        _time.sleep(_GUI_PAUSE_TIME)
+        _graphics_sleep()
     def __raw_set_x_pos(self, x: float) -> None:
         self.__x = x
         scale = _get_logical_scale()
@@ -641,7 +663,7 @@ class TurtleBase(_Ref):
     @y_pos.setter
     def y_pos(self, new_y: float) -> None:
         self.__raw_set_y_pos(float(new_y))
-        _time.sleep(_GUI_PAUSE_TIME)
+        _graphics_sleep()
     def __raw_set_y_pos(self, y: float) -> None:
         self.__y = y
         scale = _get_logical_scale()
@@ -661,7 +683,7 @@ class TurtleBase(_Ref):
     @heading.setter
     def heading(self, new_heading: float) -> None:
         self.__raw_set_heading(float(new_heading))
-        _time.sleep(_GUI_PAUSE_TIME)
+        _graphics_sleep()
     def __raw_set_heading(self, heading: float) -> None:
         self.__rot = (heading / self.__degrees) % 1.0
         self.__update_costume()
