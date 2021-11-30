@@ -3,6 +3,8 @@
 import builtins as _builtins
 
 import turtle as _turtle
+import tkinter as _tk
+from tkinter import ttk as _ttk
 
 import threading as _threading
 import traceback as _traceback
@@ -20,7 +22,7 @@ import netsblox.events as _events
 import netsblox.colors as _colors
 import netsblox.concurrency as _concurrency
 
-from typing import Any, Union, Tuple, Iterable, Optional, List
+from typing import Any, Union, Tuple, Iterable, Optional, List, Callable
 
 from PIL import Image, ImageTk, ImageDraw
 import mss
@@ -1170,6 +1172,74 @@ def onclickanywhere(f):
     '''
     setattr(f, '__click_anywhere', True)
     return onclick(f)
+
+_watch_tk = None
+_watch_watchers = {}
+_watch_changed = False
+_watch_tree = None
+def _watch_update() -> None:
+    global _watch_tk, _watch_watchers, _watch_changed, _watch_tree
+    if not _watch_changed and len(_watch_watchers) == 0: return
+    _watch_changed = False
+
+    if _watch_tk is None:
+        _watch_tk = _tk.Tk()
+        _watch_tk.title('PyBlox Watchers')
+        _watch_tk.geometry('400x600')
+    if _watch_tree is not None:
+        _watch_tree.destroy()
+        _watch_tree = None
+
+    _watch_tree = _ttk.Treeview(_watch_tk, columns = ['value'], show = 'tree')
+    _watch_tree.pack(fill = _tk.BOTH, expand = True)
+
+    iid_pos = [-1]
+    def get_iid():
+        iid_pos[0] += 1
+        return iid_pos[0]
+    def add_value(text: str, value: Any, *, parent: Union[Tuple[int, int], None] = None):
+        iid = get_iid()
+        t = type(value)
+        if t is list or t is tuple:
+            _watch_tree.insert('', _tk.END, iid = iid, text = text, values = [f'{t.__name__} ({len(value)} items)'])
+            for i, v in enumerate(value):
+                add_value(f'item {i}', v, parent = (iid, i))
+        elif t is dict:
+            _watch_tree.insert('', _tk.END, iid = iid, text = text, values = [f'{t.__name__} ({len(value)} items)'])
+            for i, (k, v) in enumerate(value.items()):
+                add_value(f'key {repr(k)}', v, parent = (iid, i))
+        else:
+            _watch_tree.insert('', _tk.END, iid = iid, text = text, values = [repr(value)])
+
+        if parent is not None:
+            _watch_tree.move(iid, parent[0], parent[1])
+
+    for name, watcher in _watch_watchers.items():
+        add_value(name, watcher['getter']())
+
+def _watch_add(name: str, getter: Callable, setter: Union[Callable, None]) -> None:
+    global _watch_changed
+
+    if type(name) != str:
+        raise TypeError(f'watcher name should be a string, got type {type(name)}')
+    if name in _watch_watchers:
+        raise ValueError(f'a watcher with name \"{name}\" already exists')
+    str(getter()) # make sure value is callable and stringifiable
+
+    _watch_watchers[name] = { 'getter': getter, 'setter': setter }
+    _watch_changed = True
+    _watch_update()
+
+def watch(name: str, getter: Callable, setter: Union[Callable, None] = None) -> None:
+    '''
+    Registers a variable watcher with the given name, which should not already be taken by another watcher.
+
+    getter - A function taking no arguments which gets the up-to-date value to watch each time it is called.
+
+    setter - A function taking one argument (new value) which when called updates the value watched by getter.
+    If setter is not provided, the watcher will be readonly (users cannot change the value).
+    '''
+    _qinvoke(_watch_add, name, getter, setter)
 
 _did_setup_stdio = False
 _print_lock = _threading.Lock()
