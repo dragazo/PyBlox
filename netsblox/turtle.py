@@ -493,6 +493,10 @@ class StageBase(_Ref):
                 return Image.frombytes('RGB', raw.size, raw.bgra, 'raw', 'BGRX')
         return _qinvoke_wait(batcher)
 
+def _get_meta_name(obj):
+    cls = getattr(obj, '_Derived__DerivedFrom', None)
+    return cls.__name__ if cls is not None else 'turtle'
+
 class TurtleBase(_Ref):
     '''
     The base class for any custom turtle.
@@ -570,6 +574,20 @@ class TurtleBase(_Ref):
         if Derived is None:
             raise RuntimeError('Tried to clone a turtle type which was not defined with @turtle')
         return Derived(_CloneTag(self))
+
+    def watch(self, name: str):
+        '''
+        Creates a variable watcher which watches the sprite variable with the given name.
+        This can be used to visually inspect the value of a sprite variable while the program is running.
+
+        ```
+        self.my_var = 7
+        self.watch('my_var')
+        ```
+        '''
+        my_name = _get_meta_name(self)
+        getattr(self, name) # make sure a variable with this name exists
+        watch(f'{my_name}\'s {name}', getter = lambda: getattr(self, name))
 
     # ----------------------------------------
 
@@ -920,6 +938,7 @@ def _derive(bases, cls):
     class Derived(*limited_bases, cls):
         def __init__(self, *args, **kwargs):
             self.__Derived = Derived
+            self.__DerivedFrom = cls
             for base in bases:
                 base.__init__(self)
 
@@ -949,7 +968,7 @@ def _derive(bases, cls):
             for _, key_script in key_scripts:
                 for key in getattr(key_script, '__run_on_key'):
                     _add_key_event(key, key_script)
-            
+
             click_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_click'))
             for _, click_script in click_scripts:
                 for key in getattr(click_script, '__run_on_click'):
@@ -966,7 +985,7 @@ def _derive(bases, cls):
             fields = [x for x in vars(src).keys() if not filter_out(x)]
             for field in fields:
                 setattr(self, field, _copy.deepcopy(getattr(src, field)))
-            
+
             for base in bases: # recurse to child types for specialized cloning logic (like turtle repositioning)
                 getattr(self, f'_{base.__name__}__clone_from')(src)
 
@@ -1173,50 +1192,77 @@ def onclickanywhere(f):
     setattr(f, '__click_anywhere', True)
     return onclick(f)
 
+_WATCH_UPDATE_INTERVAL = 500
 _watch_tk = None
+_watch_tree = None
 _watch_watchers = {}
 _watch_changed = False
-_watch_tree = None
+_watch_started = False
 def _watch_update() -> None:
     global _watch_tk, _watch_watchers, _watch_changed, _watch_tree
     if not _watch_changed and len(_watch_watchers) == 0: return
     _watch_changed = False
 
+    open_paths = set()
+    def compute_open_paths(root, root_path):
+        for child in _watch_tree.get_children(root):
+            info = _watch_tree.item(child)
+            child_path = f'{root_path}@?{info["text"]}'
+            if info['open']:
+                open_paths.add(child_path)
+            compute_open_paths(child, child_path)
+
     if _watch_tk is None:
         _watch_tk = _tk.Tk()
         _watch_tk.title('PyBlox Watchers')
-        _watch_tk.geometry('400x600')
-    if _watch_tree is not None:
-        _watch_tree.destroy()
-        _watch_tree = None
+        _watch_tk.geometry('400x300')
 
-    _watch_tree = _ttk.Treeview(_watch_tk, columns = ['value'], show = 'tree')
-    _watch_tree.pack(fill = _tk.BOTH, expand = True)
+        _watch_tree = _ttk.Treeview(_watch_tk, columns = 1, show = 'tree')
+        scroll = _tk.Scrollbar(_watch_tk, command = _watch_tree.yview)
+        _watch_tree.configure(yscrollcommand = scroll.set)
+
+        scroll.pack(side = _tk.RIGHT, fill = _tk.Y, expand = True)
+        _watch_tree.pack(fill = _tk.BOTH, expand = True)
+    else:
+        compute_open_paths(None, '') # record open paths before we delete them
+        _watch_tree.delete(*_watch_tree.get_children())
 
     iid_pos = [-1]
     def get_iid():
         iid_pos[0] += 1
         return iid_pos[0]
-    def add_value(text: str, value: Any, *, parent: Union[Tuple[int, int], None] = None):
+    def add_value(parent_path: str, text: str, value: Any, *, parent: Union[Tuple[int, int], None] = None):
+        my_path = f'{parent_path}@?{text}'
+        is_open = my_path in open_paths
         iid = get_iid()
+
         t = type(value)
         if t is list or t is tuple:
-            _watch_tree.insert('', _tk.END, iid = iid, text = text, values = [f'{t.__name__} ({len(value)} items)'])
+            _watch_tree.insert('', _tk.END, iid = iid, text = text, open = is_open, values = [f'{t.__name__} ({len(value)} items)'])
             for i, v in enumerate(value):
-                add_value(f'item {i}', v, parent = (iid, i))
+                add_value(my_path, f'item {i}', v, parent = (iid, i))
         elif t is dict:
-            _watch_tree.insert('', _tk.END, iid = iid, text = text, values = [f'{t.__name__} ({len(value)} items)'])
+            _watch_tree.insert('', _tk.END, iid = iid, text = text, open = is_open, values = [f'{t.__name__} ({len(value)} items)'])
             for i, (k, v) in enumerate(value.items()):
-                add_value(f'key {repr(k)}', v, parent = (iid, i))
+                add_value(my_path, f'key {repr(k)}', v, parent = (iid, i))
         else:
-            _watch_tree.insert('', _tk.END, iid = iid, text = text, values = [repr(value)])
+            _watch_tree.insert('', _tk.END, iid = iid, text = text, open = is_open, values = [repr(value)])
 
         if parent is not None:
             _watch_tree.move(iid, parent[0], parent[1])
 
     for name, watcher in _watch_watchers.items():
-        add_value(name, watcher['getter']())
+        add_value('', name, watcher['getter']())
 
+def _watch_start():
+    global _watch_started
+    if _watch_started: return
+    _watch_started = True
+
+    def do_update():
+        _traceback_wrapped(_watch_update)()
+        _watch_tk.after(_WATCH_UPDATE_INTERVAL, do_update)
+    do_update()
 def _watch_add(name: str, getter: Callable, setter: Union[Callable, None]) -> None:
     global _watch_changed
 
@@ -1228,17 +1274,24 @@ def _watch_add(name: str, getter: Callable, setter: Union[Callable, None]) -> No
 
     _watch_watchers[name] = { 'getter': getter, 'setter': setter }
     _watch_changed = True
-    _watch_update()
+    _watch_start()
 
-def watch(name: str, getter: Callable, setter: Union[Callable, None] = None) -> None:
+def watch(name: str, *, getter: Union[Callable, None] = None, setter: Union[Callable, None] = None) -> None:
     '''
     Registers a variable watcher with the given name, which should not already be taken by another watcher.
+    If getter is specified, the watcher will watch the value returned by getter (see below).
+    Otherwise, the watcher will watch a variable at global scope with the given name.
 
     getter - A function taking no arguments which gets the up-to-date value to watch each time it is called.
+    If not provided, the new watcher will watch a global variable with the same name as the watcher.
 
     setter - A function taking one argument (new value) which when called updates the value watched by getter.
     If setter is not provided, the watcher will be readonly (users cannot change the value).
     '''
+    if getter is None:
+        their_globals = _inspect.stack()[1][0].f_globals
+        their_globals[name] # make sure a global with that name exists
+        getter = lambda: their_globals[name]
     _qinvoke(_watch_add, name, getter, setter)
 
 _did_setup_stdio = False
