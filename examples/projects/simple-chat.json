@@ -126,7 +126,6 @@
     }
   ], 
   "show_blocks": true, 
-  "turtle_index": 0, 
   "imports": [], 
   "editors": [
     {
@@ -142,7 +141,7 @@
     {
       "type": "turtle", 
       "name": "turtle", 
-      "value": "target = 'myRole@simple-chat@devinjean'\n\n@onstart\ndef on_start(self):\n    self.visible = False\n    self.write(nb.get_public_id(), align = 'center')\n\n@onkey('space')\ndef on_space(self):\n    msg = input('msg?')\n    nb.send_message('message', self.target, msg = msg)\n\n@nb.on_message('message')\ndef on_msg(self, msg):\n    self.clear()\n    self.write(msg, align = 'center')\n"
+      "value": "target = 'myRole@simple-chat@devinjean'\n\n@onkey('space')\ndef on_space(self):\n    msg = input('msg?')\n    nb.send_message('message', self.target, msg = msg)\n\n@nb.on_message('message')\ndef on_msg(self, msg):\n    self.clear()\n    self.write(msg)\n"
     }
   ], 
   "images": {}

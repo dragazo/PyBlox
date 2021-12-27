@@ -2,7 +2,6 @@
 
 import builtins as _builtins
 
-import turtle as _turtle
 import tkinter as _tk
 from tkinter import ttk as _ttk
 
@@ -26,6 +25,8 @@ from typing import Any, Union, Tuple, Iterable, Optional, List, Callable
 
 from PIL import Image, ImageTk, ImageDraw
 import mss
+
+RENDER_PERIOD = 16 # time between frames in ms
 
 _GRAPHICS_SLEEP_TIME = 0.001 # time to pause after gui stuff like sprite movement
 _do_graphics_sleep = True
@@ -105,55 +106,10 @@ def _add_click_event(key, event):
 
     _click_events[key][1].append(_events.get_event_wrapper(event))
 
-class GameStateError(Exception):
-    pass
-
-_action_queue_thread_id = _threading.get_ident()
-
-_action_queue_ret_cv = _threading.Condition(_threading.Lock())
-_action_queue_ret_id = 0
-_action_queue_ret_vals = {}
-
-_action_queue = _queue.Queue(1) # max size is equal to max total exec imbalance, so keep it low
-_action_queue_interval = 16    # ms between control slices
-_action_max_per_slice = 16     # max number of actions to perform during a control slice
+class ProjectStateError(Exception): pass
 
 _game_running = False
 _game_stopped = False # different than not running due to 3-state system
-
-# filling up the queue before we start can help mitigate total starting exec imbalance by up to maxsize steps
-# effective max starting error decreases by 1, so if max size is 1, this is perfect
-for i in range(_action_queue.maxsize):
-    _action_queue.put((lambda *_: None, tuple()))
-
-def _process_queue():
-    if _game_running:
-        for _ in range(_action_max_per_slice):
-            if _action_queue.qsize() == 0:
-                break
-            val = _action_queue.get()
-            if len(val) == 2:
-                val[0](*val[1])
-            else:
-                ret = None
-                try:
-                    ret = val[0](*val[1])
-                except Exception as e:
-                    ret = e
-
-                with _action_queue_ret_cv:
-                    _action_queue_ret_vals[val[2]] = ret
-                    _action_queue_ret_cv.notify_all()
-
-        _turtle.Screen().ontimer(_process_queue, _action_queue_interval)
-    else:
-        _turtle.Screen().bye()
-
-# this should only be used internally, not by user code
-def _new_game():
-    global _game_running, _game_stopped
-    _game_running = False
-    _game_stopped = False
 
 _start_signal = _concurrency.Signal()
 def _start_signal_wrapped(f):
@@ -161,6 +117,90 @@ def _start_signal_wrapped(f):
         _start_signal.wait()
         return f(*args, **kwargs)
     return wrapped
+
+class _Project:
+    def __init__(self, *, width: int, height: int):
+        self.lock = _threading.RLock()
+        self.stages = {}
+        self.turtles = {}
+
+        self.tk = _tk.Tk()
+        self.tk.minsize(400, 200)
+        self.tk_canvas = _tk.Canvas(self.tk)
+        self.tk_canvas.pack(fill = _tk.BOTH, expand = True)
+        self.resize_to(width, height)
+
+        # def on_resize(e):
+        #     if e.widget is not self.tk: return 'break'
+        #     self.physical_size = (e.width, e.height)
+        #     return 'break'
+        # self.tk.bind_all('<Configure>', on_resize)
+
+    def resize_to(self, width: int, height: int) -> None:
+        with self.lock:
+            self.tk.geometry(f'{width}x{height}')
+            self.physical_size = (width, height)
+            self.logical_size = (width, height)
+            self.logical_scale = 1.0
+            self.drawings_img = Image.new('RGBA', (width, height))
+            self.last_frame = None
+
+    def register_entity(self, ent):
+        if isinstance(ent, StageBase): target = self.stages
+        elif isinstance(ent, TurtleBase): target = self.turtles
+        else: raise TypeError(f'expected stage or turtle - got {type(ent)}')
+
+        with self.lock:
+            id = len(target)
+            setattr(ent, '_Project__id', id)
+            target[id] = { 'obj': ent, 'id': id, 'disp': None }
+
+    def render_frame(self):
+        with self.lock:
+            frame = Image.new('RGBA', self.logical_size, (255, 255, 255))
+            for info in self.stages.values():
+                stage_img = info['obj'].costume
+                if stage_img is None: continue
+                scale = min(self.logical_size[i] / stage_img.size[i] for i in range(2))
+                new_size = tuple(round(v * scale) for v in stage_img.size)
+                resized = stage_img.resize(new_size, Image.ANTIALIAS)
+                center_offset = tuple(round((frame.size[i] - new_size[i]) / 2) for i in range(2))
+                frame.paste(resized, center_offset, resized)
+            frame.paste(self.drawings_img, (0, 0), self.drawings_img)
+            for info in self.turtles.values():
+                turtle = info['obj']
+                turtle_pos = turtle.pos
+                turtle_img = getattr(turtle, '_TurtleBase__display_image')
+                paste_pos = tuple(round(self.logical_size[i] / 2 + turtle_pos[i] - turtle_img.size[i] / 2) for i in range(2))
+                frame.paste(turtle_img, paste_pos, turtle_img)
+            self.last_frame = frame # keep track of this for the image grab functions
+
+            canvas_size = (self.tk_canvas.winfo_width(), self.tk_canvas.winfo_height())
+            final_scale = min(canvas_size[i] / self.logical_size[i] for i in range(2))
+            final_size = tuple(round(v * final_scale) for v in frame.size)
+            final_frame = ImageTk.PhotoImage(frame.resize(final_size, Image.ANTIALIAS))
+            self.last_cached_frame = final_frame # we have to keep a ref around or it'll disapper
+
+            self.tk_canvas.delete('all')
+            self.tk_canvas.create_image(canvas_size[0] / 2, canvas_size[1] / 2, image = final_frame)
+
+    def run(self):
+        def render_loop():
+            self.render_frame()
+            self.tk.after(RENDER_PERIOD, render_loop)
+        render_loop()
+
+        self.tk.mainloop()
+
+_proj_handle_obj = None
+_proj_handle_lock = _threading.Lock()
+def _get_proj_handle():
+    global _proj_handle_obj, _proj_handle_lock
+    with _proj_handle_lock:
+        if _proj_handle_obj is None:
+            _proj_handle_obj = _Project(width = 720, height = 480)
+    return _proj_handle_obj
+
 def start_project():
     '''
     Run turtle game logic.
@@ -170,21 +210,21 @@ def start_project():
 
     The game can manually be stopped by calling stop_project() (e.g., from a turtle).
 
-    Trying to start a game that is already running results in a GameStateError.
+    Trying to start a game that is already running results in a ProjectStateError.
     '''
     global _game_running, _game_stopped
-    if _game_running:
-        raise GameStateError('start_project() was called when the game was already running')
-    if _game_stopped:
-        raise GameStateError('start_project() was called when the game had previously been stopped')
+    if _game_running: raise ProjectStateError('start_project() was called when the project was already running')
+    if _game_stopped: raise ProjectStateError('start_project() was called when the project had previously been stopped')
     _game_running = True
 
     _start_signal.send()
-    _turtle.delay(0)
-    _turtle.listen()
-    _turtle.Screen().ontimer(_process_queue, _action_queue_interval)
-    _turtle.Screen()._root.protocol('WM_DELETE_WINDOW', stop_project)
-    _turtle.done()
+    proj = _get_proj_handle()
+    proj.run()
+    # _turtle.delay(0)
+    # _turtle.listen()
+    # _turtle.Screen().ontimer(_process_queue, _action_queue_interval)
+    # _turtle.Screen()._root.protocol('WM_DELETE_WINDOW', stop_project)
+    # _turtle.done()
 
 def stop_project():
     '''
@@ -194,44 +234,8 @@ def stop_project():
     '''
     global _game_running, _game_stopped
     if _game_running:
-        # just mark game as stopped - process queue will kill the window when it gets a chance
-        _game_running = False
+        _game_running = False # just mark game as stopped - process queue will kill the window when it gets a chance
         _game_stopped = True
-
-def _qinvoke(fn, *args) -> None:
-    # if we're running on the action queue thread, we can just do it directly
-    if _action_queue_thread_id == _threading.current_thread().ident:
-        fn(*args)
-        return
-
-    if not _game_stopped:
-        _action_queue.put((fn, args))
-
-def _qinvoke_wait(fn, *args) -> Any:
-    global _action_queue_ret_id
-
-    # if we're running on the action queue thread, we can just do it directly
-    if _action_queue_thread_id == _threading.current_thread().ident:
-        return fn(*args)
-
-    ret_id = None
-    with _action_queue_ret_cv:
-        ret_id = _action_queue_ret_id
-        _action_queue_ret_id += 1
-
-    ret_val = None
-    _action_queue.put((fn, args, ret_id))
-    while True:
-        with _action_queue_ret_cv:
-            if ret_id in _action_queue_ret_vals:
-                ret_val = _action_queue_ret_vals[ret_id]
-                del _action_queue_ret_vals[ret_id]
-                break
-            _action_queue_ret_cv.wait()
-
-    if isinstance(ret_val, Exception):
-        raise ret_val
-    return ret_val
 
 class _ImgWrapper:
     _type = 'image'
@@ -248,115 +252,81 @@ def _turtle_image(color: Tuple[int, int, int], scale: float) -> Image.Image:
     draw.polygon([(0, 0), (w, h / 2), (0, h), (w * 0.25, h / 2)], fill = color, outline = 'black')
     return img
 
-def _setcostume(t, rawt, tid, costume: Union[None, Image.Image]) -> None:
-    def batcher():
-        if costume is not None:
-            name = f'custom-costume-{tid}'
-            _turtle.register_shape(name, _ImgWrapper(costume))
-            rawt.shape(name)
-        elif isinstance(t, TurtleBase):
-            rawt.shape('classic')
-        else:
-            _turtle.register_shape('blank', _ImgWrapper(_BLANK_IMG))
-            rawt.shape('blank')
-    _qinvoke(batcher)
-
 def _apply_transforms(img: Optional[Image.Image], scale: float, rot: float) -> Image.Image:
     if img is None: return None
-
     w, h = img.size
     img = img.resize((round(w * scale), round(h * scale)))
     return img.rotate((0.25 - rot) * 360, expand = True, resample = Image.BICUBIC)
 
-# if set to non-none, will use RawTurtle with this as its TurtleScreen parent
-_raw_turtle_target = None
-_turtle_count = 0
-def _make_turtle(wrapper):
-    def batcher():
-        global _turtle_count
-        tid = _turtle_count
-        _turtle_count += 1
+# _window_size_cached = None
+# _logical_size_cached = None
+# _logical_scale_cached = None
+# _registered_resize_hook = False
 
-        t = _turtle.Turtle() if _raw_turtle_target is None else _turtle.RawTurtle(_raw_turtle_target)
-        t.speed('fastest')
-        t.penup()
+# def _get_logical_scale() -> float:
+#     if _logical_scale_cached is not None:
+#         return _logical_scale_cached
 
-        _setcostume(wrapper, t, tid, None)
+#     def batcher():
+#         global _logical_scale_cached
+#         wsize = _get_window_size()
+#         lsize = _get_logical_size()
+#         _logical_scale_cached = min(wsize[0] / lsize[0], wsize[1] / lsize[1])
+#         return _logical_scale_cached
+#     return _qinvoke_wait(batcher)
 
-        return t, tid
-    return _qinvoke_wait(batcher)
+# def _perform_resize_ui() -> None:
+#     global _logical_scale_cached
+#     wsize = _get_window_size()
+#     lsize = _get_logical_size()
+#     scale = _logical_scale_cached = min(wsize[0] / lsize[0], wsize[1] / lsize[1])
 
-_window_size_cached = None
-_logical_size_cached = None
-_logical_scale_cached = None
-_registered_resize_hook = False
-_all_turtles = []
-_all_stages = [] # ide enforces only one stage, but in general could have multiple
+#     for t in _all_turtles:
+#         x, y = t.pos
+#         getattr(t, '_TurtleBase__turtle').goto(x * scale, y * scale)
+#         getattr(t, '_TurtleBase__update_costume')()
+#     for s in _all_stages:
+#         getattr(s, '_StageBase__update_costume')()
 
-def _get_logical_scale() -> float:
-    if _logical_scale_cached is not None:
-        return _logical_scale_cached
+# def _register_resize_hook() -> None:
+#     if _registered_resize_hook: return
 
-    def batcher():
-        global _logical_scale_cached
-        wsize = _get_window_size()
-        lsize = _get_logical_size()
-        _logical_scale_cached = min(wsize[0] / lsize[0], wsize[1] / lsize[1])
-        return _logical_scale_cached
-    return _qinvoke_wait(batcher)
+#     def batcher():
+#         global _registered_resize_hook
+#         if _registered_resize_hook: return # double checked lock now that we're on the ui thread
+#         _registered_resize_hook = True
 
-def _perform_resize_ui() -> None:
-    global _logical_scale_cached
-    wsize = _get_window_size()
-    lsize = _get_logical_size()
-    scale = _logical_scale_cached = min(wsize[0] / lsize[0], wsize[1] / lsize[1])
+#         def update(e):
+#             global _window_size_cached
+#             if _window_size_cached is None or _window_size_cached[0] != e.width or _window_size_cached[1] != e.height:
+#                 _window_size_cached = (e.width + 2, e.height + 2) # add back the 1px outline from tkinter
+#                 _turtle.Screen().getcanvas().after(0, _perform_resize_ui)
+#         _turtle.Screen().getcanvas().bind('<Configure>', update)
+#     _qinvoke_wait(batcher)
 
-    for t in _all_turtles:
-        x, y = t.pos
-        getattr(t, '_TurtleBase__turtle').goto(x * scale, y * scale)
-        getattr(t, '_TurtleBase__update_costume')()
-    for s in _all_stages:
-        getattr(s, '_StageBase__update_costume')()
+# def _get_window_size() -> Tuple[int, int]:
+#     global _window_size_cached
+#     _register_resize_hook()
 
-def _register_resize_hook() -> None:
-    if _registered_resize_hook: return
+#     if _window_size_cached is not None:
+#         return _window_size_cached
+#     else:
+#         _window_size_cached = _qinvoke_wait(lambda: _turtle.Screen().screensize())
+#         return _window_size_cached
+# def _set_window_size(width: int, height: int) -> None:
+#     def batcher():
+#         global _logical_size_cached
+#         _logical_size_cached = (width, height)
+#         _register_resize_hook()
+#         _turtle.setup(width, height)
+#     _qinvoke_wait(batcher)
+# def _get_logical_size() -> Tuple[int, int]:
+#     global _logical_size_cached
+#     if _logical_size_cached is not None:
+#         return _logical_size_cached
 
-    def batcher():
-        global _registered_resize_hook
-        if _registered_resize_hook: return # double checked lock now that we're on the ui thread
-        _registered_resize_hook = True
-
-        def update(e):
-            global _window_size_cached
-            if _window_size_cached is None or _window_size_cached[0] != e.width or _window_size_cached[1] != e.height:
-                _window_size_cached = (e.width + 2, e.height + 2) # add back the 1px outline from tkinter
-                _turtle.Screen().getcanvas().after(0, _perform_resize_ui)
-        _turtle.Screen().getcanvas().bind('<Configure>', update)
-    _qinvoke_wait(batcher)
-
-def _get_window_size() -> Tuple[int, int]:
-    global _window_size_cached
-    _register_resize_hook()
-
-    if _window_size_cached is not None:
-        return _window_size_cached
-    else:
-        _window_size_cached = _qinvoke_wait(lambda: _turtle.Screen().screensize())
-        return _window_size_cached
-def _set_window_size(width: int, height: int) -> None:
-    def batcher():
-        global _logical_size_cached
-        _logical_size_cached = (width, height)
-        _register_resize_hook()
-        _turtle.setup(width, height)
-    _qinvoke_wait(batcher)
-def _get_logical_size() -> Tuple[int, int]:
-    global _logical_size_cached
-    if _logical_size_cached is not None:
-        return _logical_size_cached
-
-    _logical_size_cached = _get_window_size()
-    return _logical_size_cached
+#     _logical_size_cached = _get_window_size()
+#     return _logical_size_cached
 
 class _Ref:
     def __copy__(self):
@@ -381,20 +351,13 @@ class StageBase(_Ref):
     '''
     def __init__(self):
         try:
-            if self.__initialized:
-                return # don't initialize twice (can happen from mixing @stage decorator and explicit StageBase base class)
+            if self.__initialized: return # don't initialize twice (can happen from mixing @stage decorator and explicit StageBase base class)
         except:
             self.__initialized = True
 
         self.__costume = None
 
-        self.__turtle, self.__tid = _make_turtle(self)
-
-        _all_stages.append(self)
-
-    def __update_costume(self):
-        img = _apply_transforms(self.__costume, _get_logical_scale(), 0.25)
-        _setcostume(self, self.__turtle, self.__tid, img)
+        _get_proj_handle().register_entity(self)
 
     @property
     def costume(self) -> Union[None, Image.Image]:
@@ -414,7 +377,6 @@ class StageBase(_Ref):
             new_costume = new_costume.convert('RGBA')
 
         self.__costume = new_costume
-        self.__update_costume()
 
     @property
     def size(self) -> Tuple[int, int]:
@@ -428,10 +390,11 @@ class StageBase(_Ref):
         self.size = (800, 600)
         ```
         '''
-        return _get_logical_size()
+        return _get_proj_handle().logical_size
     @size.setter
     def size(self, new_size: Tuple[int, int]) -> None:
-        _set_window_size(*map(int, new_size))
+        w, h = tuple(map(int, new_size))
+        _get_proj_handle().logical_size = (w, h)
 
     @property
     def width(self) -> int:
@@ -442,7 +405,7 @@ class StageBase(_Ref):
         print('width:', self.width)
         ```
         '''
-        return _get_logical_size()[0]
+        return _get_proj_handle().logical_size[0]
 
     @property
     def height(self) -> int:
@@ -453,7 +416,7 @@ class StageBase(_Ref):
         print('height:', self.height)
         ```
         '''
-        return _get_logical_size()[1]
+        return _get_proj_handle().logical_size[1]
 
     @property
     def turbo(self) -> bool:
@@ -531,10 +494,9 @@ class TurtleBase(_Ref):
         self.__costume = None
         self.__display_image = None # managed by costume transforms logic
 
-        self.__turtle, self.__tid = _make_turtle(self)
         self.__update_costume() # update display image based on color/scale
 
-        _all_turtles.append(self)
+        _get_proj_handle().register_entity(self)
 
     def __clone_from(self, src):
         def batcher():
@@ -550,11 +512,10 @@ class TurtleBase(_Ref):
 
     def __update_costume(self):
         src = self.__costume
-        scale = self.__scale * _get_logical_scale()
+        scale = self.__scale * _get_proj_handle().logical_scale
         res = _apply_transforms(src, scale, self.__rot) if src is not None else _apply_transforms(_turtle_image(self.__pen_color, scale), 1.0, self.__rot)
 
         self.__display_image = res
-        _setcostume(self, self.__turtle, self.__tid, res)
 
     def clone(self) -> Any:
         '''

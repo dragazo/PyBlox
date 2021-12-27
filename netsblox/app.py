@@ -1285,8 +1285,6 @@ from netsblox.turtle import *
 from netsblox.concurrency import *
 nb = netsblox.Client(proj_name = """$proj_name""", proj_id = $proj_id)
 'A connection to NetsBlox, which allows you to use services and RPCs from python.'
-netsblox.turtle._set_window_size(1280, 720)
-netsblox.turtle._turtle.title(f'NetsBlox-Python - {nb.get_public_id()}')
 setup_stdio()
 setup_yielding()
 import time as _time
@@ -1295,7 +1293,7 @@ def _yield_(x):
     return x
 
 '''.lstrip()
-    BASE_PREFIX_LINES = 14
+    BASE_PREFIX_LINES = 12
 
     prefix = BASE_PREFIX
     prefix_lines = BASE_PREFIX_LINES
