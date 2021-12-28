@@ -24,11 +24,10 @@ import netsblox.concurrency as _concurrency
 from typing import Any, Union, Tuple, Iterable, Optional, List, Callable
 
 from PIL import Image, ImageTk, ImageDraw
-import mss
 
 RENDER_PERIOD = 16 # time between frames in ms
 
-_GRAPHICS_SLEEP_TIME = 0.001 # time to pause after gui stuff like sprite movement
+_GRAPHICS_SLEEP_TIME = 0.0085 # time to pause after gui stuff like sprite movement
 _do_graphics_sleep = True
 def _graphics_sleep():
     if _do_graphics_sleep:
@@ -120,77 +119,146 @@ def _start_signal_wrapped(f):
 
 class _Project:
     def __init__(self, *, width: int, height: int):
-        self.lock = _threading.RLock()
-        self.stages = {}
-        self.turtles = {}
+        self.__lock = _threading.RLock()
+        self.__stages = {}
+        self.__turtles = {}
 
-        self.tk = _tk.Tk()
-        self.tk.minsize(400, 200)
-        self.tk_canvas = _tk.Canvas(self.tk)
-        self.tk_canvas.pack(fill = _tk.BOTH, expand = True)
-        self.resize_to(width, height)
+        self.__tk = _tk.Tk()
+        self.__tk.minsize(400, 200)
+        self.__tk.geometry(f'{width}x{height}')
+        self.__tk_canvas = _tk.Canvas(self.__tk)
+        self.__tk_canvas.pack(fill = _tk.BOTH, expand = True)
+        self.logical_size = (width, height)
 
-        # def on_resize(e):
-        #     if e.widget is not self.tk: return 'break'
-        #     self.physical_size = (e.width, e.height)
-        #     return 'break'
-        # self.tk.bind_all('<Configure>', on_resize)
+        self.__last_frame = Image.new('RGBA', (width, height), (255, 255, 255))
 
-    def resize_to(self, width: int, height: int) -> None:
-        with self.lock:
-            self.tk.geometry(f'{width}x{height}')
-            self.physical_size = (width, height)
-            self.logical_size = (width, height)
-            self.logical_scale = 1.0
-            self.drawings_img = Image.new('RGBA', (width, height))
-            self.last_frame = None
+        last_size = [(-1, -1)]
+        def on_canvas_resize(e):
+            if e.widget is not self.__tk_canvas: return 'break' # ignore children, if any
+            new_size = (self.__tk_canvas.winfo_width(), self.__tk_canvas.winfo_height())
+            if last_size[0] == new_size: return 'break'
+            last_size[0] = new_size
+            self.invalidate()
+            return 'break'
+        self.__tk_canvas.bind_all('<Configure>', on_canvas_resize)
+
+    def get_image(self) -> Image.Image:
+        with self.__lock:
+            return self.__last_frame.copy()
+    def get_drawings(self) -> Image.Image:
+        with self.__lock:
+            return self.__drawings_img.copy()
+
+    def get_uv_mapper(self,) -> Callable:
+        w, h = self.logical_size
+        def mapper(pos: Tuple[float, float]) -> Tuple[float, float]:
+            return (w / 2 + pos[0], h / 2 - pos[1])
+        return mapper
+
+    def invalidate(self) -> None:
+        self.__needs_redraw = True
+
+    @property
+    def logical_size(self) -> Tuple[int, int]:
+        return self.__logical_size
+    @logical_size.setter
+    def logical_size(self, new_size: Tuple[int, int]) -> None:
+        width, height = new_size
+        with self.__lock:
+            self.__logical_size = (width, height)
+            self.clear_drawings() # invalidates project internally
+
+    @property
+    def turtles(self) -> List[Any]:
+        with self.__lock:
+            return [x['obj'] for x in self.__turtles.values()]
 
     def register_entity(self, ent):
-        if isinstance(ent, StageBase): target = self.stages
-        elif isinstance(ent, TurtleBase): target = self.turtles
+        if isinstance(ent, StageBase): target = self.__stages
+        elif isinstance(ent, TurtleBase): target = self.__turtles
         else: raise TypeError(f'expected stage or turtle - got {type(ent)}')
 
-        with self.lock:
+        with self.__lock:
             id = len(target)
             setattr(ent, '_Project__id', id)
-            target[id] = { 'obj': ent, 'id': id, 'disp': None }
+            target[id] = { 'obj': ent, 'id': id }
+        self.invalidate()
 
     def render_frame(self):
-        with self.lock:
-            frame = Image.new('RGBA', self.logical_size, (255, 255, 255))
-            for info in self.stages.values():
+        if not self.__needs_redraw: return
+        self.__needs_redraw = False
+
+        logical_size = self.__logical_size
+        frame = Image.new('RGBA', logical_size, (255, 255, 255))
+
+        with self.__lock:
+            for info in self.__stages.values():
                 stage_img = info['obj'].costume
                 if stage_img is None: continue
-                scale = min(self.logical_size[i] / stage_img.size[i] for i in range(2))
+                scale = min(logical_size[i] / stage_img.size[i] for i in range(2))
                 new_size = tuple(round(v * scale) for v in stage_img.size)
                 resized = stage_img.resize(new_size, Image.ANTIALIAS)
                 center_offset = tuple(round((frame.size[i] - new_size[i]) / 2) for i in range(2))
                 frame.paste(resized, center_offset, resized)
-            frame.paste(self.drawings_img, (0, 0), self.drawings_img)
-            for info in self.turtles.values():
+            frame.paste(self.__drawings_img, (0, 0), self.__drawings_img)
+            for info in self.__turtles.values():
                 turtle = info['obj']
-                turtle_pos = turtle.pos
+                turtle_pos = list(turtle.pos)
+                turtle_pos[1] = -turtle_pos[1]
                 turtle_img = getattr(turtle, '_TurtleBase__display_image')
-                paste_pos = tuple(round(self.logical_size[i] / 2 + turtle_pos[i] - turtle_img.size[i] / 2) for i in range(2))
+                paste_pos = tuple(round(logical_size[i] / 2 + turtle_pos[i] - turtle_img.size[i] / 2) for i in range(2))
                 frame.paste(turtle_img, paste_pos, turtle_img)
-            self.last_frame = frame # keep track of this for the image grab functions
+            self.__last_frame = frame # keep track of this for the image grab functions
 
-            canvas_size = (self.tk_canvas.winfo_width(), self.tk_canvas.winfo_height())
-            final_scale = min(canvas_size[i] / self.logical_size[i] for i in range(2))
-            final_size = tuple(round(v * final_scale) for v in frame.size)
-            final_frame = ImageTk.PhotoImage(frame.resize(final_size, Image.ANTIALIAS))
-            self.last_cached_frame = final_frame # we have to keep a ref around or it'll disapper
+        canvas_size = (self.__tk_canvas.winfo_width(), self.__tk_canvas.winfo_height())
+        final_scale = min(canvas_size[i] / logical_size[i] for i in range(2))
+        final_size = tuple(round(v * final_scale) for v in frame.size)
+        final_frame = ImageTk.PhotoImage(frame.resize(final_size, Image.ANTIALIAS))
+        self.__last_cached_frame = final_frame # we have to keep a ref around or it'll disapper
 
-            self.tk_canvas.delete('all')
-            self.tk_canvas.create_image(canvas_size[0] / 2, canvas_size[1] / 2, image = final_frame)
+        self.__tk_canvas.delete('all')
+        self.__tk_canvas.create_image(canvas_size[0] / 2, canvas_size[1] / 2, image = final_frame)
+
+    def draw_line(self, start: Tuple[float, float], stop: Tuple[float, float], color: Tuple[int, int, int], width: float, *, critical: Optional[Callable]) -> None:
+        xy2uv = self.get_uv_mapper()
+        start, stop = [tuple(map(round, xy2uv(x))) for x in [start, stop]]
+        if width < 0.5: return
+
+        with self.__lock:
+            ctx = ImageDraw.Draw(self.__drawings_img)
+            ctx.line([start, stop], fill = color, width = round(width))
+
+            # ImageDraw.line's curve joint mode is broken, so we'll implement it ourselves
+            if width >= 5:
+                r = width / 2 - 0.125
+                for c in [start, stop]:
+                    ctx.ellipse([_math.ceil(c[0] - r), _math.ceil(c[1] - r), _math.floor(c[0] + r), _math.floor(c[1] + r)], fill = color)
+
+            if critical is not None: critical()
+        self.invalidate()
+
+    def stamp_img(self, pos: Tuple[float, float], img: Image.Image) -> None:
+        xy2uv = self.get_uv_mapper()
+        paste_pos = xy2uv(pos)
+        paste_pos = tuple(round(paste_pos[i] - img.size[i] / 2) for i in range(2))
+
+        with self.__lock:
+            self.__drawings_img.paste(img, paste_pos, img)
+        self.invalidate()
+
+    def clear_drawings(self) -> None:
+        with self.__lock:
+            self.__drawings_img = Image.new('RGBA', self.__logical_size)
+        self.invalidate()
 
     def run(self):
+        renderer = _traceback_wrapped(self.render_frame)
         def render_loop():
-            self.render_frame()
-            self.tk.after(RENDER_PERIOD, render_loop)
+            renderer()
+            self.__tk.after(RENDER_PERIOD, render_loop)
         render_loop()
 
-        self.tk.mainloop()
+        self.__tk.mainloop()
 
 _proj_handle_obj = None
 _proj_handle_lock = _threading.Lock()
@@ -246,7 +314,7 @@ _BLANK_IMG = Image.new('RGBA', (1, 1)) # fully transparent
 _CURSOR_KERNEL = Image.new('RGBA', (3, 3), 'black') # used for cursor click collision detection on sprites - should be roughly circleish
 
 def _turtle_image(color: Tuple[int, int, int], scale: float) -> Image.Image:
-    w, h = round(40 * scale), round(30 * scale)
+    w, h = round(34 * scale), round(18 * scale)
     img = Image.new('RGBA', (w, h))
     draw = ImageDraw.Draw(img)
     draw.polygon([(0, 0), (w, h / 2), (0, h), (w * 0.25, h / 2)], fill = color, outline = 'black')
@@ -357,7 +425,8 @@ class StageBase(_Ref):
 
         self.__costume = None
 
-        _get_proj_handle().register_entity(self)
+        self.__proj = _get_proj_handle()
+        self.__proj.register_entity(self)
 
     @property
     def costume(self) -> Union[None, Image.Image]:
@@ -390,11 +459,13 @@ class StageBase(_Ref):
         self.size = (800, 600)
         ```
         '''
-        return _get_proj_handle().logical_size
+        return self.__proj.logical_size
     @size.setter
     def size(self, new_size: Tuple[int, int]) -> None:
         w, h = tuple(map(int, new_size))
-        _get_proj_handle().logical_size = (w, h)
+        if any(x < 1 for x in (w,h)):
+            raise ValueError(f'Attempt to set stage size to {w}x{h}, which is less than the minimum (1x1)')
+        self.__proj.logical_size = (w, h)
 
     @property
     def width(self) -> int:
@@ -405,7 +476,7 @@ class StageBase(_Ref):
         print('width:', self.width)
         ```
         '''
-        return _get_proj_handle().logical_size[0]
+        return self.size[0]
 
     @property
     def height(self) -> int:
@@ -416,7 +487,7 @@ class StageBase(_Ref):
         print('height:', self.height)
         ```
         '''
-        return _get_proj_handle().logical_size[1]
+        return self.size[1]
 
     @property
     def turbo(self) -> bool:
@@ -436,25 +507,27 @@ class StageBase(_Ref):
         global _do_graphics_sleep
         _do_graphics_sleep = not bool(value)
 
-    def grab_image(self) -> Any:
+    def get_image(self) -> Image.Image:
         '''
-        Grabs and returns an image of the stage and everything one it.
-        This is effectively a picture of the entire turtle environment.
+        Gets an image of the stage and everything on it, including any drawings.
+        This is effectively a snapshot of the entire graphical environment.
 
         ```
-        img = self.grab_image()
+        img = self.get_image()
         ```
         '''
-        def batcher():
-            canvas = _turtle.Screen().getcanvas()
-            x = canvas.winfo_rootx()
-            y = canvas.winfo_rooty()
-            w = canvas.winfo_width()
-            h = canvas.winfo_height()
-            with mss.mss() as sct:
-                raw = sct.grab({ 'left': x, 'top': y, 'width': w, 'height': h })
-                return Image.frombytes('RGB', raw.size, raw.bgra, 'raw', 'BGRX')
-        return _qinvoke_wait(batcher)
+        return self.__proj.get_image()
+    def get_drawings(self) -> Image.Image:
+        '''
+        Gets an image of all the drawings on the stage.
+        This includes lines, text, and stamps drawn by sprites, but does not include the sprites themselves or the stage costume.
+        The returned image has a transparent background.
+
+        ```
+        img = self.get_drawings()
+        ```
+        '''
+        return self.__proj.get_drawings()
 
 def _get_meta_name(obj):
     cls = getattr(obj, '_Derived__DerivedFrom', None)
@@ -482,6 +555,8 @@ class TurtleBase(_Ref):
         except:
             self.__initialized = True
 
+        self.__proj = _get_proj_handle()
+
         self.__drawing = False
         self.__visible = True
         self.__x = 0.0
@@ -494,9 +569,8 @@ class TurtleBase(_Ref):
         self.__costume = None
         self.__display_image = None # managed by costume transforms logic
 
-        self.__update_costume() # update display image based on color/scale
-
-        _get_proj_handle().register_entity(self)
+        self.__update_costume() # init display image
+        self.__proj.register_entity(self)
 
     def __clone_from(self, src):
         def batcher():
@@ -511,11 +585,9 @@ class TurtleBase(_Ref):
         _qinvoke_wait(batcher)
 
     def __update_costume(self):
-        src = self.__costume
-        scale = self.__scale * _get_proj_handle().logical_scale
-        res = _apply_transforms(src, scale, self.__rot) if src is not None else _apply_transforms(_turtle_image(self.__pen_color, scale), 1.0, self.__rot)
-
-        self.__display_image = res
+        src = self.__costume # grab this so it can't change during evaluation (used multiple times)
+        self.__display_image = _apply_transforms(src, self.__scale, self.__rot) if src is not None else _apply_transforms(_turtle_image(self.__pen_color, self.__scale), 1.0, self.__rot)
+        self.__proj.invalidate()
 
     def clone(self) -> Any:
         '''
@@ -570,7 +642,7 @@ class TurtleBase(_Ref):
             new_costume = new_costume.convert('RGBA')
 
         self.__costume = new_costume
-        self.__update_costume()
+        self.__update_costume() # invalidates project internally
 
     @property
     def scale(self) -> float:
@@ -591,7 +663,7 @@ class TurtleBase(_Ref):
         if new_scale <= 0:
             raise RuntimeError(f'attempt to set turtle scale to non-positive value: {new_scale}')
         self.__scale = new_scale
-        self.__update_costume()
+        self.__update_costume() # invalidates project internally
 
     @property
     def pos(self) -> Tuple[float, float]:
@@ -608,9 +680,13 @@ class TurtleBase(_Ref):
         self.__raw_set_pos(*map(float, new_pos))
         _graphics_sleep()
     def __raw_set_pos(self, x: float, y: float) -> None:
-        self.__x, self.__y = x, y
-        scale = _get_logical_scale()
-        _qinvoke(self.__turtle.goto, x * scale, y * scale)
+        if self.drawing:
+            def updater():
+                self.__x, self.__y = x, y
+            self.__proj.draw_line((self.__x, self.__y), (x, y), self.__pen_color, self.__pen_size, critical = updater)
+        else:
+            self.__x, self.__y = x, y
+            self.__proj.invalidate()
 
     @property
     def x_pos(self) -> float:
@@ -624,12 +700,7 @@ class TurtleBase(_Ref):
         return self.__x
     @x_pos.setter
     def x_pos(self, new_x: float) -> None:
-        self.__raw_set_x_pos(float(new_x))
-        _graphics_sleep()
-    def __raw_set_x_pos(self, x: float) -> None:
-        self.__x = x
-        scale = _get_logical_scale()
-        _qinvoke(self.__turtle.setx, x * scale)
+        self.pos = (float(new_x), self.__y)
 
     @property
     def y_pos(self) -> float:
@@ -643,12 +714,7 @@ class TurtleBase(_Ref):
         return self.__y
     @y_pos.setter
     def y_pos(self, new_y: float) -> None:
-        self.__raw_set_y_pos(float(new_y))
-        _graphics_sleep()
-    def __raw_set_y_pos(self, y: float) -> None:
-        self.__y = y
-        scale = _get_logical_scale()
-        _qinvoke(self.__turtle.sety, y * scale)
+        self.pos = (self.__x, float(new_y))
 
     @property
     def heading(self) -> float:
@@ -667,7 +733,7 @@ class TurtleBase(_Ref):
         _graphics_sleep()
     def __raw_set_heading(self, heading: float) -> None:
         self.__rot = (heading / self.__degrees) % 1.0
-        self.__update_costume()
+        self.__update_costume() # invalidates project internally
 
     @property
     def degrees(self) -> float:
@@ -701,7 +767,7 @@ class TurtleBase(_Ref):
     @visible.setter
     def visible(self, is_visible: bool) -> None:
         self.__visible = bool(is_visible)
-        _qinvoke(self.__turtle.showturtle if self.__visible else self.__turtle.hideturtle)
+        self.__proj.invalidate()
 
     @property
     def drawing(self) -> bool:
@@ -717,7 +783,6 @@ class TurtleBase(_Ref):
     @drawing.setter
     def drawing(self, is_drawing: bool) -> None:
         self.__drawing = bool(is_drawing)
-        _qinvoke(self.__turtle.pendown if self.__drawing else self.__turtle.penup)
 
     @property
     def pen_size(self) -> float:
@@ -734,7 +799,6 @@ class TurtleBase(_Ref):
     @pen_size.setter
     def pen_size(self, new_size: float) -> None:
         self.__pen_size = float(new_size)
-        _qinvoke(self.__turtle.pensize, self.__pen_size)
 
     @property
     def pen_color(self) -> Tuple[int, int, int]:
@@ -755,10 +819,9 @@ class TurtleBase(_Ref):
         assert type(new_color) is tuple # sanity check so users can't modify colors
 
         self.__pen_color = new_color
-        _qinvoke(self.__turtle.pencolor, tuple(x / 255 for x in new_color))
 
         if self.__costume is None:
-            self.__update_costume()
+            self.__update_costume() # invalidates project internally
 
     # -------------------------------------------------------
 
@@ -772,7 +835,7 @@ class TurtleBase(_Ref):
         '''
         distance = float(distance)
         h = self.__rot * 2 * _math.pi
-        self.pos = (self.__x + _math.sin(h) * distance, self.__y + _math.cos(h) * distance)
+        self.pos = (self.__x + _math.sin(h) * distance, self.__y + _math.cos(h) * distance) # invalidates project internally
 
     def turn_left(self, angle: float = None) -> None:
         '''
@@ -784,7 +847,7 @@ class TurtleBase(_Ref):
         self.turn_left(45)
         ```
         '''
-        self.heading -= float(angle) if angle is not None else self.__degrees / 4
+        self.heading -= float(angle) if angle is not None else self.__degrees / 4 # invalidates project internally
     def turn_right(self, angle: float = None) -> None:
         '''
         Turn the turtle to the right by the given angle.
@@ -795,8 +858,8 @@ class TurtleBase(_Ref):
         self.turn_right(45)
         ```
         '''
-        self.heading += float(angle) if angle is not None else self.__degrees / 4
-    
+        self.heading += float(angle) if angle is not None else self.__degrees / 4 # invalidates project internally
+
     # -------------------------------------------------------
 
     def clear(self) -> None:
@@ -807,7 +870,7 @@ class TurtleBase(_Ref):
         self.clear()
         ```
         '''
-        _qinvoke(self.__turtle.clear)
+        self.__proj.clear_drawings() # invalidates project internally
 
     def stamp(self) -> None:
         '''
@@ -818,30 +881,7 @@ class TurtleBase(_Ref):
         self.stamp()
         ```
         '''
-        _qinvoke(self.__turtle.stamp)
-
-    def clear_stamps(self) -> None:
-        '''
-        Clears (erases) all of the stamps made by this turtle.
-
-        ```
-        self.clear_stamps()
-        ```
-        '''
-        _qinvoke(self.__turtle.clearstamps)
-
-    def dot(self, radius: int = None):
-        '''
-        Draws a dot (circle) on the background at the current position.
-        The radius argument allows you to set the size in pixels, otherwise a default is used based on the pen width.
-        Dots count as drawings, so they can be erased with `self.clear()`.
-
-        ```
-        self.dot()   # make a dot with default radius
-        self.dot(10) # make a dot with radius 10 pixels
-        ```
-        '''
-        _qinvoke(self.__turtle.dot, int(radius) if radius is not None else None)
+        self.__proj.stamp_img((self.__x, self.__y), self.__display_image)
 
     def write(self, text: str, *, size: int = 12, align: str = 'left', move = False):
         '''
@@ -861,7 +901,7 @@ class TurtleBase(_Ref):
             self.__turtle.write(str(text), bool(move), align, ('Arial', int(size), 'normal'))
             return self.__turtle.position()
         self.__x, self.__y = _qinvoke_wait(batcher)
-    
+
     # -----------------------------------
 
     def is_touching(self, other: Any) -> bool:
@@ -876,10 +916,9 @@ class TurtleBase(_Ref):
         if not isinstance(other, TurtleBase):
             raise TypeError(f'Attempt to check if a turtle is touching a non-turtle (type {type(other)})')
 
-        scale = _get_logical_scale()
         return self.__visible and other.__visible and _intersects(
-            (self.__display_image, self.__x * scale, self.__y * scale),
-            (other.__display_image, other.__x * scale, other.__y * scale))
+            (self.__display_image, self.__x, self.__y),
+            (other.__display_image, other.__x, other.__y))
     def get_all_touching(self) -> List[Any]:
         '''
         Gets a list of all the turtles that this turtle is touching, other than itself.
@@ -888,7 +927,7 @@ class TurtleBase(_Ref):
         touch_count = len(self.get_all_touching())
         ```
         '''
-        return [other for other in _all_turtles if other is not self and self.is_touching(other)]
+        return [other for other in self.__proj.turtles if other is not self and self.is_touching(other)]
 
 class _CloneTag:
     def __init__(self, src):
@@ -1264,7 +1303,7 @@ def setup_stdio():
 
     def new_input(prompt: Any = '?') -> str:
         def asker():
-            res = _turtle.textinput('UserInput', str(prompt))
+            res = _turtle.textinput('User Input', str(prompt))
             _turtle.listen()
             return res
         return _qinvoke_wait(asker)
