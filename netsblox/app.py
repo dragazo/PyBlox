@@ -1273,7 +1273,7 @@ class CodeEditor(ScrolledText):
             self.text.insert(tk.INSERT, '    ')
 
         return 'break' # we always override default (we don't want tabs ever)
-    
+
     def do_autocomment(self):
         self._do_batch_edit(smart_comment_uncomment)
         return 'break'

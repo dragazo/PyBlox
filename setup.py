@@ -15,6 +15,7 @@ setup(
     author_email = meta.author_email,
     license = 'Apache 2.0',
     packages = [ 'netsblox' ],
+    include_package_data = True,
     install_requires = [
         'websocket-client',
         'darkdetect',
