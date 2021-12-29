@@ -12,7 +12,7 @@ class EventWrapper:
         t = _threading.Thread(target = self.__process_queue)
         t.setDaemon(True)
         t.start()
-    
+
     def wrapped(self):
         return self.__fn
 

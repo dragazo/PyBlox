@@ -27,23 +27,23 @@ from typing import Any, Union, Tuple, Iterable, Optional, List, Callable
 
 from PIL import Image, ImageTk, ImageDraw, ImageFont
 
-NETSBLOX_PY_PATH = _os.path.dirname(_netsblox.__file__)
+_NETSBLOX_PY_PATH = _os.path.dirname(_netsblox.__file__)
 
 _FONT_SRC = { # maps (weight, italics) to the font source file
-    (1, False): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-ExtraLight.otf',
-    (1, True): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-ExtraLightIt.otf',
-    (2, False): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Light.otf',
-    (2, True): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-LightIt.otf',
-    (3, False): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Regular.otf',
-    (3, True): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-It.otf',
-    (4, False): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Medium.otf',
-    (4, True): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-MediumIt.otf',
-    (5, False): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Semibold.otf',
-    (5, True): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-SemiboldIt.otf',
-    (6, False): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Bold.otf',
-    (6, True): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-BoldIt.otf',
-    (7, False): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Black.otf',
-    (7, True): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-BlackIt.otf',
+    (1, False): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-ExtraLight.otf',
+    (1, True): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-ExtraLightIt.otf',
+    (2, False): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Light.otf',
+    (2, True): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-LightIt.otf',
+    (3, False): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Regular.otf',
+    (3, True): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-It.otf',
+    (4, False): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Medium.otf',
+    (4, True): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-MediumIt.otf',
+    (5, False): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Semibold.otf',
+    (5, True): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-SemiboldIt.otf',
+    (6, False): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Bold.otf',
+    (6, True): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-BoldIt.otf',
+    (7, False): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Black.otf',
+    (7, True): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-BlackIt.otf',
 }
 _CACHED_FONTS = {}
 _FONT_LOCK = _threading.Lock()
@@ -56,7 +56,7 @@ def _get_font(*, weight: int, italics: bool) -> ImageFont.ImageFont:
         _CACHED_FONTS[key] = ImageFont.truetype(_FONT_SRC[key])
         return _CACHED_FONTS[key]
 
-RENDER_PERIOD = 16 # time between frames in ms
+_RENDER_PERIOD = 16 # time between frames in ms
 
 _GRAPHICS_SLEEP_TIME = 0.0085 # time to pause after gui stuff like sprite movement
 _do_graphics_sleep = True
@@ -64,7 +64,7 @@ def _graphics_sleep():
     if _do_graphics_sleep:
         _time.sleep(_GRAPHICS_SLEEP_TIME)
 
-VIS_THRESH = 20
+_VIS_THRESH = 20
 def _image_alpha(img: Image.Image) -> Image.Image:
     assert img.mode == 'RGBA'
     return img.getchannel('A')
@@ -86,7 +86,7 @@ def _intersects(a: Tuple[Image.Image, int, int], b: Tuple[Image.Image, int, int]
     other_trans = Image.new('L', base.size, 0)
     other_trans.paste(other, (round(other_x), round(other_y)))
 
-    return _np.bitwise_and(_np.array(base) >= VIS_THRESH, _np.array(other_trans) >= VIS_THRESH).any()
+    return _np.bitwise_and(_np.array(base) >= _VIS_THRESH, _np.array(other_trans) >= _VIS_THRESH).any()
 
 def _traceback_wrapped(fn):
     def wrapped(*args, **kwargs):
@@ -95,21 +95,6 @@ def _traceback_wrapped(fn):
         except:
             print(_traceback.format_exc(), file = _sys.stderr) # print out directly so that the stdio wrappers are used
     return wrapped
-
-_key_events = {} # maps key to [raw handler, _EventWrapper[]]
-def _add_key_event(key, event):
-    if key not in _key_events:
-        entry = [None, []]
-        def raw_handler():
-            handlers = entry[1] if key is None or None not in _key_events else entry[1] + _key_events[None][1]
-            for handler in handlers:
-                handler.schedule_no_queueing()
-        entry[0] = raw_handler
-
-        _key_events[key] = entry
-        _turtle.onkeypress(entry[0], key)
-
-    _key_events[key][1].append(_events.get_event_wrapper(event))
 
 _click_events = {} # maps key to [raw handler, event[]]
 def _add_click_event(key, event):
@@ -173,6 +158,16 @@ class _Project:
             self.invalidate()
             return 'break'
         self.__tk_canvas.bind_all('<Configure>', on_canvas_resize)
+
+        self.__key_events = { 'any': [] } # maps key to [raw handler, _EventWrapper[]]
+
+        def on_key(key):
+            with self.__lock:
+                for event in self.__key_events.get(key, []) + self.__key_events['any']:
+                    event.schedule_no_queueing()
+            return 'break'
+        self.__tk.bind('<Tab>', lambda e: on_key('tab'))
+        self.__tk.bind_all('<Key>', lambda e: on_key(e.keysym.lower()))
 
     def get_image(self) -> Image.Image:
         with self.__lock:
@@ -307,11 +302,17 @@ class _Project:
             self.__drawings_img = Image.new('RGBA', self.__logical_size)
         self.invalidate()
 
+    def add_key_event(self, key: str, event: Callable) -> None:
+        with self.__lock:
+            if key not in self.__key_events:
+                self.__key_events[key] = []
+            self.__key_events[key].append(_events.get_event_wrapper(event))
+
     def run(self):
         renderer = _traceback_wrapped(self.render_frame)
         def render_loop():
             renderer()
-            self.__tk.after(RENDER_PERIOD, render_loop)
+            self.__tk.after(_RENDER_PERIOD, render_loop)
         render_loop()
 
         self.__tk.mainloop()
@@ -939,6 +940,8 @@ class TurtleBase(_Ref):
         '''
         Draws text onto the background.
         The `size` argument sets the font size of the drawn text.
+        The `weight` argument controls the boldness of the text - this should in the range `[1, 7]`.
+        The `italics` argument allows using italic fonts.
         The `move` argument specifies if the turtle should move to the end of the text after drawing.
 
         Text counts as a drawing, so it can be erased by calling `self.clear()`.
@@ -990,6 +993,12 @@ def _derive(bases, cls):
             for base in bases:
                 base.__init__(self)
 
+            self.__proj = None
+            for base in bases:
+                self.__proj = getattr(self, f'_{base.__name__}__proj', None)
+                if self.__proj is not None: break
+            if self.__proj is None: self.__proj = _get_proj_handle()
+
             if len(args) == 1 and len(kwargs) == 0 and isinstance(args[0], _CloneTag):
                 src = args[0].src
                 self.__Derived_args = src.__Derived_args
@@ -1015,7 +1024,7 @@ def _derive(bases, cls):
             key_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_key'))
             for _, key_script in key_scripts:
                 for key in getattr(key_script, '__run_on_key'):
-                    _add_key_event(key, key_script)
+                    self.__proj.add_key_event(key, key_script)
 
             click_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_click'))
             for _, click_script in click_scripts:
@@ -1131,67 +1140,76 @@ def _add_gui_event_wrapper(field, register, keys):
         return f
     return wrapper
 
-# keys are targets (case sensitive), values are lists of valid inputs (case insentive)
-_KEY_GROUPS = {
-    ('Right',): ['right', 'right arrow', 'arrow right'],
-    ('Left',): ['left', 'left arrow', 'arrow left'],
-    ('Up',): ['up', 'up arrow', 'arrow up'],
-    ('Down',): ['down', 'down arrow', 'arrow down'],
-    ('Prior',): ['pageup', 'page up'],
-    ('Next',): ['pagedown', 'page down'],
-    ('Return', 'KP_Enter'): ['return', 'enter'],
-    ('Caps_Lock',): ['capslock', 'caps lock'],
-    ('Num_Lock',): ['numlock', 'num lock'],
-    ('Scroll_Lock',): ['scrolllock', 'scroll lock'],
-    ('Alt_L', 'Alt_R'): ['alt', 'left alt'],
-    ('Control_L', 'Control_R'): ['control', 'left control', 'ctrl', 'left ctrl'],
-    ('Shift_L', 'Shift_R'): ['shift', 'left shift'],
-    ('Escape',): ['esc', 'escape'],
-    ('minus', 'KP_Subtract'): ['-', 'minus', 'subtract'],
-    ('plus', 'KP_Add'): ['+', 'plus', 'add'],
-    ('space',): ['space', ' '],
-    ('BackSpace',): ['backspace'],
-    ('Delete',): ['delete'],
-    ('Home',): ['home'],
-    ('End',): ['end'],
-    ('Insert',): ['insert'],
-    ('Print',): ['print'],
-    ('Tab',): ['tab'],
-    ('0', 'KP_0'): ['0'],
-    ('1', 'KP_1'): ['1'],
-    ('2', 'KP_2'): ['2'],
-    ('3', 'KP_3'): ['3'],
-    ('4', 'KP_4'): ['4'],
-    ('5', 'KP_5'): ['5'],
-    ('6', 'KP_6'): ['6'],
-    ('7', 'KP_7'): ['7'],
-    ('8', 'KP_8'): ['8'],
-    ('9', 'KP_9'): ['9'],
-    (None,): ['any'],
+_KEYSYM_MAPS = { # anything not listed here passes through as-is (lower case)
+    'up arrow': ['up'],
+    'arrow up': ['up'],
+    'right arrow': ['right'],
+    'arrow right': ['right'],
+    'down arrow': ['down'],
+    'arrow down': ['down'],
+    'left arrow': ['left'],
+    'arrow left': ['left'],
+
+    'pageup': ['prior'],
+    'page up': ['prior'],
+    'pagedown': ['next'],
+    'page down': ['next'],
+
+    'return': ['return', 'kp_enter'],
+    'enter': ['return', 'kp_enter'],
+    '\n': ['return', 'kp_enter'],
+    '\t': ['tab'],
+
+    'capslock': ['caps_lock'],
+    'caps lock': ['caps_lock'],
+    'numlock': ['num_lock'],
+    'num lock': ['num_lock'],
+    'scrolllock': ['scroll_lock'],
+    'scroll lock': ['scroll_lock'],
+
+    'alt': ['alt_l', 'alt_r'],
+    'left alt': ['alt_l'],
+    'right alt': ['alt_r'],
+
+    'shift': ['shift_l', 'shift_r'],
+    'left shift': ['shift_l'],
+    'right shift': ['shift_r'],
+
+    'control': ['control_l', 'control_r'],
+    'ctrl': ['control_l', 'control_r'],
+    'left control': ['control_l'],
+    'left ctrl': ['control_l'],
+    'right control': ['control_r'],
+    'right ctrl': ['control_r'],
+
+    'esc': ['escape'],
+    ' ': ['space'],
+
+    'minus': ['minus', 'kp_subtract'],
+    '-': ['minus', 'kp_subtract'],
+    'plus': ['plus', 'kp_add'],
+    '+': ['plus', 'kp_add'],
+
+    '0': ['0', 'kp_0'],
+    '1': ['1', 'kp_1'],
+    '2': ['2', 'kp_2'],
+    '3': ['3', 'kp_3'],
+    '4': ['4', 'kp_4'],
+    '5': ['5', 'kp_5'],
+    '6': ['6', 'kp_6'],
+    '7': ['7', 'kp_7'],
+    '8': ['8', 'kp_8'],
+    '9': ['9', 'kp_9'],
+
+    'any key': ['any'],
 }
-# flattened transpose of _KEY_GROUPS - keys are input (case insensitive), values are targets (case sensitive)
-_KEY_MAPS = {}
-for k,vs in _KEY_GROUPS.items():
-    for v in vs:
-        assert v not in _KEY_MAPS
-        assert v == v.lower()
-        _KEY_MAPS[v] = k
-
-for k,vs in _KEY_MAPS.items(): # sanity check
-    assert type(k) == str
-    assert type(vs) == tuple
-    for v in vs:
-        assert v is None or type(v) == str
-def _map_key(key: str) -> Iterable[str]:
-    return _KEY_MAPS.get(key.lower(), (key,))
-
 def onkey(*keys: str):
     '''
     The `@onkey` decorator can be applied to a function at global scope
     or a method definition inside a stage or turtle
     to make that function run whenever the user presses a key on the keyboard.
 
-    The special `'any'` value can be used to catch any key press.
+    The special `'any'` or `'any key'` values (equivalent) can be used to catch any key press.
 
     ```
     @onkey('space')
@@ -1205,8 +1223,10 @@ def onkey(*keys: str):
     '''
     mapped_keys = []
     for key in keys:
-        mapped_keys.extend(_map_key(key))
-    return _add_gui_event_wrapper('__run_on_key', _add_key_event, mapped_keys)
+        key = key.lower()
+        mapped_keys.extend(_KEYSYM_MAPS.get(key, [key]))
+    proj =  _get_proj_handle()
+    return _add_gui_event_wrapper('__run_on_key', proj.add_key_event, mapped_keys)
 
 def onclick(f):
     '''
