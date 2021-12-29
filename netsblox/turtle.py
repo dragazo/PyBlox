@@ -13,9 +13,11 @@ import copy as _copy
 import math as _math
 import time as _time
 import sys as _sys
+import os as _os
 
 import numpy as _np
 
+import netsblox as _netsblox
 import netsblox.common as _common
 import netsblox.events as _events
 import netsblox.colors as _colors
@@ -23,7 +25,36 @@ import netsblox.concurrency as _concurrency
 
 from typing import Any, Union, Tuple, Iterable, Optional, List, Callable
 
-from PIL import Image, ImageTk, ImageDraw
+from PIL import Image, ImageTk, ImageDraw, ImageFont
+
+NETSBLOX_PY_PATH = _os.path.dirname(_netsblox.__file__)
+
+_FONT_SRC = { # maps (weight, italics) to the font source file
+    (1, False): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-ExtraLight.otf',
+    (1, True): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-ExtraLightIt.otf',
+    (2, False): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Light.otf',
+    (2, True): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-LightIt.otf',
+    (3, False): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Regular.otf',
+    (3, True): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-It.otf',
+    (4, False): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Medium.otf',
+    (4, True): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-MediumIt.otf',
+    (5, False): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Semibold.otf',
+    (5, True): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-SemiboldIt.otf',
+    (6, False): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Bold.otf',
+    (6, True): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-BoldIt.otf',
+    (7, False): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Black.otf',
+    (7, True): f'{NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-BlackIt.otf',
+}
+_CACHED_FONTS = {}
+_FONT_LOCK = _threading.Lock()
+def _get_font(*, weight: int, italics: bool) -> ImageFont.ImageFont:
+    if weight < 1 or weight > 7:
+        raise ValueError(f'Invalid font weight: expected an integer 1-7, got {weight}')
+    key = (weight, italics)
+    with _FONT_LOCK:
+        if key in _CACHED_FONTS: return _CACHED_FONTS[key]
+        _CACHED_FONTS[key] = ImageFont.truetype(_FONT_SRC[key])
+        return _CACHED_FONTS[key]
 
 RENDER_PERIOD = 16 # time between frames in ms
 
@@ -118,19 +149,20 @@ def _start_signal_wrapped(f):
     return wrapped
 
 class _Project:
-    def __init__(self, *, width: int, height: int):
+    def __init__(self, *, logical_size: Tuple[int, int], physical_size: Tuple[int, int]):
         self.__lock = _threading.RLock()
         self.__stages = {}
         self.__turtles = {}
 
         self.__tk = _tk.Tk()
         self.__tk.minsize(400, 200)
-        self.__tk.geometry(f'{width}x{height}')
+        self.__tk.geometry(f'{physical_size[0]}x{physical_size[1]}')
+
         self.__tk_canvas = _tk.Canvas(self.__tk)
         self.__tk_canvas.pack(fill = _tk.BOTH, expand = True)
-        self.logical_size = (width, height)
+        self.logical_size = logical_size
 
-        self.__last_frame = Image.new('RGBA', (width, height), (255, 255, 255))
+        self.__last_frame = Image.new('RGBA', logical_size, (255, 255, 255))
 
         last_size = [(-1, -1)]
         def on_canvas_resize(e):
@@ -203,6 +235,7 @@ class _Project:
             frame.paste(self.__drawings_img, (0, 0), self.__drawings_img)
             for info in self.__turtles.values():
                 turtle = info['obj']
+                if not turtle.visible: continue
                 turtle_pos = list(turtle.pos)
                 turtle_pos[1] = -turtle_pos[1]
                 turtle_img = getattr(turtle, '_TurtleBase__display_image')
@@ -237,6 +270,29 @@ class _Project:
             if critical is not None: critical()
         self.invalidate()
 
+    def draw_text(self, pos: Tuple[float, float], rot: float, text: str, size: float, weight: float, italics: bool, color: Tuple[int, int, int], *, critical: Optional[Callable] = None) -> float:
+        xy2uv = self.get_uv_mapper()
+        font = _get_font(weight = round(weight), italics = bool(italics)).font_variant(size = round(1.5 * size))
+
+        text_mask = font.getmask(text, mode = 'L')
+        text_mask = Image.frombytes('L', text_mask.size, _np.array(text_mask).astype(_np.uint8)) # convert ImagingCore to Image
+        text_img = Image.new('RGBA', text_mask.size, color)
+        text_img.putalpha(text_mask)
+        res = float(text_img.width)
+
+        rot_img = text_img.rotate((0.25 - rot) * 360, expand = True)
+        ang = (0.25 - rot) * 2 * _math.pi
+        radial = _np.array([_math.cos(ang), _math.sin(ang)])
+        tangent = _np.array([-radial[1], radial[0]])
+        center = xy2uv(tuple(_np.array(pos) + radial * (res / 2) + tangent * (text_img.height / 2)))
+        paste_pos = tuple(round(center[i] - rot_img.size[i] / 2) for i in range(2))
+
+        with self.__lock:
+            self.__drawings_img.paste(rot_img, paste_pos, rot_img)
+            if critical is not None: critical(res)
+        self.invalidate()
+        return res
+
     def stamp_img(self, pos: Tuple[float, float], img: Image.Image) -> None:
         xy2uv = self.get_uv_mapper()
         paste_pos = xy2uv(pos)
@@ -266,7 +322,7 @@ def _get_proj_handle():
     global _proj_handle_obj, _proj_handle_lock
     with _proj_handle_lock:
         if _proj_handle_obj is None:
-            _proj_handle_obj = _Project(width = 720, height = 480)
+            _proj_handle_obj = _Project(logical_size = (1080, 720), physical_size = (1080, 720))
     return _proj_handle_obj
 
 def start_project():
@@ -305,16 +361,11 @@ def stop_project():
         _game_running = False # just mark game as stopped - process queue will kill the window when it gets a chance
         _game_stopped = True
 
-class _ImgWrapper:
-    _type = 'image'
-    def __init__(self, img):
-        self._data = ImageTk.PhotoImage(img)
-
-_BLANK_IMG = Image.new('RGBA', (1, 1)) # fully transparent
 _CURSOR_KERNEL = Image.new('RGBA', (3, 3), 'black') # used for cursor click collision detection on sprites - should be roughly circleish
 
 def _turtle_image(color: Tuple[int, int, int], scale: float) -> Image.Image:
-    w, h = round(34 * scale), round(18 * scale)
+    scale *= 1.25
+    w, h = round(32 * scale), round(18 * scale)
     img = Image.new('RGBA', (w, h))
     draw = ImageDraw.Draw(img)
     draw.polygon([(0, 0), (w, h / 2), (0, h), (w * 0.25, h / 2)], fill = color, outline = 'black')
@@ -452,11 +503,12 @@ class StageBase(_Ref):
         '''
         Gets or sets the logical size of the stage (width, height).
         This controls the space in which turtles are visible.
-        Setting the logical size of the turtle space also changes the physical size of the window.
+        Higher resolutions mean you can display higher-quality images, but may also slow down the simulation.
+        Note that this has nothing to do with the window size.
 
         ```
         width, height = self.size
-        self.size = (800, 600)
+        self.size = (1080, 720)
         ```
         '''
         return self.__proj.logical_size
@@ -465,7 +517,7 @@ class StageBase(_Ref):
         w, h = tuple(map(int, new_size))
         if any(x < 1 for x in (w,h)):
             raise ValueError(f'Attempt to set stage size to {w}x{h}, which is less than the minimum (1x1)')
-        self.__proj.logical_size = (w, h)
+        self.__proj.logical_size = (w, h) # invalidates project internally
 
     @property
     def width(self) -> int:
@@ -883,11 +935,10 @@ class TurtleBase(_Ref):
         '''
         self.__proj.stamp_img((self.__x, self.__y), self.__display_image)
 
-    def write(self, text: str, *, size: int = 12, align: str = 'left', move = False):
+    def write(self, text: str, *, size: float = 12, weight: float = 4, italics: bool = False, move = True):
         '''
         Draws text onto the background.
         The `size` argument sets the font size of the drawn text.
-        The `align` argument can be `left`, `right`, or `center` and controls how the text is drawn.
         The `move` argument specifies if the turtle should move to the end of the text after drawing.
 
         Text counts as a drawing, so it can be erased by calling `self.clear()`.
@@ -897,10 +948,7 @@ class TurtleBase(_Ref):
         self.write('small hello world!', size = 8)
         ```
         '''
-        def batcher():
-            self.__turtle.write(str(text), bool(move), align, ('Arial', int(size), 'normal'))
-            return self.__turtle.position()
-        self.__x, self.__y = _qinvoke_wait(batcher)
+        self.__proj.draw_text((self.__x, self.__y), self.__rot, str(text), float(size), float(weight), bool(italics), self.__pen_color, critical = self.forward if move else None)
 
     # -----------------------------------
 

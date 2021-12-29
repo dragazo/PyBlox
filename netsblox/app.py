@@ -347,7 +347,7 @@ class DndManager:
         widget.bind('<ButtonPress-1>', self.on_start)
         widget.bind('<B1-Motion>', self.on_drag)
         widget.bind('<ButtonRelease-1>', self.on_drop)
-    
+
     def on_start(self, e):
         for target in self.targets:
             target.on_start(e)
@@ -395,7 +395,7 @@ class BlocksList(tk.Frame):
                 # restore saved focus
                 if focused[0] is not None:
                     focused[0].focus()
-    
+
                 text_target.configure(highlightbackground = orig_bcolor)
             def on_drop(e):
                 x, y = text_target.winfo_pointerxy()
@@ -500,7 +500,7 @@ class Imports:
                 'info': clean_docstring(normalize_strip(item[2])),
                 'code': f'import {item[0]}' if item[0] == item[1] else f'import {item[0]} as {item[1]}',
             }
-        
+
         self.images = {}
 
         self.on_update = on_update
@@ -531,7 +531,7 @@ class Imports:
             import_str = '\n'.join(lines)
             GlobalEditor.prefix = f'{GlobalEditor.BASE_PREFIX}{import_str}\n\n'
             GlobalEditor.prefix_lines = GlobalEditor.BASE_PREFIX_LINES + len(lines) + 1
-        
+
         if self.on_update is not None:
             self.on_update()
 
@@ -655,7 +655,7 @@ class ProjectEditor(tk.Frame):
                 messagebox.showerror(title = 'Invalid name', message = f'A tab named "{name}" already exists')
                 continue
             break
-        
+
         editor.name = name
         self.notebook.tab(idx, text = name)
 
@@ -671,7 +671,7 @@ class ProjectEditor(tk.Frame):
         self.notebook.add(editor, text = name)
         self.editors.append(editor)
         return editor
-    
+
     def get_full_script(self, *, is_export: bool = False) -> str:
         scripts = []
         for editor in self.editors:
@@ -964,7 +964,7 @@ class ScrolledText(tk.Frame):
             def on_paste(e):
                 if self.text.tag_ranges(tk.SEL):
                     self.text.delete(tk.SEL_FIRST, tk.SEL_LAST)
-                
+
                 # some versions of tcl/tk on mac are broken and crash here, so impl manually
                 self.text.insert(tk.INSERT, self.clipboard_get())
                 return 'break'
@@ -1285,6 +1285,7 @@ from netsblox.turtle import *
 from netsblox.concurrency import *
 nb = netsblox.Client(proj_name = """$proj_name""", proj_id = $proj_id)
 'A connection to NetsBlox, which allows you to use services and RPCs from python.'
+getattr(netsblox.turtle._get_proj_handle(), '_Project__tk').title(f'PyBlox - {nb.get_public_id()}')
 setup_stdio()
 setup_yielding()
 import time as _time
@@ -1293,7 +1294,7 @@ def _yield_(x):
     return x
 
 '''.lstrip()
-    BASE_PREFIX_LINES = 12
+    BASE_PREFIX_LINES = 13
 
     prefix = BASE_PREFIX
     prefix_lines = BASE_PREFIX_LINES
