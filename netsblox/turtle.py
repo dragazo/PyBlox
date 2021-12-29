@@ -169,6 +169,30 @@ class _Project:
         self.__tk.bind('<Tab>', lambda e: on_key('tab'))
         self.__tk.bind_all('<Key>', lambda e: on_key(e.keysym.lower()))
 
+        self.__mouse_down_events = []
+        self.__mouse_up_events = []
+
+        def on_mouse(e, events):
+            logical_size = _np.array(self.logical_size)
+            physical_size = _np.array([self.__tk_canvas.winfo_width(), self.__tk_canvas.winfo_height()])
+            scale = min(physical_size / logical_size)
+            raw_pos = _np.array([e.x, e.y])
+            x, y = (raw_pos - physical_size / 2) / scale * _np.array([1, -1])
+
+            for event, anywhere in events:
+                should_handle = True
+                wrapped = event.wrapped()
+                obj = getattr(wrapped, '__self__', None)
+                if isinstance(obj, TurtleBase) and not anywhere:
+                    obj_disp_img = getattr(obj, '_TurtleBase__display_image')
+                    should_handle = _intersects((obj_disp_img, *obj.pos), (_CURSOR_KERNEL, x, y))
+
+                if should_handle: event.schedule_no_queueing(x, y)
+
+            return 'break'
+        self.__tk.bind_all('<Button-1>', lambda e: on_mouse(e, self.__mouse_down_events))
+        self.__tk.bind_all('<ButtonRelease-1>', lambda e: on_mouse(e, self.__mouse_up_events))
+
     def get_image(self) -> Image.Image:
         with self.__lock:
             return self.__last_frame.copy()
@@ -308,6 +332,17 @@ class _Project:
                 self.__key_events[key] = []
             self.__key_events[key].append(_events.get_event_wrapper(event))
 
+    def add_mouse_event(self, mode: Tuple[str, bool], event: Callable) -> None:
+        when, anywhere = mode
+
+        target = None
+        if when == 'down': target = self.__mouse_down_events
+        elif when == 'up': target = self.__mouse_up_events
+        else: raise ValueError(f'unknown mouse trigger: "{when}"')
+
+        with self.__lock:
+            target.append((_events.get_event_wrapper(event), anywhere))
+
     def run(self):
         renderer = _traceback_wrapped(self.render_frame)
         def render_loop():
@@ -378,76 +413,6 @@ def _apply_transforms(img: Optional[Image.Image], scale: float, rot: float) -> I
     img = img.resize((round(w * scale), round(h * scale)))
     return img.rotate((0.25 - rot) * 360, expand = True, resample = Image.BICUBIC)
 
-# _window_size_cached = None
-# _logical_size_cached = None
-# _logical_scale_cached = None
-# _registered_resize_hook = False
-
-# def _get_logical_scale() -> float:
-#     if _logical_scale_cached is not None:
-#         return _logical_scale_cached
-
-#     def batcher():
-#         global _logical_scale_cached
-#         wsize = _get_window_size()
-#         lsize = _get_logical_size()
-#         _logical_scale_cached = min(wsize[0] / lsize[0], wsize[1] / lsize[1])
-#         return _logical_scale_cached
-#     return _qinvoke_wait(batcher)
-
-# def _perform_resize_ui() -> None:
-#     global _logical_scale_cached
-#     wsize = _get_window_size()
-#     lsize = _get_logical_size()
-#     scale = _logical_scale_cached = min(wsize[0] / lsize[0], wsize[1] / lsize[1])
-
-#     for t in _all_turtles:
-#         x, y = t.pos
-#         getattr(t, '_TurtleBase__turtle').goto(x * scale, y * scale)
-#         getattr(t, '_TurtleBase__update_costume')()
-#     for s in _all_stages:
-#         getattr(s, '_StageBase__update_costume')()
-
-# def _register_resize_hook() -> None:
-#     if _registered_resize_hook: return
-
-#     def batcher():
-#         global _registered_resize_hook
-#         if _registered_resize_hook: return # double checked lock now that we're on the ui thread
-#         _registered_resize_hook = True
-
-#         def update(e):
-#             global _window_size_cached
-#             if _window_size_cached is None or _window_size_cached[0] != e.width or _window_size_cached[1] != e.height:
-#                 _window_size_cached = (e.width + 2, e.height + 2) # add back the 1px outline from tkinter
-#                 _turtle.Screen().getcanvas().after(0, _perform_resize_ui)
-#         _turtle.Screen().getcanvas().bind('<Configure>', update)
-#     _qinvoke_wait(batcher)
-
-# def _get_window_size() -> Tuple[int, int]:
-#     global _window_size_cached
-#     _register_resize_hook()
-
-#     if _window_size_cached is not None:
-#         return _window_size_cached
-#     else:
-#         _window_size_cached = _qinvoke_wait(lambda: _turtle.Screen().screensize())
-#         return _window_size_cached
-# def _set_window_size(width: int, height: int) -> None:
-#     def batcher():
-#         global _logical_size_cached
-#         _logical_size_cached = (width, height)
-#         _register_resize_hook()
-#         _turtle.setup(width, height)
-#     _qinvoke_wait(batcher)
-# def _get_logical_size() -> Tuple[int, int]:
-#     global _logical_size_cached
-#     if _logical_size_cached is not None:
-#         return _logical_size_cached
-
-#     _logical_size_cached = _get_window_size()
-#     return _logical_size_cached
-
 class _Ref:
     def __copy__(self):
         return self
@@ -498,6 +463,7 @@ class StageBase(_Ref):
             new_costume = new_costume.convert('RGBA')
 
         self.__costume = new_costume
+        self.__proj.invalidate()
 
     @property
     def size(self) -> Tuple[int, int]:
@@ -516,7 +482,7 @@ class StageBase(_Ref):
     @size.setter
     def size(self, new_size: Tuple[int, int]) -> None:
         w, h = tuple(map(int, new_size))
-        if any(x < 1 for x in (w,h)):
+        if any(x < 1 for x in (w, h)):
             raise ValueError(f'Attempt to set stage size to {w}x{h}, which is less than the minimum (1x1)')
         self.__proj.logical_size = (w, h) # invalidates project internally
 
@@ -1029,7 +995,7 @@ def _derive(bases, cls):
             click_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_click'))
             for _, click_script in click_scripts:
                 for key in getattr(click_script, '__run_on_click'):
-                    _add_click_event(key, click_script)
+                    self.__proj.add_mouse_event(key, click_script)
 
             msg_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_message'))
             for _, msg_script in msg_scripts:
@@ -1228,37 +1194,39 @@ def onkey(*keys: str):
     proj =  _get_proj_handle()
     return _add_gui_event_wrapper('__run_on_key', proj.add_key_event, mapped_keys)
 
-def onclick(f):
+def onclick(*, when: str = 'down', anywhere: bool = False):
     '''
-    The `@onclick` decorator can be applied to a function at global scope to
-    make that function run whenever the user clicks on the display.
+    The `@onclick()` decorator can be applied to a function to make it run
+    when a user clicks on the turtle or display.
     The function you apply it to will receive the `x` and `y` position of the click.
 
-    This can also be applied to turtle/stage methods, however note that when used on turtles
-    the function will only be called when the user clicks on the turtle itself.
-    If you want to have a turtle run a function when the user clicks anywhere, use `@onclickanywhere` instead.
+    When used on sprite methods, by default this will only be triggered when the user
+    clicks on the sprite itself, rather than anywhere on the display.
+    If you want a sprite method to run when clicking anywhere on the display,
+    pass the `anywhere = True` keyword argument (see examples below).
+
+    The `when` keyword argument controls when the function is called - there are the following options:
+     - 'down' (default) - run when the mouse button is pressed down.
+     - 'up' - run when the mouse button is released.
 
     ```
-    @onclick
-    def mouse_click(self, x, y):
-        print('user clicked at', x, y)
-    ```
-    '''
-    return _add_gui_event_wrapper('__run_on_click', _add_click_event, [1])(f) # call wrapper immediately cause we take no args
+    @onclick()
+    def mouse_click_1(self, x, y):
+        pass
 
-def onclickanywhere(f):
-    '''
-    Equivalent to `@onclick` except that it is triggered when the user clicks anywhere on the display,
-    even when used on a turtle.
+    @onclick(anywhere = True)
+    def mouse_click_2(self, x, y):
+        pass
 
-    ```
-    @onclickanywhere
-    def mouse_click(self, x, y):
-        print('user clicked at', x, y)
+    @onclick(when = 'up')
+    def mouse_click_3(self, x, y):
+        pass
     ```
     '''
-    setattr(f, '__click_anywhere', True)
-    return onclick(f)
+    if when not in ['down', 'up']:
+        raise ValueError(f'Unknown @onclick when mode: "{when}". Expected "down" or "up".')
+    proj = _get_proj_handle()
+    return _add_gui_event_wrapper('__run_on_click', proj.add_mouse_event, [(when, anywhere)])
 
 _WATCH_UPDATE_INTERVAL = 500
 _watch_tk = None
