@@ -173,7 +173,7 @@
     {
       "type": "turtle", 
       "name": "sprite", 
-      "value": "@onstart\ndef my_onstart(self):\n    self.drawing = True\n\n@onstartclone\ndef my_onstartclone(self):\n    self.drawing = True\n    r = random.randrange(256)\n    g = random.randrange(256)\n    b = random.randrange(256)\n    self.pen_color = (r, g, b)\n    self.heading = random.random() * 360\n    self.forward(random.random() * 30 + 20)\n\n@onclick\ndef my_onclick(self, x, y):\n    self.clone()\n\n@onkey('up arrow')\ndef my_onup(self):\n    self.forward(10)\n\n@onkey('down arrow')\ndef my_ondown(self):\n    self.forward(-10)\n\n@onkey('left arrow')\ndef my_onleft(self):\n    self.turn_left(15)\n    \n@onkey('right arrow')\ndef my_onright(self):\n    self.turn_right(15)\n"
+      "value": "@onstart()\ndef my_onstart(self):\n    self.drawing = True\n\n@onstart(when = 'clone')\ndef my_onstartclone(self):\n    self.drawing = True\n    r = random.randrange(256)\n    g = random.randrange(256)\n    b = random.randrange(256)\n    self.pen_color = (r, g, b)\n    self.heading = random.random() * 360\n    self.forward(random.random() * 30 + 20)\n\n@onclick()\ndef my_onclick(self, x, y):\n    self.clone()\n\n@onkey('up arrow')\ndef my_onup(self):\n    self.forward(10)\n\n@onkey('down arrow')\ndef my_ondown(self):\n    self.forward(-10)\n\n@onkey('left arrow')\ndef my_onleft(self):\n    self.turn_left(15)\n    \n@onkey('right arrow')\ndef my_onright(self):\n    self.turn_right(15)\n"
     }
   ], 
   "images": {}

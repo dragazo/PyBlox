@@ -96,32 +96,23 @@ def _traceback_wrapped(fn):
             print(_traceback.format_exc(), file = _sys.stderr) # print out directly so that the stdio wrappers are used
     return wrapped
 
-_click_events = {} # maps key to [raw handler, event[]]
-def _add_click_event(key, event):
-    if key not in _click_events:
-        entry = [None, []]
-        def raw_handler(rawx, rawy):
-            scale = _get_logical_scale()
-            x, y = rawx / scale, rawy / scale
-            for handler in entry[1]:
-                should_handle = True
-                wrapped = handler.wrapped()
-                obj = getattr(wrapped, '__self__', None)
-                if isinstance(obj, TurtleBase) and not hasattr(wrapped, '__click_anywhere'):
-                    obj_disp_img = getattr(obj, '_TurtleBase__display_image')
-                    obj_x, obj_y = obj.x_pos * scale, obj.y_pos * scale
-                    should_handle = _intersects((obj_disp_img, obj_x, obj_y), (_CURSOR_KERNEL, rawx, rawy))
-
-                if should_handle:
-                    handler.schedule_no_queueing(x, y)
-        entry[0] = raw_handler
-
-        _click_events[key] = entry
-        _turtle.onscreenclick(entry[0], key)
-
-    _click_events[key][1].append(_events.get_event_wrapper(event))
+def _start_safe_thread(f: Callable, *args, **kwargs) -> _threading.Thread:
+    thread = _threading.Thread(target = _traceback_wrapped(f), args = args, kwargs = kwargs)
+    thread.setDaemon(True)
+    thread.start()
+    return thread
 
 class ProjectStateError(Exception): pass
+
+_action_queue_thread_id = _threading.get_ident()
+
+_action_queue_ret_cv = _threading.Condition(_threading.Lock())
+_action_queue_ret_id = 0
+_action_queue_ret_vals = {}
+
+_action_queue = _queue.Queue(1) # max size is equal to max total exec imbalance, so keep it low
+_ACTION_QUEUE_INTERVAL = 16    # ms between control slices
+_ACTION_MAX_PER_SLICE = 16     # max number of actions to perform during a control slice
 
 _game_running = False
 _game_stopped = False # different than not running due to 3-state system
@@ -142,6 +133,8 @@ class _Project:
         self.__tk = _tk.Tk()
         self.__tk.minsize(400, 200)
         self.__tk.geometry(f'{physical_size[0]}x{physical_size[1]}')
+
+        self.__tk.protocol('WM_DELETE_WINDOW', stop_project)
 
         self.__tk_canvas = _tk.Canvas(self.__tk)
         self.__tk_canvas.pack(fill = _tk.BOTH, expand = True)
@@ -346,9 +339,30 @@ class _Project:
     def run(self):
         renderer = _traceback_wrapped(self.render_frame)
         def render_loop():
+            if not _game_running: return
             renderer()
             self.__tk.after(_RENDER_PERIOD, render_loop)
         render_loop()
+
+        def process_queue():
+            if _game_stopped:
+                self.__tk.destroy()
+                return
+
+            for _ in range(_ACTION_MAX_PER_SLICE):
+                if _action_queue.qsize() == 0: break
+                val = _action_queue.get()
+                if len(val) == 2: val[0](*val[1])
+                else:
+                    ret = None
+                    try: ret = val[0](*val[1])
+                    except Exception as e: ret = e
+
+                    with _action_queue_ret_cv:
+                        _action_queue_ret_vals[val[2]] = ret
+                        _action_queue_ret_cv.notify_all()
+            self.__tk.after(_ACTION_QUEUE_INTERVAL, process_queue)
+        process_queue()
 
         self.__tk.mainloop()
 
@@ -380,11 +394,6 @@ def start_project():
     _start_signal.send()
     proj = _get_proj_handle()
     proj.run()
-    # _turtle.delay(0)
-    # _turtle.listen()
-    # _turtle.Screen().ontimer(_process_queue, _action_queue_interval)
-    # _turtle.Screen()._root.protocol('WM_DELETE_WINDOW', stop_project)
-    # _turtle.done()
 
 def stop_project():
     '''
@@ -396,6 +405,40 @@ def stop_project():
     if _game_running:
         _game_running = False # just mark game as stopped - process queue will kill the window when it gets a chance
         _game_stopped = True
+    _watch_kill_permanently()
+
+def _qinvoke(fn, *args) -> None:
+    # if we're running on the action queue thread, we can just do it directly
+    if _action_queue_thread_id == _threading.current_thread().ident:
+        fn(*args)
+        return
+
+    _action_queue.put((fn, args))
+
+def _qinvoke_wait(fn, *args) -> Any:
+    global _action_queue_ret_id
+
+    # if we're running on the action queue thread, we can just do it directly
+    if _action_queue_thread_id == _threading.current_thread().ident:
+        return fn(*args)
+
+    ret_id = None
+    with _action_queue_ret_cv:
+        ret_id = _action_queue_ret_id
+        _action_queue_ret_id += 1
+
+    ret_val = None
+    _action_queue.put((fn, args, ret_id))
+    while True:
+        with _action_queue_ret_cv:
+            if ret_id in _action_queue_ret_vals:
+                ret_val = _action_queue_ret_vals[ret_id]
+                del _action_queue_ret_vals[ret_id]
+                break
+            _action_queue_ret_cv.wait()
+
+    if isinstance(ret_val, Exception): raise ret_val
+    return ret_val
 
 _CURSOR_KERNEL = Image.new('RGBA', (3, 3), 'black') # used for cursor click collision detection on sprites - should be roughly circleish
 
@@ -980,12 +1023,11 @@ def _derive(bases, cls):
                 self.__is_clone = None
                 cls.__init__(self, *args, **kwargs)
 
-            start_tag = '__run_on_start' if not self.__is_clone else '__run_on_start_clone'
-            start_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, start_tag))
+            exec_start_tag = 'clone' if self.__is_clone else 'original'
+            start_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_start'))
             for _, start_script in start_scripts:
-                thread = _threading.Thread(target = _traceback_wrapped(_start_signal_wrapped(start_script)))
-                thread.setDaemon(True)
-                thread.start()
+                for key in getattr(start_script, '__run_on_start'):
+                    if key == exec_start_tag: _start_safe_thread(start_script)
 
             key_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_key'))
             for _, key_script in key_scripts:
@@ -1052,47 +1094,6 @@ def stage(cls):
     '''
     return _derive([StageBase], cls)
 
-def onstart(f):
-    '''
-    The `@onstart` decorator can be applied to a method definition inside a stage or turtle
-    to make that function run whenever the stage/turtle is created.
-
-    Turtles created via cloning will not run onstart events; instead, use the `@onstartclone` decorator.
-
-    `@onstart` can also be applied to a function at global scope (not a method),
-    in which case the function is called when the project is started.
-
-    ```
-    @onstart
-    def start(self):
-        self.forward(75)
-    ```
-    '''
-    if _common.is_method(f):
-        setattr(f, '__run_on_start', True)
-    else:
-        t = _threading.Thread(target = _traceback_wrapped(f))
-        t.setDaemon(True)
-        t.start()
-    return f
-
-def onstartclone(f):
-    '''
-    The `@onstartclone` decorator can be applied to turtle methods, and is
-    equivalent to `@onstart` except that it runs when a clone is created.
-
-    ```
-    @onstartclone
-    def clonestart(self):
-        self.forward(75)
-    ```
-    '''
-    if _common.is_method(f):
-        setattr(f, '__run_on_start_clone', True)
-    else:
-        raise TypeError('Attempt to use @onstartclone on a non-method')
-    return f
-
 def _add_gui_event_wrapper(field, register, keys):
     def wrapper(f):
         if _common.is_method(f):
@@ -1105,6 +1106,30 @@ def _add_gui_event_wrapper(field, register, keys):
 
         return f
     return wrapper
+
+def onstart(*, when: str = 'original'):
+    '''
+    The `@onstart()` decorator can be applied to a method definition inside a stage or turtle
+    to make that function run whenever the stage/turtle is created.
+
+    The `when` keyword argument controls when the function should be called.
+    The following options are available:
+     - 'original' (default) - run when the original (non-clone) sprite is created. This mode can also be used on stage methods or global functions.
+     - 'clone' - run when a clone is created. Note that clone mode should only be used on a sprite method.
+
+    ```
+    @onstart()
+    def start(self):
+        self.forward(75)
+
+    @onstart(when = 'clone')
+    def cloned(self):
+        self.pos = (0, 0)
+    ```
+    '''
+    if when not in ['original', 'clone']:
+        raise ValueError(f'Unknown @onstart() when mode - got "{when}", expected "original" or "clone"')
+    return _add_gui_event_wrapper('__run_on_start', _start_safe_thread, [when])
 
 _KEYSYM_MAPS = { # anything not listed here passes through as-is (lower case)
     'up arrow': ['up'],
@@ -1171,7 +1196,7 @@ _KEYSYM_MAPS = { # anything not listed here passes through as-is (lower case)
 }
 def onkey(*keys: str):
     '''
-    The `@onkey` decorator can be applied to a function at global scope
+    The `@onkey()` decorator can be applied to a function at global scope
     or a method definition inside a stage or turtle
     to make that function run whenever the user presses a key on the keyboard.
 
@@ -1234,6 +1259,8 @@ _watch_tree = None
 _watch_watchers = {}
 _watch_changed = False
 _watch_started = False
+_watch_killed_permanently = False
+_watch_critical = _threading.Lock()
 def _watch_update() -> None:
     global _watch_tk, _watch_watchers, _watch_changed, _watch_tree
     if not _watch_changed and len(_watch_watchers) == 0: return
@@ -1250,6 +1277,7 @@ def _watch_update() -> None:
 
     if _watch_tk is None:
         _watch_tk = _tk.Tk()
+        _watch_tk.protocol('WM_DELETE_WINDOW', _watch_kill_permanently)
         _watch_tk.title('PyBlox Watchers')
         _watch_tk.geometry('400x300')
 
@@ -1292,13 +1320,24 @@ def _watch_update() -> None:
 
 def _watch_start():
     global _watch_started
-    if _watch_started: return
-    _watch_started = True
+    if _watch_started: return # double-checked lock for speed
+    with _watch_critical:
+        if _watch_started: return
+        _watch_started = True
+
+    if _watch_killed_permanently: return
 
     def do_update():
         _traceback_wrapped(_watch_update)()
-        _watch_tk.after(_WATCH_UPDATE_INTERVAL, do_update)
+        if _watch_killed_permanently:
+            _watch_tk.destroy()
+        else:
+            _watch_tk.after(_WATCH_UPDATE_INTERVAL, do_update)
     do_update()
+def _watch_kill_permanently():
+    global _watch_killed_permanently
+    _watch_killed_permanently = True
+
 def _watch_add(name: str, getter: Callable, setter: Union[Callable, None]) -> None:
     global _watch_changed
 

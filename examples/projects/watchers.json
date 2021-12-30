@@ -164,17 +164,17 @@
     {
       "type": "global", 
       "name": "global", 
-      "value": "my_global_var = 'hello world' # create a global variable\n\ncounter = 0\nother = { }\nwatch('counter')\nwatch('other')\n\n\nmatrix = [ list(range(10)) for i in range(10)]\nwatch('matrix')\n"
+      "value": "my_global_var = 'hello world' # create a global variable\n\ncounter = 0\nother = { }\nwatch('counter')\nwatch('other')\n\nmatrix = [ list(range(10)) for i in range(10)]\nwatch('matrix')\n"
     }, 
     {
       "type": "stage", 
       "name": "stage", 
-      "value": "@onstart\ndef my_onstart(self): # functions need different names\n    self.my_list = [1, 2, 3] # create a stage variable\n"
+      "value": "@onstart()\ndef my_onstart(self): # functions need different names\n    self.my_list = [1, 2, 3] # create a stage variable\n"
     }, 
     {
       "type": "turtle", 
       "name": "sprite", 
-      "value": "@onstart\ndef my_onstart(self): # functions need different names\n    self.my_distance = 2 # create a sprite variable\n\n    for i in range(360): # repeat code 360 times\n        self.forward(self.my_distance)\n        self.turn_right(1)\n\n@onstart\ndef do_counting(self):\n    self.my_counter = 0\n    self.watch('my_counter')\n    \n    global counter, other\n    while True:\n        time.sleep(0.1)\n        counter += 1\n        self.my_counter += random.randrange(4)\n        letter = chr(random.randrange(65, 65 + 26))\n        if letter not in other:\n            other[letter] = [0, 0]\n        other[letter][random.randrange(2)] += 3\n        "
+      "value": "@onstart()\ndef my_onstart(self): # functions need different names\n    self.my_distance = 2 # create a sprite variable\n\n    for i in range(360): # repeat code 360 times\n        self.forward(self.my_distance)\n        self.turn_right(1)\n\n@onstart()\ndef do_counting(self):\n    self.my_counter = 0\n    self.watch('my_counter')\n    \n    global counter, other\n    while True:\n        time.sleep(0.1)\n        counter += 1\n        self.my_counter += random.randrange(4)\n        letter = chr(random.randrange(65, 65 + 26))\n        if letter not in other:\n            other[letter] = [0, 0]\n        other[letter][random.randrange(2)] += 3\n"
     }
   ], 
   "images": {}
