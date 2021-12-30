@@ -58,6 +58,8 @@ def _get_font(*, weight: int, italics: bool) -> ImageFont.ImageFont:
         return _CACHED_FONTS[key]
 
 _RENDER_PERIOD = 16 # time between frames in ms
+_SAY_PAGINATE_LEN = 30 # max length of a paginated line in turtle.say()
+_SAY_PAGINATE_MAX_LINES = 8 # max number of lines to show before ...-ing the rest
 
 _GRAPHICS_SLEEP_TIME = 0.0085 # time to pause after gui stuff like sprite movement
 _do_graphics_sleep = True
@@ -88,6 +90,16 @@ def _intersects(a: Tuple[Image.Image, int, int], b: Tuple[Image.Image, int, int]
     other_trans.paste(other, (round(other_x), round(other_y)))
 
     return _np.bitwise_and(_np.array(base) >= _VIS_THRESH, _np.array(other_trans) >= _VIS_THRESH).any()
+
+def _render_text(text: str, size: float, weight: float, italics: bool, color: Tuple[int, int, int]) -> Image.Image:
+    font = _get_font(weight = round(weight), italics = bool(italics)).font_variant(size = round(1.5 * size))
+
+    text_mask = font.getmask(text, mode = 'L')
+    text_mask = Image.frombytes('L', text_mask.size, _np.array(text_mask).astype(_np.uint8)) # convert ImagingCore to Image
+    text_img = Image.new('RGBA', text_mask.size, color)
+    text_img.putalpha(text_mask)
+
+    return text_img
 
 def _traceback_wrapped(fn):
     def wrapped(*args, **kwargs):
@@ -243,20 +255,30 @@ class _Project:
             for info in self.__stages.values():
                 stage_img = info['obj'].costume
                 if stage_img is None: continue
+
                 scale = min(logical_size[i] / stage_img.size[i] for i in range(2))
                 new_size = tuple(round(v * scale) for v in stage_img.size)
                 resized = stage_img.resize(new_size, Image.ANTIALIAS)
                 center_offset = tuple(round((frame.size[i] - new_size[i]) / 2) for i in range(2))
                 frame.paste(resized, center_offset, resized)
+
             frame.paste(self.__drawings_img, (0, 0), self.__drawings_img)
+
             for info in self.__turtles.values():
                 turtle = info['obj']
                 if not turtle.visible: continue
+
                 turtle_pos = list(turtle.pos)
                 turtle_pos[1] = -turtle_pos[1]
                 turtle_img = getattr(turtle, '_TurtleBase__display_image')
                 paste_pos = tuple(round(logical_size[i] / 2 + turtle_pos[i] - turtle_img.size[i] / 2) for i in range(2))
                 frame.paste(turtle_img, paste_pos, turtle_img)
+
+                say_img = getattr(turtle, '_TurtleBase__say_img')
+                if say_img is not None:
+                    say_pos = (paste_pos[0] + turtle_img.width, paste_pos[1] - say_img.height)
+                    frame.paste(say_img, say_pos, say_img)
+
             self.__last_frame = frame # keep track of this for the image grab functions
 
         canvas_size = (self.__tk_canvas.winfo_width(), self.__tk_canvas.winfo_height())
@@ -288,12 +310,7 @@ class _Project:
 
     def draw_text(self, pos: Tuple[float, float], rot: float, text: str, size: float, weight: float, italics: bool, color: Tuple[int, int, int], *, critical: Optional[Callable] = None) -> float:
         xy2uv = self.get_uv_mapper()
-        font = _get_font(weight = round(weight), italics = bool(italics)).font_variant(size = round(1.5 * size))
-
-        text_mask = font.getmask(text, mode = 'L')
-        text_mask = Image.frombytes('L', text_mask.size, _np.array(text_mask).astype(_np.uint8)) # convert ImagingCore to Image
-        text_img = Image.new('RGBA', text_mask.size, color)
-        text_img.putalpha(text_mask)
+        text_img = _render_text(text, size, weight, italics, color)
         res = float(text_img.width)
 
         rot_img = text_img.rotate((0.25 - rot) * 360, expand = True)
@@ -632,6 +649,7 @@ class TurtleBase(_Ref):
         self.__pen_color = (0, 0, 0) # [0,255] rgb (defaults to black)
         self.__costume = None
         self.__display_image = None # managed by costume transforms logic
+        self.__say_img = None
 
         self.__update_costume() # init display image
         self.__proj.register_entity(self)
@@ -961,6 +979,50 @@ class TurtleBase(_Ref):
         ```
         '''
         self.__proj.draw_text((self.__x, self.__y), self.__rot, str(text), float(size), float(weight), bool(italics), self.__pen_color, critical = self.forward if move else None)
+
+    def say(self, text: str = '', *, duration: Optional[float] = None) -> None:
+        '''
+        Causes the sprite to show a message bubble on the display with the given content.
+        The message bubble will follow the sprite around as it moves on the display.
+        You can get rid of the message by saying an empty string (the default value).
+
+        If `duration` is provided, the sprite will say the message for the given duration (in seconds) and then clear it.
+        Note that this will block (wait) for that length of time to elapse before returning.
+
+        ```
+        self.say('hello world')
+        self.say('something else', duration = 2)
+        ```
+        '''
+        text = str(text)
+        if text == '':
+            self.__say_img = None
+            self.__proj.invalidate()
+            return
+
+        lines = _common.paginate_str(text, _SAY_PAGINATE_LEN)
+        if len(lines) > _SAY_PAGINATE_MAX_LINES:
+            lines = lines[:_SAY_PAGINATE_MAX_LINES-1] + ['...']
+        imgs = [_render_text(x, size = 8, weight = 3, italics = False, color = (0, 0, 0)) for x in lines]
+        maxw = max(x.width for x in imgs)
+        padding = 5
+        line_spacing = 3
+
+        res_size = (maxw + 2 * padding, sum(x.height for x in imgs) + max(len(imgs) - 1, 0) * line_spacing + 2 * padding)
+        res = Image.new('RGBA', res_size, color = (255, 255, 255))
+        hpos = padding
+        for img in imgs:
+            paste_pos = (round((maxw - img.width) / 2) + padding, hpos)
+            res.paste(img, paste_pos, img)
+            hpos += img.height + line_spacing
+
+        self.__say_img = res
+        self.__proj.invalidate()
+
+        if duration is not None:
+            _time.sleep(float(duration))
+            self.__say_img = None
+            self.__proj.invalidate()
 
     # -----------------------------------
 
