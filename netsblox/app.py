@@ -179,13 +179,11 @@ def normalize_strip(content: str) -> str:
 
 FULL_NAME_DOC_REMAPS = {
     'builtins.input': '''
-input(prompt: Any=...) -> str
+input(prompt: Any=...) -> Optional[str]
 
-Prompt the user to input a string (which might be empty).
-If the prompt is closed or canceled, `None` is returned.
-
-Note that calling this function will pause the simulation
-while the user decides what to enter.
+Prompt the user to input a string.
+If the prompt is closed or canceled, `None` is returned,
+otherwise the user's input is returned directly (which may be the empty string).
 '''.strip(),
 }
 PROP_DOC_REMAPS = {}

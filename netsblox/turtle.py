@@ -3,6 +3,7 @@
 import builtins as _builtins
 
 import tkinter as _tk
+from tkinter import simpledialog as _simpledialog
 from tkinter import ttk as _ttk
 
 import threading as _threading
@@ -97,7 +98,7 @@ def _traceback_wrapped(fn):
     return wrapped
 
 def _start_safe_thread(f: Callable, *args, **kwargs) -> _threading.Thread:
-    thread = _threading.Thread(target = _traceback_wrapped(f), args = args, kwargs = kwargs)
+    thread = _threading.Thread(target = _traceback_wrapped(_start_signal_wrapped(f)), args = args, kwargs = kwargs)
     thread.setDaemon(True)
     thread.start()
     return thread
@@ -110,7 +111,7 @@ _action_queue_ret_cv = _threading.Condition(_threading.Lock())
 _action_queue_ret_id = 0
 _action_queue_ret_vals = {}
 
-_action_queue = _queue.Queue(1) # max size is equal to max total exec imbalance, so keep it low
+_action_queue = _queue.Queue() # queue of 2- and 3-tuples for deferred execution on ui thread
 _ACTION_QUEUE_INTERVAL = 16    # ms between control slices
 _ACTION_MAX_PER_SLICE = 16     # max number of actions to perform during a control slice
 
@@ -154,18 +155,21 @@ class _Project:
 
         self.__key_events = { 'any': [] } # maps key to [raw handler, _EventWrapper[]]
 
-        def on_key(key):
+        def on_key(key, src):
+            if src is not self.__tk_canvas: return
             with self.__lock:
                 for event in self.__key_events.get(key, []) + self.__key_events['any']:
                     event.schedule_no_queueing()
             return 'break'
-        self.__tk.bind('<Tab>', lambda e: on_key('tab'))
-        self.__tk.bind_all('<Key>', lambda e: on_key(e.keysym.lower()))
+        self.__tk_canvas.bind('<Tab>', lambda e: on_key('tab', e.widget))
+        self.__tk_canvas.bind_all('<Key>', lambda e: on_key(e.keysym.lower(), e.widget))
 
         self.__mouse_down_events = []
         self.__mouse_up_events = []
 
         def on_mouse(e, events):
+            if e.widget is not self.__tk_canvas: return
+
             logical_size = _np.array(self.logical_size)
             physical_size = _np.array([self.__tk_canvas.winfo_width(), self.__tk_canvas.winfo_height()])
             scale = min(physical_size / logical_size)
@@ -183,8 +187,8 @@ class _Project:
                 if should_handle: event.schedule_no_queueing(x, y)
 
             return 'break'
-        self.__tk.bind_all('<Button-1>', lambda e: on_mouse(e, self.__mouse_down_events))
-        self.__tk.bind_all('<ButtonRelease-1>', lambda e: on_mouse(e, self.__mouse_up_events))
+        self.__tk_canvas.bind_all('<Button-1>', lambda e: on_mouse(e, self.__mouse_down_events))
+        self.__tk_canvas.bind_all('<ButtonRelease-1>', lambda e: on_mouse(e, self.__mouse_up_events))
 
     def get_image(self) -> Image.Image:
         with self.__lock:
@@ -362,7 +366,10 @@ class _Project:
                         _action_queue_ret_vals[val[2]] = ret
                         _action_queue_ret_cv.notify_all()
             self.__tk.after(_ACTION_QUEUE_INTERVAL, process_queue)
-        process_queue()
+        def starter():
+            _start_signal.send()
+            process_queue()
+        self.__tk.after(100, starter) # give time for main window to open
 
         self.__tk.mainloop()
 
@@ -370,7 +377,8 @@ _proj_handle_obj = None
 _proj_handle_lock = _threading.Lock()
 def _get_proj_handle():
     global _proj_handle_obj, _proj_handle_lock
-    with _proj_handle_lock:
+    if _proj_handle_obj is not None: return _proj_handle_obj
+    with _proj_handle_lock: # double checked lock for speed
         if _proj_handle_obj is None:
             _proj_handle_obj = _Project(logical_size = (1080, 720), physical_size = (1080, 720))
     return _proj_handle_obj
@@ -391,7 +399,6 @@ def start_project():
     if _game_stopped: raise ProjectStateError('start_project() was called when the project had previously been stopped')
     _game_running = True
 
-    _start_signal.send()
     proj = _get_proj_handle()
     proj.run()
 
@@ -407,12 +414,7 @@ def stop_project():
         _game_stopped = True
     _watch_kill_permanently()
 
-def _qinvoke(fn, *args) -> None:
-    # if we're running on the action queue thread, we can just do it directly
-    if _action_queue_thread_id == _threading.current_thread().ident:
-        fn(*args)
-        return
-
+def _qinvoke_defer(fn, *args) -> None:
     _action_queue.put((fn, args))
 
 def _qinvoke_wait(fn, *args) -> Any:
@@ -635,16 +637,14 @@ class TurtleBase(_Ref):
         self.__proj.register_entity(self)
 
     def __clone_from(self, src):
-        def batcher():
-            self.__raw_set_pos(*src.pos)        # avoid motion sleep
-            self.degrees = src.degrees          # needed for heading
-            self.__raw_set_heading(src.heading) # avoid motion sleep
-            self.visible = src.visible
-            self.costume = src.costume
-            self.pen_size = src.pen_size
-            self.pen_color = src.pen_color
-            self.drawing = src.drawing
-        _qinvoke_wait(batcher)
+        self.__raw_set_pos(*src.pos)        # avoid motion sleep
+        self.degrees = src.degrees          # needed for heading
+        self.__raw_set_heading(src.heading) # avoid motion sleep
+        self.visible = src.visible
+        self.costume = src.costume
+        self.pen_size = src.pen_size
+        self.pen_color = src.pen_color
+        self.drawing = src.drawing
 
     def __update_costume(self):
         src = self.__costume # grab this so it can't change during evaluation (used multiple times)
@@ -1260,7 +1260,6 @@ _watch_watchers = {}
 _watch_changed = False
 _watch_started = False
 _watch_killed_permanently = False
-_watch_critical = _threading.Lock()
 def _watch_update() -> None:
     global _watch_tk, _watch_watchers, _watch_changed, _watch_tree
     if not _watch_changed and len(_watch_watchers) == 0: return
@@ -1320,10 +1319,8 @@ def _watch_update() -> None:
 
 def _watch_start():
     global _watch_started
-    if _watch_started: return # double-checked lock for speed
-    with _watch_critical:
-        if _watch_started: return
-        _watch_started = True
+    if _watch_started: return
+    _watch_started = True # no lock needed cause watch functions are all on the ui thread
 
     if _watch_killed_permanently: return
 
@@ -1351,7 +1348,7 @@ def _watch_add(name: str, getter: Callable, setter: Union[Callable, None]) -> No
     _watch_changed = True
     _watch_start()
 
-def watch(name: str, *, getter: Union[Callable, None] = None, setter: Union[Callable, None] = None) -> None:
+def watch(name: str, *, getter: Optional[Callable] = None, setter: Optional[Callable] = None) -> None:
     '''
     Registers a variable watcher with the given name, which should not already be taken by another watcher.
     If getter is specified, the watcher will watch the value returned by getter (see below).
@@ -1367,7 +1364,7 @@ def watch(name: str, *, getter: Union[Callable, None] = None, setter: Union[Call
         their_globals = _inspect.stack()[1][0].f_globals
         their_globals[name] # make sure a global with that name exists
         getter = lambda: their_globals[name]
-    _qinvoke(_watch_add, name, getter, setter)
+    _qinvoke_defer(_watch_add, name, getter, setter)
 
 _did_setup_stdio = False
 _print_lock = _threading.Lock()
@@ -1376,12 +1373,9 @@ def setup_stdio():
     if _did_setup_stdio: return
     _did_setup_stdio = True
 
-    def new_input(prompt: Any = '?') -> str:
-        def asker():
-            res = _turtle.textinput('User Input', str(prompt))
-            _turtle.listen()
-            return res
-        return _qinvoke_wait(asker)
+    def new_input(prompt: Any = '?') -> Optional[str]:
+        prompt = str(prompt)
+        return _qinvoke_wait(lambda: _simpledialog.askstring(title = 'User Input', prompt = prompt))
     _builtins.input = new_input
 
     old_print = print

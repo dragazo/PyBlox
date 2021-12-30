@@ -26,7 +26,6 @@ setup(
         'numpy',
         'parso',
         'jedi',
-        'mss',
     ],
     classifiers = [
         'Development Status :: 1 - Planning',
