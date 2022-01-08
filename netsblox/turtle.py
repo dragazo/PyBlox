@@ -489,7 +489,7 @@ class StageBase(_Ref):
     ```
     @stage
     class MyStage(StageBase):
-        @onstart
+        @onstart()
         def start(self):
             pass
 
@@ -622,7 +622,7 @@ class TurtleBase(_Ref):
     ```
     @turtle
     class MyTurtle(TurtleBase):
-        @onstart
+        @onstart()
         def start(self):
             self.forward(75)
 
@@ -1123,12 +1123,12 @@ def turtle(cls):
     The `@turtle` decorator for a class creates a new type of turtle.
     This should be used in conjunction with the `TurtleBase` base class.
 
-    You can use the `@onstart` decorator on any method definition to make it run when a turtle of this type is created.
+    You can use the `@onstart()` decorator on any method definition to make it run when a turtle of this type is created.
 
     ```
     @turtle
     class MyTurtle(TurtleBase):
-        @onstart
+        @onstart()
         def start(self):
             self.forward(75)
 
@@ -1144,12 +1144,12 @@ def stage(cls):
     Stages function much like the stage in NetsBlox - equivalent to a sprite/turtle except with no movement controls.
     Unlike in NetsBlox, you may create multiple instances of a stage, or even multiple types of stages.
 
-    You can use the `@onstart` decorator on any method definition to make it run when a stage of this type is created.
+    You can use the `@onstart()` decorator on any method definition to make it run when a stage of this type is created.
 
     ```
     @stage
     class MyStage(StageBase):
-        @onstart
+        @onstart()
         def start(self):
             print('stage starting')
     ```
@@ -1191,7 +1191,7 @@ def onstart(*, when: str = 'original'):
     '''
     if when not in ['original', 'clone']:
         raise ValueError(f'Unknown @onstart() when mode - got "{when}", expected "original" or "clone"')
-    return _add_gui_event_wrapper('__run_on_start', _start_safe_thread, [when])
+    return _add_gui_event_wrapper('__run_on_start', lambda _, f: _start_safe_thread(f), [when])
 
 _KEYSYM_MAPS = { # anything not listed here passes through as-is (lower case)
     'up arrow': ['up'],

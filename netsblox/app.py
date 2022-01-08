@@ -679,7 +679,7 @@ class ProjectEditor(tk.Frame):
         return ''.join(scripts)
 
     DEFAULT_GLOBAL_BLOCKS = [
-        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef my_onstart(): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart()\ndef my_onstart(): # functions need different names\n    pass # replace with your code' },
         { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(): # functions need different names\n    pass # replace with your code' },
         { 'url': f'{IMG_ROOT}/blocks/msgrecv-snap.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(msg): # functions need different names\n    pass # replace with your code' },
         { 'url': f'{IMG_ROOT}/blocks/sendmsg-snap.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
@@ -692,9 +692,9 @@ class ProjectEditor(tk.Frame):
         { 'url': f'{IMG_ROOT}/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in my_list:\n    pass # replace with your code' },
     ]
     DEFAULT_STAGE_BLOCKS = [
-        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef my_onstart(self): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart()\ndef my_onstart(self): # functions need different names\n    pass # replace with your code' },
         { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick()\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code' },
         { 'url': f'{IMG_ROOT}/blocks/msgrecv-snap.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
         { 'url': f'{IMG_ROOT}/blocks/sendmsg-snap.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
         { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
@@ -706,10 +706,10 @@ class ProjectEditor(tk.Frame):
         { 'url': f'{IMG_ROOT}/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in my_list:\n    pass # replace with your code' },
     ]
     DEFAULT_TURTLE_BLOCKS = [
-        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart\ndef my_onstart(self): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/onstartclone.png', 'scale': 1, 'replace': '@onstartclone\ndef my_onstartclone(self): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart()\ndef my_onstart(self): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/onstartclone.png', 'scale': 1, 'replace': '@onstart(when = \'clone\')\ndef my_onstartclone(self): # functions need different names\n    pass # replace with your code' },
         { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick()\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code' },
         { 'url': f'{IMG_ROOT}/blocks/msgrecv-snap.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
         { 'url': f'{IMG_ROOT}/blocks/sendmsg-snap.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
         { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
@@ -906,15 +906,21 @@ class ChangedText(tk.Text):
         return result # return what the actual widget returned
 
 class ScrolledText(tk.Frame):
-    def __init__(self, parent, *, readonly = False, linenumbers = False, blocks = [], **kwargs):
+    def __init__(self, parent, *, wrap = True, readonly = False, linenumbers = False, blocks = [], **kwargs):
         super().__init__(parent)
         undo_args = { 'undo': True, 'maxundo': -1, 'autoseparators': True }
 
         self.font = tkfont.nametofont('TkFixedFont')
 
         self.scrollbar = ttk.Scrollbar(self)
-        self.text = ChangedText(self, font = self.font, yscrollcommand = self.scrollbar.set, **({} if readonly else undo_args), **kwargs)
+        self.text = ChangedText(self, font = self.font, yscrollcommand = self.scrollbar.set, wrap = tk.WORD if wrap else tk.NONE, **({} if readonly else undo_args), **kwargs)
         self.scrollbar.config(command = self.text.yview)
+
+        self.hscrollbar = None
+        if not wrap:
+            self.hscrollbar = ttk.Scrollbar(self, orient = 'horizontal')
+            self.text.config(xscrollcommand = self.hscrollbar.set)
+            self.hscrollbar.config(command = self.text.xview)
 
         self.custom_on_change = []
 
@@ -982,7 +988,7 @@ class ScrolledText(tk.Frame):
         self.update_pack()
 
     def update_pack(self):
-        for item in [self.scrollbar, self.blocks, self.linenumbers, self.text]:
+        for item in [self.scrollbar, self.hscrollbar, self.blocks, self.linenumbers, self.text]:
             if item is not None: item.pack_forget()
 
         self.scrollbar.pack(side = tk.RIGHT, fill = tk.Y)
@@ -990,6 +996,8 @@ class ScrolledText(tk.Frame):
             self.blocks.pack(side = tk.LEFT, fill = tk.Y)
         if self.linenumbers is not None:
             self.linenumbers.pack(side = tk.LEFT, fill = tk.Y)
+        if self.hscrollbar is not None:
+            self.hscrollbar.pack(side = tk.BOTTOM, fill = tk.X)
         self.text.pack(side = tk.RIGHT, fill = tk.BOTH, expand = True)
 
         self.update() # needed on mac
@@ -1005,8 +1013,8 @@ class ScrolledText(tk.Frame):
         self.text.insert('1.0', txt)
 
 class CodeEditor(ScrolledText):
-    def __init__(self, parent, *, column_offset = 0, **kwargs):
-        super().__init__(parent, linenumbers = True, **kwargs)
+    def __init__(self, parent, *, wrap = False, column_offset = 0, **kwargs):
+        super().__init__(parent, linenumbers = True, wrap = wrap, **kwargs)
         self.__line_count = None
         self.column_offset = column_offset
         self.help_popup = None
