@@ -1,15 +1,22 @@
 #!/user/bin/env python
 
+import netsblox as _netsblox
+
 import randomname as _randomname
+import threading as _threading
 import requests as _requests
 import inspect as _inspect
 import base64 as _base64
 import json as _json
+import sys as _sys
 import io as _io
+import os as _os
 
-from PIL import Image as _Image
+from PIL import Image as _Image, ImageTk as _ImageTk
 
 from typing import Tuple, List
+
+_NETSBLOX_PY_PATH = _os.path.dirname(_netsblox.__file__)
 
 class UnavailableService(Exception):
     pass
@@ -19,6 +26,38 @@ class InvokeError(Exception):
     pass
 class ServerError(Exception):
     pass
+
+def scale_image(img: _Image.Image, scale: float = 1) -> _Image.Image:
+    if scale == 1: return img
+    new_size = tuple(round(v * scale) for v in img.size)
+    return img.resize(new_size, resample = _Image.ANTIALIAS)
+
+_img_lock = _threading.Lock()
+_img_cache = {}
+_error_image = _Image.new('RGB', (50, 50), (252, 3, 244))
+def load_image(uri: str) -> _Image.Image:
+    img = _error_image
+    protocol = uri[:uri.find('://')]
+    with _img_lock:
+        if uri in _img_cache:
+            return _img_cache[uri]
+        elif protocol == 'netsblox':
+            print('file loading', uri)
+            img = _Image.open(f'{_NETSBLOX_PY_PATH}/{uri[11:]}')
+        elif protocol in ['https', 'http']:
+            print('downloading', uri)
+            res = _requests.get(uri)
+            if res.status_code == 200:
+                img = _Image.open(_io.BytesIO(res.content))
+            else:
+                print(f'Failed to load image {uri} (error code {res.status_code})\n\nMake sure the web host allows direct downloads.', file = _sys.stderr)
+        else:
+            print(f'Failed to load image {uri} (unknown protocol)', file = _sys.stderr)
+
+        _img_cache[uri] = img
+        return img
+def load_tkimage(uri: str, *, scale: float = 1) -> _ImageTk.PhotoImage:
+    return _ImageTk.PhotoImage(scale_image(load_image(uri), scale))
 
 def generate_proj_id() -> str:
     return f'py-{_randomname.get_name()}'

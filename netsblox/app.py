@@ -29,8 +29,6 @@ from netsblox import common
 
 NETSBLOX_PY_PATH = os.path.dirname(netsblox.__file__)
 
-IMG_ROOT = 'https://raw.githubusercontent.com/dragazo/NetsBlox-python/master/img'
-
 SUGGESTION_UPDATE_INTERVAL = 200
 
 xux = lambda x: f'{x} {x.upper()}'
@@ -230,28 +228,6 @@ def clean_docstring(content: str) -> str:
     res = re.sub(INLINE_CODE_REGEX, r'\1', res)
     return res
 
-_img_cache = {}
-_error_image = Image.new('RGB', (50, 50), (252, 3, 244))
-def load_image(img_url: str, *, scale: float = 1):
-    if img_url in _img_cache:
-        return _img_cache[img_url]
-
-    res = requests.get(img_url)
-    img = _error_image # defualt to error image
-    if res.status_code == 200:
-        img = Image.open(io.BytesIO(res.content))
-    else:
-        title = 'Failed to Load Image'
-        msg = f'Failed to load image {img_url} (error code {res.status_code})\n\nMake sure the web host allows direct downloads.'
-        messagebox.showerror(title, msg)
-
-    if scale != 1:
-        img = img.resize((round(img.width * scale), round(img.height * scale)))
-
-    img = ImageTk.PhotoImage(img)
-    _img_cache[img_url] = img
-    return img
-
 _exec_monitor_running = False
 def start_exec_monitor():
     global _exec_monitor_running, _exec_process
@@ -410,7 +386,7 @@ class BlocksList(tk.Frame):
 
         self.imgs = [] # for some reason we need to keep a reference to the images or they disappear
         for block in blocks:
-            img = load_image(block['url'], scale = block['scale'])
+            img = common.load_tkimage(block['url'], scale = block['scale'])
             label = tk.Label(self.text, image = img, bg = COLOR_INFO['text-background-disabled'])
 
             self.text.window_create('end', window = label)
@@ -679,46 +655,46 @@ class ProjectEditor(tk.Frame):
         return ''.join(scripts)
 
     DEFAULT_GLOBAL_BLOCKS = [
-        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart()\ndef my_onstart(): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/msgrecv-snap.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(msg): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/sendmsg-snap.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
-        { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/onstart.png', 'scale': 1, 'replace': '@onstart()\ndef my_onstart(): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/msgrecv-snap.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(msg): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/sendmsg-snap.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
+        { 'url': f'netsblox://assets/img/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
 
-        { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass # replace with your code' },
 
-        { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(msg): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
-        { 'url': f'{IMG_ROOT}/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in my_list:\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(msg): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
+        { 'url': f'netsblox://assets/img/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in my_list:\n    pass # replace with your code' },
     ]
     DEFAULT_STAGE_BLOCKS = [
-        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart()\ndef my_onstart(self): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick()\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/msgrecv-snap.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/sendmsg-snap.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
-        { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/onstart.png', 'scale': 1, 'replace': '@onstart()\ndef my_onstart(self): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/onclick.png', 'scale': 1, 'replace': '@onclick()\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/msgrecv-snap.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/sendmsg-snap.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
+        { 'url': f'netsblox://assets/img/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
 
-        { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass # replace with your code' },
 
-        { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
-        { 'url': f'{IMG_ROOT}/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in my_list:\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
+        { 'url': f'netsblox://assets/img/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in my_list:\n    pass # replace with your code' },
     ]
     DEFAULT_TURTLE_BLOCKS = [
-        { 'url': f'{IMG_ROOT}/blocks/onstart.png', 'scale': 1, 'replace': '@onstart()\ndef my_onstart(self): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/onstartclone.png', 'scale': 1, 'replace': '@onstart(when = \'clone\')\ndef my_onstartclone(self): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/onclick.png', 'scale': 1, 'replace': '@onclick()\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/msgrecv-snap.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/sendmsg-snap.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
-        { 'url': f'{IMG_ROOT}/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/onstart.png', 'scale': 1, 'replace': '@onstart()\ndef my_onstart(self): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/onstartclone.png', 'scale': 1, 'replace': '@onstart(when = \'clone\')\ndef my_onstartclone(self): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/onclick.png', 'scale': 1, 'replace': '@onclick()\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/msgrecv-snap.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/sendmsg-snap.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
+        { 'url': f'netsblox://assets/img/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
 
-        { 'url': f'{IMG_ROOT}/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass # replace with your code' },
 
-        { 'url': f'{IMG_ROOT}/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'{IMG_ROOT}/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
-        { 'url': f'{IMG_ROOT}/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in my_list:\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
+        { 'url': f'netsblox://assets/img/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
+        { 'url': f'netsblox://assets/img/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in my_list:\n    pass # replace with your code' },
     ]
     DEFAULT_PROJECT = {
         'global_blocks': DEFAULT_GLOBAL_BLOCKS,
@@ -1659,7 +1635,7 @@ def main():
     style = ttk.Style(root)
     style.configure('TNotebook', tabposition = 'n')
 
-    logo = load_image(f'{IMG_ROOT}/logo/logo-256.png')
+    logo = common.load_tkimage(f'netsblox://assets/img/logo/logo-256.png')
     root.iconphoto(True, logo)
 
     content = Content(root)

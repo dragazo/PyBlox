@@ -14,48 +14,28 @@ import copy as _copy
 import math as _math
 import time as _time
 import sys as _sys
-import os as _os
 
 import numpy as _np
 
-import netsblox as _netsblox
 import netsblox.common as _common
 import netsblox.events as _events
 import netsblox.colors as _colors
 import netsblox.concurrency as _concurrency
 
-from typing import Any, Union, Tuple, Iterable, Optional, List, Callable
+from typing import Any, Union, Tuple, Optional, List, Callable
 
 from PIL import Image, ImageTk, ImageDraw, ImageFont
 
-_NETSBLOX_PY_PATH = _os.path.dirname(_netsblox.__file__)
-
-_FONT_SRC = { # maps (weight, italics) to the font source file
-    (1, False): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-ExtraLight.otf',
-    (1, True): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-ExtraLightIt.otf',
-    (2, False): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Light.otf',
-    (2, True): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-LightIt.otf',
-    (3, False): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Regular.otf',
-    (3, True): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-It.otf',
-    (4, False): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Medium.otf',
-    (4, True): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-MediumIt.otf',
-    (5, False): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Semibold.otf',
-    (5, True): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-SemiboldIt.otf',
-    (6, False): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Bold.otf',
-    (6, True): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-BoldIt.otf',
-    (7, False): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-Black.otf',
-    (7, True): f'{_NETSBLOX_PY_PATH}/fonts/SourceCode/SourceCodePro-BlackIt.otf',
-}
-_CACHED_FONTS = {}
+_FONT_SRC = f'{_common._NETSBLOX_PY_PATH}/assets/fonts/Droid/DroidSansFallback.ttf'
 _FONT_LOCK = _threading.Lock()
-def _get_font(*, weight: int, italics: bool) -> ImageFont.ImageFont:
-    if weight < 1 or weight > 7:
-        raise ValueError(f'Invalid font weight: expected an integer 1-7, got {weight}')
-    key = (weight, italics)
+_CACHED_FONT = None
+def _get_font() -> ImageFont.ImageFont:
+    global _CACHED_FONT
+    if _CACHED_FONT is not None: return _CACHED_FONT
     with _FONT_LOCK:
-        if key in _CACHED_FONTS: return _CACHED_FONTS[key]
-        _CACHED_FONTS[key] = ImageFont.truetype(_FONT_SRC[key])
-        return _CACHED_FONTS[key]
+        if _CACHED_FONT is not None: return _CACHED_FONT
+        _CACHED_FONT = ImageFont.truetype(_FONT_SRC)
+        return _CACHED_FONT
 
 _RENDER_PERIOD = 16 # time between frames in ms
 _SAY_PAGINATE_LEN = 30 # max length of a paginated line in turtle.say()
@@ -91,10 +71,10 @@ def _intersects(a: Tuple[Image.Image, int, int], b: Tuple[Image.Image, int, int]
 
     return _np.bitwise_and(_np.array(base) >= _VIS_THRESH, _np.array(other_trans) >= _VIS_THRESH).any()
 
-def _render_text(text: str, size: float, weight: float, italics: bool, color: Tuple[int, int, int]) -> Image.Image:
-    font = _get_font(weight = round(weight), italics = bool(italics)).font_variant(size = round(1.5 * size))
+def _render_text(text: str, size: float, color: Tuple[int, int, int]) -> Image.Image:
+    font = _get_font().font_variant(size = round(1.5 * size))
 
-    text_mask = font.getmask(text, mode = 'L')
+    text_mask = font.getmask(text, mode = 'L', features = ['aalt'])
     text_mask = Image.frombytes('L', text_mask.size, _np.array(text_mask).astype(_np.uint8)) # convert ImagingCore to Image
     text_img = Image.new('RGBA', text_mask.size, color)
     text_img.putalpha(text_mask)
@@ -310,9 +290,9 @@ class _Project:
             if critical is not None: critical()
         self.invalidate()
 
-    def draw_text(self, pos: Tuple[float, float], rot: float, text: str, size: float, weight: float, italics: bool, color: Tuple[int, int, int], *, critical: Optional[Callable] = None) -> float:
+    def draw_text(self, pos: Tuple[float, float], rot: float, text: str, size: float, color: Tuple[int, int, int], *, critical: Optional[Callable] = None) -> float:
         xy2uv = self.get_uv_mapper()
-        text_img = _render_text(text, size, weight, italics, color)
+        text_img = _render_text(text, size, color)
         res = float(text_img.width)
 
         rot_img = text_img.rotate((0.25 - rot) * 360, expand = True)
@@ -965,12 +945,10 @@ class TurtleBase(_Ref):
         '''
         self.__proj.stamp_img((self.__x, self.__y), self.__display_image)
 
-    def write(self, text: str, *, size: float = 12, weight: float = 4, italics: bool = False, move = True):
+    def write(self, text: str, *, size: float = 12, move = True):
         '''
         Draws text onto the background.
         The `size` argument sets the font size of the drawn text.
-        The `weight` argument controls the boldness of the text - this should in the range `[1, 7]`.
-        The `italics` argument allows using italic fonts.
         The `move` argument specifies if the turtle should move to the end of the text after drawing.
 
         Text counts as a drawing, so it can be erased by calling `self.clear()`.
@@ -980,7 +958,7 @@ class TurtleBase(_Ref):
         self.write('small hello world!', size = 8)
         ```
         '''
-        self.__proj.draw_text((self.__x, self.__y), self.__rot, str(text), float(size), float(weight), bool(italics), self.__pen_color, critical = self.forward if move else None)
+        self.__proj.draw_text((self.__x, self.__y), self.__rot, str(text), float(size), self.__pen_color, critical = self.forward if move else None)
 
     def say(self, text: str = '', *, duration: Optional[float] = None) -> None:
         '''
@@ -1005,7 +983,7 @@ class TurtleBase(_Ref):
         lines = _common.paginate_str(text, _SAY_PAGINATE_LEN)
         if len(lines) > _SAY_PAGINATE_MAX_LINES:
             lines = lines[:_SAY_PAGINATE_MAX_LINES-1] + ['...']
-        imgs = [_render_text(x, size = 8, weight = 3, italics = False, color = (0, 0, 0)) for x in lines]
+        imgs = [_render_text(x, size = 8, color = (0, 0, 0)) for x in lines]
         maxw = max(x.width for x in imgs)
         padding = 8
         line_spacing = 3
