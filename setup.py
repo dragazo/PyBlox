@@ -22,7 +22,7 @@ setup(
         'randomname',
         'requests',
         'gelidum',
-        'pillow',
+        'pillow>=8.2', # 8.2 needed for ImageDraw.rounded_rectangle()
         'numpy',
         'parso',
         'jedi',

@@ -1007,11 +1007,13 @@ class TurtleBase(_Ref):
             lines = lines[:_SAY_PAGINATE_MAX_LINES-1] + ['...']
         imgs = [_render_text(x, size = 8, weight = 3, italics = False, color = (0, 0, 0)) for x in lines]
         maxw = max(x.width for x in imgs)
-        padding = 5
+        padding = 8
         line_spacing = 3
 
         res_size = (maxw + 2 * padding, sum(x.height for x in imgs) + max(len(imgs) - 1, 0) * line_spacing + 2 * padding)
-        res = Image.new('RGBA', res_size, color = (255, 255, 255))
+        res = Image.new('RGBA', res_size)
+        draw = ImageDraw.Draw(res)
+        draw.rounded_rectangle((0, 0, res.width - 1, res.height - 1), fill = (255, 255, 255), outline = (150, 150, 150), width = 3, radius = 10)
         hpos = padding
         for img in imgs:
             paste_pos = (round((maxw - img.width) / 2) + padding, hpos)
