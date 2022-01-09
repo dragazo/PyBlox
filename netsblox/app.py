@@ -1656,6 +1656,9 @@ def main():
     root.geometry('1200x600')
     root.minsize(width = 800, height = 400)
 
+    style = ttk.Style(root)
+    style.configure('TNotebook', tabposition = 'n')
+
     logo = load_image(f'{IMG_ROOT}/logo/logo-256.png')
     root.iconphoto(True, logo)
 

@@ -202,6 +202,8 @@ class _Project:
         self.__tk_canvas.bind_all('<Button-1>', lambda e: on_mouse(e, self.__mouse_down_events))
         self.__tk_canvas.bind_all('<ButtonRelease-1>', lambda e: on_mouse(e, self.__mouse_up_events))
 
+        self.__tk_canvas.focus_set() # grab focus so we can get key events (click events work either way)
+
     def get_image(self) -> Image.Image:
         with self.__lock:
             return self.__last_frame.copy()
