@@ -1,6 +1,8 @@
 {
   "blocks": {
-    "sources": ["netsblox://assets/default-blocks.json"], 
+    "sources": [
+      "netsblox://assets/default-blocks.json"
+    ], 
     "global": [], 
     "stage": [], 
     "turtle": []
@@ -21,7 +23,7 @@
     {
       "type": "turtle", 
       "name": "turtle", 
-      "value": "@onstart()\ndef start(self):\n    self.visible = False\n    \n    self.pos = (-430, 120)\n    self.pen_color = 'red'\n    self.write('COVID-19 Daily Cases in NetsBlox-python', size = 24)\n    \n    self.pen_color = 'blue'\n    self.pos = (-350, 60)\n    self.write('Use the arrow keys or wasd to pan and +/- to zoom', size = 16)\n    \n    self.pos = (-320, 20)\n    self.write('When on the map, press Q to search for places', size = 16)\n    \n    self.pos = (-328, -20)\n    self.write('Click on the map to get daily covid statistics', size = 16)\n    \n    self.pos = (-380, -120)\n    self.pen_color = 'red'\n    self.write('Click anywhere or press any key to continue', size = 20)\n\n@onclick(anywhere = True)\n@onkey('any')\ndef do_continue(self, *args):\n    if stage.mode is None:\n        stage.mode = 'Map'\n        self.clear()\n        stage.update_map()\n"
+      "value": "@onstart()\ndef start(self):\n    self.visible = False\n    \n    self.pos = (-340, 120)\n    self.pen_color = 'red'\n    self.write('COVID-19 Daily Cases in NetsBlox-python', size = 24)\n    \n    self.pen_color = 'blue'\n    self.pos = (-280, 60)\n    self.write('Use the arrow keys or wasd to pan and +/- to zoom', size = 16)\n    \n    self.pos = (-255, 20)\n    self.write('When on the map, press Q to search for places', size = 16)\n    \n    self.pos = (-235, -20)\n    self.write('Click on the map to get daily covid statistics', size = 16)\n    \n    self.pos = (-300, -120)\n    self.pen_color = 'red'\n    self.write('Click anywhere or press any key to continue', size = 20)\n\n@onclick(anywhere = True)\n@onkey('any')\ndef do_continue(self, *args):\n    if stage.mode is None:\n        stage.mode = 'Map'\n        self.clear()\n        stage.update_map()\n"
     }, 
     {
       "type": "turtle", 

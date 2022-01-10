@@ -1,6 +1,8 @@
 {
   "blocks": {
-    "sources": ["netsblox://assets/default-blocks.json"], 
+    "sources": [
+      "netsblox://assets/default-blocks.json"
+    ], 
     "global": [], 
     "stage": [], 
     "turtle": []
@@ -21,7 +23,7 @@
     {
       "type": "turtle", 
       "name": "turtle", 
-      "value": "@onstart()\ndef start(self):\n    self.visible = False\n    \n    self.pos = (-415, 120)\n    self.pen_color = 'red'\n    self.write('Google Street View in NetsBlox-python', size = 24)\n    \n    self.pen_color = 'blue'\n    self.pos = (-350, 60)\n    self.write('Use the arrow keys or wasd to pan and +/- to zoom', size = 16)\n    \n    self.pos = (-342, 20)\n    self.write('Press x to toggle between map and satellite view', size = 16)\n    \n    self.pos = (-320, -20)\n    self.write('When on the map, press Q to search for places', size = 16)\n    \n    self.pos = (-250, -60)\n    self.write('Click on the map to get street view', size = 16)\n    \n    self.pos = (-290, -100)\n    self.write('The arrow keys/wasd and +/- work here too', size = 16)\n    \n    self.pos = (-380, -200)\n    self.pen_color = 'red'\n    self.write('Click anywhere or press any key to continue', size = 20)\n\n@onclick(anywhere = True)\n@onkey('any')\ndef do_continue(self, *args):\n    if stage.mode is None:\n        stage.mode = stage.view = 'Map'\n        self.clear()\n        stage.update_map()\n"
+      "value": "@onstart()\ndef start(self):\n    self.visible = False\n    \n    self.pos = (-310, 120)\n    self.pen_color = 'red'\n    self.write('Google Street View in NetsBlox-python', size = 24)\n    \n    self.pen_color = 'blue'\n    self.pos = (-275, 60)\n    self.write('Use the arrow keys or wasd to pan and +/- to zoom', size = 16)\n    \n    self.pos = (-260, 20)\n    self.write('Press x to toggle between map and satellite view', size = 16)\n    \n    self.pos = (-250, -20)\n    self.write('When on the map, press Q to search for places', size = 16)\n    \n    self.pos = (-180, -60)\n    self.write('Click on the map to get street view', size = 16)\n    \n    self.pos = (-230, -100)\n    self.write('The arrow keys/wasd and +/- work here too', size = 16)\n    \n    self.pos = (-300, -200)\n    self.pen_color = 'red'\n    self.write('Click anywhere or press any key to continue', size = 20)\n\n@onclick(anywhere = True)\n@onkey('any')\ndef do_continue(self, *args):\n    if stage.mode is None:\n        stage.mode = stage.view = 'Map'\n        self.clear()\n        stage.update_map()\n"
     }
   ], 
   "images": {}

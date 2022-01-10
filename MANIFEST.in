@@ -1,1 +1,1 @@
-include netsblox/assets/
+recursive-include netsblox/assets/ *
