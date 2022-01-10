@@ -42,10 +42,8 @@ def load_image(uri: str) -> _Image.Image:
         if uri in _img_cache:
             return _img_cache[uri]
         elif protocol == 'netsblox':
-            print('file loading', uri)
             img = _Image.open(f'{_NETSBLOX_PY_PATH}/{uri[11:]}')
         elif protocol in ['https', 'http']:
-            print('downloading', uri)
             res = _requests.get(uri)
             if res.status_code == 200:
                 img = _Image.open(_io.BytesIO(res.content))
@@ -58,6 +56,30 @@ def load_image(uri: str) -> _Image.Image:
         return img
 def load_tkimage(uri: str, *, scale: float = 1) -> _ImageTk.PhotoImage:
     return _ImageTk.PhotoImage(scale_image(load_image(uri), scale))
+
+_text_lock = _threading.Lock()
+_text_cache = {}
+def load_text(uri: str) -> str:
+    txt = None
+    protocol = uri[:uri.find('://')]
+    with _text_lock:
+        if uri in _text_cache:
+            return _text_cache[uri]
+        elif protocol == 'netsblox':
+            with open(f'{_NETSBLOX_PY_PATH}/{uri[11:]}', 'r') as f:
+                txt = f.read()
+        elif protocol in ['https', 'http']:
+            res = _requests.get(uri)
+            if res.status_code == 200:
+                txt = res.content
+            else:
+                raise RuntimeError(f'Failed to download file at {uri} (error code {res.status_code})\n\nMake sure the web host allows direct downloads.')
+        else:
+            raise RuntimeError(f'Failed to download file at {uri} (unknown protocol)')
+
+        assert txt is not None
+        _text_cache[uri] = txt
+        return txt
 
 def generate_proj_id() -> str:
     return f'py-{_randomname.get_name()}'

@@ -654,92 +654,16 @@ class ProjectEditor(tk.Frame):
         scripts.append('start_project()')
         return ''.join(scripts)
 
-    DEFAULT_GLOBAL_BLOCKS = [
-        { 'url': f'netsblox://assets/img/blocks/onstart.png', 'scale': 1, 'replace': '@onstart()\ndef my_onstart(): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'netsblox://assets/img/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'netsblox://assets/img/blocks/msgrecv-snap.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(msg): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'netsblox://assets/img/blocks/sendmsg-snap.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
-        { 'url': f'netsblox://assets/img/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
-
-        { 'url': f'netsblox://assets/img/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass # replace with your code' },
-
-        { 'url': f'netsblox://assets/img/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(msg): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'netsblox://assets/img/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
-        { 'url': f'netsblox://assets/img/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in my_list:\n    pass # replace with your code' },
-    ]
-    DEFAULT_STAGE_BLOCKS = [
-        { 'url': f'netsblox://assets/img/blocks/onstart.png', 'scale': 1, 'replace': '@onstart()\ndef my_onstart(self): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'netsblox://assets/img/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'netsblox://assets/img/blocks/onclick.png', 'scale': 1, 'replace': '@onclick()\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'netsblox://assets/img/blocks/msgrecv-snap.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'netsblox://assets/img/blocks/sendmsg-snap.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
-        { 'url': f'netsblox://assets/img/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
-
-        { 'url': f'netsblox://assets/img/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass # replace with your code' },
-
-        { 'url': f'netsblox://assets/img/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'netsblox://assets/img/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
-        { 'url': f'netsblox://assets/img/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in my_list:\n    pass # replace with your code' },
-    ]
-    DEFAULT_TURTLE_BLOCKS = [
-        { 'url': f'netsblox://assets/img/blocks/onstart.png', 'scale': 1, 'replace': '@onstart()\ndef my_onstart(self): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'netsblox://assets/img/blocks/onstartclone.png', 'scale': 1, 'replace': '@onstart(when = \'clone\')\ndef my_onstartclone(self): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'netsblox://assets/img/blocks/keypress.png', 'scale': 1, 'replace': '@onkey(\'space\')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'netsblox://assets/img/blocks/onclick.png', 'scale': 1, 'replace': '@onclick()\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'netsblox://assets/img/blocks/msgrecv-snap.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'netsblox://assets/img/blocks/sendmsg-snap.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
-        { 'url': f'netsblox://assets/img/blocks/loop-forever.png', 'scale': 1, 'replace': 'while True:\n    pass # replace with your code' },
-
-        { 'url': f'netsblox://assets/img/blocks/warp.png', 'scale': 1, 'replace': 'with Warp():\n    pass # replace with your code' },
-
-        { 'url': f'netsblox://assets/img/blocks/msgrecv.png', 'scale': 1, 'replace': '@nb.on_message(\'message\')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code' },
-        { 'url': f'netsblox://assets/img/blocks/sendmsg.png', 'scale': 1, 'replace': 'nb.send_message(\'message\', \'myself\', msg = \'Hello World!\')' },
-        { 'url': f'netsblox://assets/img/blocks/loop-foreach.png', 'scale': 1, 'replace': 'for item in my_list:\n    pass # replace with your code' },
-    ]
-    DEFAULT_PROJECT = {
-        'global_blocks': DEFAULT_GLOBAL_BLOCKS,
-        'stage_blocks': DEFAULT_STAGE_BLOCKS,
-        'turtle_blocks': DEFAULT_TURTLE_BLOCKS,
-        'show_blocks': True,
-        'editors': [
-            {
-                'type': 'global',
-                'name': 'global',
-                'value': '''
-my_global_var = 'hello world' # create a global variable
-'''.lstrip(),
-            },
-            {
-                'type': 'stage',
-                'name': 'stage',
-                'value': '''
-@onstart
-def my_onstart(self): # functions need different names
-    self.my_list = [1, 2, 3] # create a stage variable
-'''.lstrip(),
-            },
-            {
-                'type': 'turtle',
-                'name': 'sprite',
-                'value': '''
-@onstart
-def my_onstart(self): # functions need different names
-    self.my_distance = 2 # create a sprite variable
-
-    for i in range(360): # repeat code 360 times
-        self.forward(self.my_distance)
-        self.turn_right(1)
-'''.lstrip(),
-            },
-        ],
-        'imports': [],
-    }
+    DEFAULT_PROJECT = json.loads(common.load_text('netsblox://assets/default-project.json'))
 
     def get_save_dict(self) -> dict:
         res = {}
-        res['global_blocks'] = [x.copy() for x in GlobalEditor.blocks]
-        res['stage_blocks'] = [x.copy() for x in  StageEditor.blocks]
-        res['turtle_blocks'] = [x.copy() for x in TurtleEditor.blocks]
+        res['blocks'] = {
+            'sources': self.block_sources[:],
+            'global': [x.copy() for x in GlobalEditor.blocks if x['source'] == None],
+            'stage':  [x.copy() for x in  StageEditor.blocks if x['source'] == None],
+            'turtle': [x.copy() for x in TurtleEditor.blocks if x['source'] == None],
+        }
         res['show_blocks'] = self.show_blocks
         res['imports'] = []
         for pkg, item in self.imports.packages.items():
@@ -760,9 +684,30 @@ def my_onstart(self): # functions need different names
         res['images'] = { name: common.encode_image(img) for name, img in self.imports.images.items() }
         return res
     def load(self, proj: dict) -> None:
-        GlobalEditor.blocks = [x.copy() for x in proj['global_blocks']]
-        StageEditor.blocks = [x.copy() for x in proj['stage_blocks']]
-        TurtleEditor.blocks = [x.copy() for x in proj['turtle_blocks']]
+        new_blocks = { 'global': [], 'stage': [], 'turtle': [] }
+        new_sources = proj.get('blocks', {}).get('sources', [])
+
+        def add_blocks(blocks, *, source):
+            for k, v in blocks.items():
+                target = new_blocks[k]
+                for block in v:
+                    x = block.copy()
+                    x['source'] = source
+                    target.append(x)
+
+        for src in new_sources:
+            add_blocks(json.loads(common.load_text(src)), source = src)
+        add_blocks({ k: v for k, v in proj.get('blocks', {}).items() if k in new_blocks }, source = None)
+        add_blocks({ # legacy support
+            'global': proj.get('global_blocks', []),
+            'stage': proj.get('stage_blocks', []),
+            'turtle': proj.get('turtle_blocks', []),
+        }, source = None)
+
+        GlobalEditor.blocks = new_blocks['global']
+        StageEditor.blocks = new_blocks['stage']
+        TurtleEditor.blocks = new_blocks['turtle']
+        self.block_sources = new_sources
 
         for i in range(len(self.editors) - 1, -1, -1):
             self.notebook.forget(i)

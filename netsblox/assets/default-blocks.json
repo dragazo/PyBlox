@@ -1,0 +1,44 @@
+{
+    "global": [
+        { "url": "netsblox://assets/img/blocks/onstart.png", "scale": 1, "replace": "@onstart()\ndef my_onstart(): # functions need different names\n    pass # replace with your code" },
+        { "url": "netsblox://assets/img/blocks/keypress.png", "scale": 1, "replace": "@onkey('space')\ndef my_onkey(): # functions need different names\n    pass # replace with your code" },
+        { "url": "netsblox://assets/img/blocks/msgrecv-snap.png", "scale": 1, "replace": "@nb.on_message('message')\ndef my_on_message(msg): # functions need different names\n    pass # replace with your code" },
+        { "url": "netsblox://assets/img/blocks/sendmsg-snap.png", "scale": 1, "replace": "nb.send_message('message', 'myself', msg = 'Hello World!')" },
+        { "url": "netsblox://assets/img/blocks/loop-forever.png", "scale": 1, "replace": "while True:\n    pass # replace with your code" },
+
+        { "url": "netsblox://assets/img/blocks/warp.png", "scale": 1, "replace": "with Warp():\n    pass # replace with your code" },
+
+        { "url": "netsblox://assets/img/blocks/msgrecv.png", "scale": 1, "replace": "@nb.on_message('message')\ndef my_on_message(msg): # functions need different names\n    pass # replace with your code" },
+        { "url": "netsblox://assets/img/blocks/sendmsg.png", "scale": 1, "replace": "nb.send_message('message', 'myself', msg = 'Hello World!')" },
+        { "url": "netsblox://assets/img/blocks/loop-foreach.png", "scale": 1, "replace": "for item in my_list:\n    pass # replace with your code" }
+    ],
+    "stage": [
+        { "url": "netsblox://assets/img/blocks/onstart.png", "scale": 1, "replace": "@onstart()\ndef my_onstart(self): # functions need different names\n    pass # replace with your code" },
+        { "url": "netsblox://assets/img/blocks/keypress.png", "scale": 1, "replace": "@onkey('space')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code" },
+        { "url": "netsblox://assets/img/blocks/onclick.png", "scale": 1, "replace": "@onclick()\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code" },
+        { "url": "netsblox://assets/img/blocks/msgrecv-snap.png", "scale": 1, "replace": "@nb.on_message('message')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code" },
+        { "url": "netsblox://assets/img/blocks/sendmsg-snap.png", "scale": 1, "replace": "nb.send_message('message', 'myself', msg = 'Hello World!')" },
+        { "url": "netsblox://assets/img/blocks/loop-forever.png", "scale": 1, "replace": "while True:\n    pass # replace with your code" },
+
+        { "url": "netsblox://assets/img/blocks/warp.png", "scale": 1, "replace": "with Warp():\n    pass # replace with your code" },
+
+        { "url": "netsblox://assets/img/blocks/msgrecv.png", "scale": 1, "replace": "@nb.on_message('message')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code" },
+        { "url": "netsblox://assets/img/blocks/sendmsg.png", "scale": 1, "replace": "nb.send_message('message', 'myself', msg = 'Hello World!')" },
+        { "url": "netsblox://assets/img/blocks/loop-foreach.png", "scale": 1, "replace": "for item in my_list:\n    pass # replace with your code" }
+    ],
+    "turtle": [
+        { "url": "netsblox://assets/img/blocks/onstart.png", "scale": 1, "replace": "@onstart()\ndef my_onstart(self): # functions need different names\n    pass # replace with your code" },
+        { "url": "netsblox://assets/img/blocks/onstartclone.png", "scale": 1, "replace": "@onstart(when = 'clone')\ndef my_onstartclone(self): # functions need different names\n    pass # replace with your code" },
+        { "url": "netsblox://assets/img/blocks/keypress.png", "scale": 1, "replace": "@onkey('space')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code" },
+        { "url": "netsblox://assets/img/blocks/onclick.png", "scale": 1, "replace": "@onclick()\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code" },
+        { "url": "netsblox://assets/img/blocks/msgrecv-snap.png", "scale": 1, "replace": "@nb.on_message('message')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code" },
+        { "url": "netsblox://assets/img/blocks/sendmsg-snap.png", "scale": 1, "replace": "nb.send_message('message', 'myself', msg = 'Hello World!')" },
+        { "url": "netsblox://assets/img/blocks/loop-forever.png", "scale": 1, "replace": "while True:\n    pass # replace with your code" },
+
+        { "url": "netsblox://assets/img/blocks/warp.png", "scale": 1, "replace": "with Warp():\n    pass # replace with your code" },
+
+        { "url": "netsblox://assets/img/blocks/msgrecv.png", "scale": 1, "replace": "@nb.on_message('message')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code" },
+        { "url": "netsblox://assets/img/blocks/sendmsg.png", "scale": 1, "replace": "nb.send_message('message', 'myself', msg = 'Hello World!')" },
+        { "url": "netsblox://assets/img/blocks/loop-foreach.png", "scale": 1, "replace": "for item in my_list:\n    pass # replace with your code" }
+    ]
+}
