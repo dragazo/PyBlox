@@ -1,13 +1,14 @@
 {
+    "block_sources": [
+        "netsblox://assets/default-blocks.json"
+    ],
     "blocks": {
-        "sources": [
-            "netsblox://assets/default-blocks.json"
-        ],
-        "global": [],
-        "stage": [],
+        "global": [], 
+        "stage": [], 
         "turtle": []
     },
     "show_blocks": true,
+    "imports": [],
     "editors": [
         {
             "type": "global",
@@ -22,8 +23,8 @@
         {
             "type": "turtle",
             "name": "sprite",
-            "value": "@onstart\ndef my_onstart(self): # functions need different names\n    self.my_distance = 2 # create a sprite variable\n\n    for i in range(360): # repeat code 360 times\n        self.forward(self.my_distance)        self.turn_right(1)"
+            "value": "@onstart\ndef my_onstart(self): # functions need different names\n    self.my_distance = 2 # create a sprite variable\n\n    for i in range(360): # repeat code 360 times\n        self.forward(self.my_distance)\n        self.turn_right(1)"
         }
     ],
-    "imports": []
+    "images": {}
 }

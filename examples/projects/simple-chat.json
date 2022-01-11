@@ -1,6 +1,8 @@
 {
+  "block_sources": [
+    "netsblox://assets/default-blocks.json"
+  ],
   "blocks": {
-    "sources": ["netsblox://assets/default-blocks.json"], 
     "global": [], 
     "stage": [], 
     "turtle": []

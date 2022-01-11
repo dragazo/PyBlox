@@ -21,7 +21,7 @@ import os
 
 from PIL import Image, ImageTk
 
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Optional
 
 import netsblox
 from netsblox import transform
@@ -517,6 +517,8 @@ class ProjectEditor(tk.Frame):
         # it is not stored in project files or exports because conflicting ids would break messaging.
         self.project_id = common.generate_proj_id()
 
+        self.block_sources = []
+
         self.editors: List[CodeEditor] = []
         self.show_blocks_tkvar = tk.BooleanVar()
 
@@ -658,8 +660,8 @@ class ProjectEditor(tk.Frame):
 
     def get_save_dict(self) -> dict:
         res = {}
+        res['block_sources'] = self.block_sources[:]
         res['blocks'] = {
-            'sources': self.block_sources[:],
             'global': [x.copy() for x in GlobalEditor.blocks if x['source'] == None],
             'stage':  [x.copy() for x in  StageEditor.blocks if x['source'] == None],
             'turtle': [x.copy() for x in TurtleEditor.blocks if x['source'] == None],
@@ -685,7 +687,7 @@ class ProjectEditor(tk.Frame):
         return res
     def load(self, proj: dict) -> None:
         new_blocks = { 'global': [], 'stage': [], 'turtle': [] }
-        new_sources = proj.get('blocks', {}).get('sources', [])
+        new_sources = proj.get('block_sources', [])
 
         def add_blocks(blocks, *, source):
             for k, v in blocks.items():
@@ -697,7 +699,7 @@ class ProjectEditor(tk.Frame):
 
         for src in new_sources:
             add_blocks(json.loads(common.load_text(src)), source = src)
-        add_blocks({ k: v for k, v in proj.get('blocks', {}).items() if k in new_blocks }, source = None)
+        add_blocks(proj.get('blocks', {}), source = None)
         add_blocks({ # legacy support
             'global': proj.get('global_blocks', []),
             'stage': proj.get('stage_blocks', []),
@@ -1306,7 +1308,7 @@ class TerminalOutput(tk.Frame):
                     self.old.write(data)
                     self.old.flush()
                 _print_queue.put(data)
-            
+
             def flush(self):
                 pass
             def __len__(self):
@@ -1359,8 +1361,20 @@ class MainMenu(tk.Menu):
         root.protocol('WM_DELETE_WINDOW', kill)
 
         submenu = tk.Menu(self, **MENU_STYLE)
-        submenu.add_command(label = 'New', command = self.new_project, accelerator = f'{SYS_INFO["mod-str"]}+N')
+        submenu.add_command(label = 'New', command = lambda: self.open_project(proj = ProjectEditor.DEFAULT_PROJECT), accelerator = f'{SYS_INFO["mod-str"]}+N')
         submenu.add_command(label = 'Open', command = self.open_project, accelerator = f'{SYS_INFO["mod-str"]}+O')
+
+        subsubmenu = tk.Menu(submenu, **MENU_STYLE)
+        for file in sorted(os.listdir(f'{common._NETSBLOX_PY_PATH}/assets/examples/')):
+            def make_opener(file):
+                def opener():
+                    with open(f'{common._NETSBLOX_PY_PATH}/assets/examples/{file}') as f:
+                        content = json.load(f) # don't cache projects (could be large)
+                    self.open_project(proj = content)
+                return opener
+            subsubmenu.add_command(label = file[:-5], command = make_opener(file))
+
+        submenu.add_cascade(label = 'Example', menu = subsubmenu)
         submenu.add_separator()
         submenu.add_command(label = 'Save', command = self.save, accelerator = f'{SYS_INFO["mod-str"]}+S')
         submenu.add_command(label = 'Save As', command = self.save_as, accelerator = f'Shift+{SYS_INFO["mod-str"]}+S')
@@ -1370,7 +1384,7 @@ class MainMenu(tk.Menu):
         submenu.add_command(label = 'Exit', command = kill)
         self.add_cascade(label = 'File', menu = submenu)
 
-        root.bind_all(f'<{SYS_INFO["mod"]}-n>', lambda e: self.new_project())
+        root.bind_all(f'<{SYS_INFO["mod"]}-n>', lambda e: self.open_project(proj = ProjectEditor.DEFAULT_PROJECT))
         root.bind_all(f'<{SYS_INFO["mod"]}-o>', lambda e: self.open_project())
         root.bind_all(f'<{SYS_INFO["mod"]}-s>', lambda e: self.save())
         root.bind_all(f'<{SYS_INFO["mod"]}-S>', lambda e: self.save_as())
@@ -1471,38 +1485,35 @@ class MainMenu(tk.Menu):
             except Exception as e:
                 messagebox.showerror('Failed to save exported project', str(e))
 
-    def new_project(self):
-        if not self.try_close_project():
-            return
-
-        content.project.load(ProjectEditor.DEFAULT_PROJECT)
-        self.project_path = None
-        self.saved_project_dict = None
-
-    def open_project(self):
+    def open_project(self, *, proj: Optional[dict] = None):
         content.project.on_tab_change()
 
         if not self.try_close_project():
             return
 
-        p = filedialog.askopenfilename(filetypes = PROJECT_FILETYPES)
-        if type(p) is not str or not p:
-            return
-
         rstor = None
+        p = None
         try:
-            with open(p, 'r') as f:
-                proj = json.load(f)
-                rstor = content.project.get_save_dict() # in case load fails
-                content.project.load(proj)
-                self.project_path = p
-                self.saved_project_dict = proj
+            if proj is None:
+                p = filedialog.askopenfilename(filetypes = PROJECT_FILETYPES)
+                if type(p) is not str or not p:
+                    return
+                with open(p, 'r') as f:
+                    proj = json.load(f)
+
+            rstor = content.project.get_save_dict() # in case load fails
+            content.project.load(proj)
+            self.saved_project_dict = proj
+            self.project_path = p
         except Exception as e:
             messagebox.showerror('Failed to load project', str(e))
             if rstor is not None:
                 content.project.load(rstor)
 
     def try_close_project(self) -> bool: # true if user accepted close
+        if self.saved_project_dict is None:
+            return True # fires (only) on first initialization
+
         save_dict = content.project.get_save_dict()
         if save_dict == self.saved_project_dict:
             return True # if saved project content is equal, no need to do anything
@@ -1587,13 +1598,12 @@ def main():
     main_menu = MainMenu(root)
 
     if len(sys.argv) <= 1:
-        content.project.load(ProjectEditor.DEFAULT_PROJECT)
+        main_menu.open_project(proj = ProjectEditor.DEFAULT_PROJECT)
     elif len(sys.argv) == 2:
         with open(sys.argv[1], 'r') as f:
             save_dict = json.load(f)
-            content.project.load(save_dict)
-            main_menu.project_path = os.path.abspath(sys.argv[1])
-            main_menu.saved_project_dict = save_dict
+        main_menu.open_project(proj = save_dict)
+        main_menu.project_path = os.path.abspath(sys.argv[1])
     else:
         print(f'usage: {sys.argv[0]} (project)', file = sys.stderr)
         sys.exit(1)
