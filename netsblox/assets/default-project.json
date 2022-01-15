@@ -13,17 +13,17 @@
         {
             "type": "global",
             "name": "global",
-            "value": "my_global_var = 'hello world' # create a global variable"
+            "value": "my_global_var = 'hello world' # create a global variable\n"
         },
         {
             "type": "stage",
             "name": "stage",
-            "value": "@onstart\ndef my_onstart(self): # functions need different names\n    self.my_list = [1, 2, 3] # create a stage variable"
+            "value": ""
         },
         {
             "type": "turtle",
             "name": "sprite",
-            "value": "@onstart\ndef my_onstart(self): # functions need different names\n    self.my_distance = 2 # create a sprite variable\n\n    for i in range(360): # repeat code 360 times\n        self.forward(self.my_distance)\n        self.turn_right(1)"
+            "value": "@onstart()\ndef my_onstart(self): # functions need different names\n    for i in range(120): # repeat code 120 times\n        self.forward(4)\n        self.turn_right(3)\n"
         }
     ],
     "images": {}
