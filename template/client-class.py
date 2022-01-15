@@ -257,12 +257,37 @@ $service_instances
             return f
         return wrapper
 
-    def _call(self, service, rpc, payload):
-        payload = { k: _common.prep_send(v) for k,v in payload.items() }
+    def call(self, service: str, rpc: str, arguments: dict = {}, **kwargs):
+        '''
+        Directly calls the specified NetsBlox RPC based on its name.
+        This is needed to access unofficial or dynamically-generated (like create-a-service) services.
+
+        Note that the `service` and `rpc` names must match those in NetsBlox,
+        rather than the renamed versions used in the Python wrappers here.
+
+        The `arguments` input is the dictionary of input values to the RPC.
+        Note that these names must match those stated in NetsBlox.
+        From NetsBlox, you can inspect the argument names from an empty call block (arg names shown as hint text),
+        or by visiting the official [NetsBlox documentation](https://editor.netsblox.org/docs/services/GoogleMaps/index.html).
+
+        For convenience, any extra keyword arguments to this function will be added to `arguments`.
+        If there are keys in `arguments` and `kwargs` that conflict, `kwargs` take precedence.
+
+        ```
+        # the following are equivalent
+        nb.call('GoogleMaps', 'getEarthCoordinates', { 'x': x, 'y': y })
+        nb.call('Googlemaps', 'getEarthCoordinates', x = x, y = y)
+        ```
+        '''
+
+        arguments = arguments.copy()
+        arguments.update(kwargs)
+        arguments = { k: _common.prep_send(v) for k, v in arguments.items() }
+
         state = f'uuid={self._client_id}&projectId={self._project_id}&roleId={self._role_id}&t={round(_time.time() * 1000)}'
         url = f'{self._base_url}/services/{service}/{rpc}?{state}'
         res = _requests.post(url,
-            _common.small_json(payload), # if the json has unnecessary white space, request on the server will hang for some reason
+            _common.small_json(arguments), # if the json has unnecessary white space, request on the server will hang for some reason
             headers = { 'Content-Type': 'application/json' })
 
         if res.status_code == 200:

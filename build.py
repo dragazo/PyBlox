@@ -110,7 +110,7 @@ async def generate_service(session, base_url: str, service_name: str, types_meta
         meta = await res.json(content_type=None) # ignore content type in case response mime type is wrong
         if 'servicePath' not in meta or not meta['servicePath']:
             return None # only generate code for fs services
-        
+
         rpcs = []
         for rpc_name, rpc_meta in meta['rpcs'].items():
             if 'deprecated' in rpc_meta and rpc_meta['deprecated']:
@@ -123,12 +123,12 @@ async def generate_service(session, base_url: str, service_name: str, types_meta
             ret_info = parse_arg(rpc_meta.get('returns'), types_meta, 'returns')
             args = ['self'] + [f'{clean_fn_name(x[0]["name"])}: {x[1]}' for x in required] + [f'{clean_fn_name(x[0]["name"])}: {x[1]} = None' for x in non_required]
             payloads = [f"'{x[0]['name']}': {clean_fn_name(x[0]['name'])}" for x in required + non_required]
-            
+
             desc = ([rpc_meta['description']] if rpc_meta.get('description') else []) + [x[2] for x in required + non_required] + ([ret_info[2]] if 'returns' in rpc_meta else [])
             desc = '\n\n'.join(desc)
             desc = indent(f"'''\n{desc}\n'''", 8)
-            
-            code = f"self._client._call('{service_name}', '{rpc_name}', {{ {', '.join(payloads)} }})"
+
+            code = f"self._client.call('{service_name}', '{rpc_name}', {{ {', '.join(payloads)} }})"
             code = f'res = {code}\nreturn {ret_info[3]}(res)' if ret_info[3] else f'return {code}'
 
             fn_name = clean_fn_name(rpc_name)
@@ -167,7 +167,7 @@ async def main():
     args = [
         ('https://editor.netsblox.org', 'Client', 'netsblox/editor.py'),
         ('https://dev.netsblox.org', 'Client', 'netsblox/dev.py'),
-        
+
         # ('http://localhost:8080', 'LocalHost', 'netsblox/localhost.py'), # for dev purposes only
     ]
     await asyncio.gather(*[asyncio.ensure_future(generate_client_save(*x)) for x in args])
