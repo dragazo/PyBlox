@@ -1,30 +1,34 @@
 {
-    "block_sources": [
-        "netsblox://assets/default-blocks.json"
-    ],
-    "blocks": {
-        "global": [], 
-        "stage": [], 
-        "turtle": []
-    },
     "show_blocks": true,
-    "imports": [],
-    "editors": [
+    "roles": [
         {
-            "type": "global",
-            "name": "global",
-            "value": "my_global_var = 'hello world' # create a global variable\n"
-        },
-        {
-            "type": "stage",
-            "name": "stage",
-            "value": ""
-        },
-        {
-            "type": "turtle",
-            "name": "sprite",
-            "value": "@onstart()\ndef my_onstart(self): # functions need different names\n    for i in range(120): # repeat code 120 times\n        self.forward(4)\n        self.turn_right(3)\n"
+            "block_sources": [
+                "netsblox://assets/default-blocks.json"
+            ],
+            "blocks": {
+                "global": [], 
+                "stage": [], 
+                "turtle": []
+            },
+            "imports": [],
+            "editors": [
+                {
+                    "type": "global",
+                    "name": "global",
+                    "value": "my_global_var = 'hello world' # create a global variable\n"
+                },
+                {
+                    "type": "stage",
+                    "name": "stage",
+                    "value": ""
+                },
+                {
+                    "type": "turtle",
+                    "name": "sprite",
+                    "value": "@onstart()\ndef my_onstart(self): # functions need different names\n    for i in range(120): # repeat code 120 times\n        self.forward(4)\n        self.turn_right(3)\n"
+                }
+            ],
+            "images": {}
         }
-    ],
-    "images": {}
+    ]
 }

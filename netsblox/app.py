@@ -12,14 +12,14 @@ import darkdetect
 import threading
 import traceback
 import platform
-import requests
+import copy
 import json
 import sys
 import io
 import re
 import os
 
-from PIL import Image, ImageTk
+from PIL import Image
 
 from typing import List, Tuple, Any, Optional
 
@@ -452,6 +452,10 @@ class ProjectEditor(tk.Frame):
         # it is not stored in project files or exports because conflicting ids would break messaging.
         self.project_id = common.generate_proj_id()
 
+        self.super_proj: dict = None # super proj contains all roles - sub proj are actual "projects" (one sub proj open at a time)
+        self.roles: List[dict] = None
+        self.active_role: int = None
+
         self.block_sources = []
 
         self.editors: List[CodeEditor] = []
@@ -595,32 +599,68 @@ class ProjectEditor(tk.Frame):
 
     def get_save_dict(self) -> dict:
         res = {}
-        res['block_sources'] = self.block_sources[:]
-        res['blocks'] = {
-            'global': [x.copy() for x in GlobalEditor.blocks if x['source'] == None],
-            'stage':  [x.copy() for x in  StageEditor.blocks if x['source'] == None],
-            'turtle': [x.copy() for x in TurtleEditor.blocks if x['source'] == None],
-        }
+
+        res['roles'] = []
+        for i, role in enumerate(self.roles):
+            if i != self.active_role:
+                res['roles'].append(copy.deepcopy(role))
+                continue
+
+            role_res = {}
+            res['roles'].append(role_res)
+
+            role_res['name'] = role['name']
+            role_res['block_sources'] = self.block_sources[:]
+            role_res['blocks'] = {
+                'global': [x.copy() for x in GlobalEditor.blocks if x['source'] == None],
+                'stage':  [x.copy() for x in  StageEditor.blocks if x['source'] == None],
+                'turtle': [x.copy() for x in TurtleEditor.blocks if x['source'] == None],
+            }
+
+            role_res['imports'] = []
+            for pkg, item in self.imports.packages.items():
+                if item['tkvar'].get():
+                    role_res['imports'].append(pkg)
+
+            role_res['editors'] = []
+            for editor in self.editors:
+                ty = None
+                if isinstance(editor, GlobalEditor): ty = 'global'
+                elif isinstance(editor, StageEditor): ty = 'stage'
+                elif isinstance(editor, TurtleEditor): ty = 'turtle'
+                else: raise Exception(f'unknown editor type: {type(editor)}')
+                role_res['editors'].append({
+                    'type': ty,
+                    'name': editor.name,
+                    'value': editor.text.get('1.0', 'end-1c'),
+                })
+
+            role_res['images'] = { name: common.encode_image(img) for name, img in self.imports.images.items() }
+
         res['show_blocks'] = self.show_blocks
-        res['imports'] = []
-        for pkg, item in self.imports.packages.items():
-            if item['tkvar'].get():
-                res['imports'].append(pkg)
-        res['editors'] = []
-        for editor in self.editors:
-            ty = None
-            if isinstance(editor, GlobalEditor): ty = 'global'
-            elif isinstance(editor, StageEditor): ty = 'stage'
-            elif isinstance(editor, TurtleEditor): ty = 'turtle'
-            else: raise Exception(f'unknown editor type: {type(editor)}')
-            res['editors'].append({
-                'type': ty,
-                'name': editor.name,
-                'value': editor.text.get('1.0', 'end-1c'),
-            })
-        res['images'] = { name: common.encode_image(img) for name, img in self.imports.images.items() }
+
         return res
-    def load(self, proj: dict) -> None:
+    def load(self, *, super_proj: Optional[dict] = None, active_role: Optional[int] = None) -> None:
+        if super_proj is None:
+            super_proj = self.super_proj
+            roles = self.roles
+        else:
+            super_proj = copy.deepcopy(super_proj)
+            roles = super_proj.get('roles', [super_proj]) # backward compat
+        assert super_proj is not None
+
+        if active_role is None:
+            active_role = 0
+        elif active_role < 0 or active_role >= len(roles):
+            active_role = 0
+        proj = roles[active_role]
+
+        counter = 0
+        for role in roles:
+            if 'name' in role: continue
+            role['name'] = 'untitled' if counter == 0 else f'untitled_{counter}'
+            counter += 1
+
         new_blocks = { 'global': [], 'stage': [], 'turtle': [] }
         new_sources = proj.get('block_sources', [])
 
@@ -641,6 +681,10 @@ class ProjectEditor(tk.Frame):
             'turtle': proj.get('turtle_blocks', []),
         }, source = None)
 
+        self.super_proj = super_proj
+        self.roles = roles
+        self.active_role = active_role
+
         GlobalEditor.blocks = new_blocks['global']
         StageEditor.blocks = new_blocks['stage']
         TurtleEditor.blocks = new_blocks['turtle']
@@ -651,7 +695,7 @@ class ProjectEditor(tk.Frame):
             self.editors[i].destroy()
         self.editors = []
 
-        self.show_blocks = proj['show_blocks']
+        self.show_blocks = super_proj['show_blocks']
 
         for info in proj['editors']:
             ty = info['type']
@@ -1299,7 +1343,7 @@ class MainMenu(tk.Menu):
         root.protocol('WM_DELETE_WINDOW', kill)
 
         submenu = tk.Menu(self, **MENU_STYLE)
-        submenu.add_command(label = 'New', command = lambda: self.open_project(proj = ProjectEditor.DEFAULT_PROJECT), accelerator = f'{SYS_INFO["mod-str"]}+N')
+        submenu.add_command(label = 'New', command = lambda: self.open_project(super_proj = ProjectEditor.DEFAULT_PROJECT), accelerator = f'{SYS_INFO["mod-str"]}+N')
         submenu.add_command(label = 'Open', command = self.open_project, accelerator = f'{SYS_INFO["mod-str"]}+O')
 
         subsubmenu = tk.Menu(submenu, **MENU_STYLE)
@@ -1308,7 +1352,7 @@ class MainMenu(tk.Menu):
                 def opener():
                     with open(f'{common._NETSBLOX_PY_PATH}/assets/examples/{file}') as f:
                         content = json.load(f) # don't cache projects (could be large)
-                    self.open_project(proj = content)
+                    self.open_project(super_proj = content)
                 return opener
             subsubmenu.add_command(label = file[:-5], command = make_opener(file))
 
@@ -1322,7 +1366,7 @@ class MainMenu(tk.Menu):
         submenu.add_command(label = 'Exit', command = kill)
         self.add_cascade(label = 'File', menu = submenu)
 
-        root.bind_all(f'<{SYS_INFO["mod"]}-n>', lambda e: self.open_project(proj = ProjectEditor.DEFAULT_PROJECT))
+        root.bind_all(f'<{SYS_INFO["mod"]}-n>', lambda e: self.open_project(super_proj = ProjectEditor.DEFAULT_PROJECT))
         root.bind_all(f'<{SYS_INFO["mod"]}-o>', lambda e: self.open_project())
         root.bind_all(f'<{SYS_INFO["mod"]}-s>', lambda e: self.save())
         root.bind_all(f'<{SYS_INFO["mod"]}-S>', lambda e: self.save_as())
@@ -1332,6 +1376,9 @@ class MainMenu(tk.Menu):
         self.add_cascade(label = 'View', menu = submenu)
 
         root.bind_all(f'<{SYS_INFO["mod"]}-b>', lambda e: self.toggle_blocks())
+
+        self.roles_dropdown = tk.Menu(self, **MENU_STYLE)
+        self.add_cascade(label = 'Roles', menu = self.roles_dropdown)
 
         submenu = tk.Menu(self, **MENU_STYLE)
         imp = content.project.imports
@@ -1400,6 +1447,8 @@ class MainMenu(tk.Menu):
                 with open(self.project_path, 'w') as f:
                     json.dump(save_dict, f, separators = (', ', ': '), indent = 2)
                 self.saved_project_dict = save_dict
+                active_idx = content.project.active_role
+                content.project.roles[active_idx] = save_dict['roles'][active_idx] # sync the in-memory role content
                 return True
             except Exception as e:
                 messagebox.showerror('Failed to save project', str(e))
@@ -1423,30 +1472,38 @@ class MainMenu(tk.Menu):
             except Exception as e:
                 messagebox.showerror('Failed to save exported project', str(e))
 
-    def open_project(self, *, proj: Optional[dict] = None):
+    def open_project(self, *, super_proj: Optional[dict] = None, active_role: Optional[int] = None):
         content.project.on_tab_change()
-
-        if not self.try_close_project():
-            return
+        if not self.try_close_project(): return
 
         rstor = None
         p = None
         try:
-            if proj is None:
+            if super_proj is None:
                 p = filedialog.askopenfilename(filetypes = PROJECT_FILETYPES)
                 if type(p) is not str or not p:
                     return
                 with open(p, 'r') as f:
-                    proj = json.load(f)
+                    super_proj = json.load(f)
 
-            rstor = content.project.get_save_dict() # in case load fails
-            content.project.load(proj)
-            self.saved_project_dict = proj
+            if content.project.super_proj is not None:
+                rstor = content.project.get_save_dict() # in case load fails
+
+            content.project.load(super_proj = super_proj, active_role = active_role)
+            self.saved_project_dict = super_proj
             self.project_path = p
+            self.update_roles()
         except Exception as e:
             messagebox.showerror('Failed to load project', str(e))
             if rstor is not None:
                 content.project.load(rstor)
+
+    def switch_role(self, *, active_role: int):
+        content.project.on_tab_change()
+        if not self.try_close_project(): return
+
+        content.project.load(active_role = active_role)
+        self.update_roles()
 
     def try_close_project(self) -> bool: # true if user accepted close
         if self.saved_project_dict is None:
@@ -1479,14 +1536,13 @@ class MainMenu(tk.Menu):
 
         name = None
         while True:
-            name = simpledialog.askstring('Name Image', 'Enter the name of the image, which is used to access it from code')
-            if name is None:
-                return
+            name = simpledialog.askstring(title = 'Name Image', prompt = 'Enter the name of the image, which is used to access it from code')
+            if name is None: return
             if not is_valid_ident(name):
-                messagebox.showerror(title = 'Invalid name', message = f'"{name}" is not a valid python variable name')
+                messagebox.showerror('Invalid name', message = f'"{name}" is not a valid python variable name')
                 continue
             if name in content.project.imports.images:
-                messagebox.showerror(title = 'Invalid name', message = f'An image named "{name}" already exists')
+                messagebox.showerror(title = 'Invalid name', message = f'An image named {name} already exists')
                 continue
             break
 
@@ -1509,8 +1565,8 @@ class MainMenu(tk.Menu):
 
             def get_deleter(name):
                 def deleter():
-                    title = f'Delete {name}'
-                    msg = f'Are you sure you would like to delete {name}? This operation cannot be undone.'
+                    title = f'Delete sprite {name}'
+                    msg = f'Are you sure you would like to delete sprite {name}? This operation cannot be undone.'
                     if messagebox.askyesno(title, msg, icon = 'warning', default = 'no'):
                         del content.project.imports.images[name]
                         content.project.imports.batch_update()
@@ -1518,6 +1574,63 @@ class MainMenu(tk.Menu):
             submenu.add_command(label = 'Delete', command = get_deleter(name))
 
             self.images_dropdown.add_cascade(label = f'{name} {img.width}x{img.height}', menu = submenu)
+
+    def update_roles(self):
+        self.roles_dropdown.delete(0, 'end')
+
+        def make_role():
+            name = None
+            while True:
+                name = simpledialog.askstring(title = 'Name Role', prompt = 'Enter the name of the new role, which should be a valid variable name')
+                if name is None: return
+                if not is_valid_ident(name):
+                    messagebox.showerror('Invalid name', message = f'"{name}" is not a valid python variable name')
+                    continue
+                if any(x['name'] == name for x in content.project.roles):
+                    messagebox.showerror(title = 'Invalid name', message = f'A role named {name} already exists.')
+                    continue
+                break
+            role = copy.deepcopy(ProjectEditor.DEFAULT_PROJECT['roles'][0])
+            role['name'] = name
+            content.project.roles.append(role)
+            self.update_roles()
+        self.roles_dropdown.add_command(label = 'New Role', command = make_role)
+
+        if len(content.project.roles) != 0:
+            self.roles_dropdown.add_separator()
+
+        for i, role in enumerate(content.project.roles):
+            submenu = tk.Menu(**MENU_STYLE)
+            is_current = i == content.project.active_role
+
+            def get_switcher(idx):
+                def do_switch():
+                    if idx == content.project.active_role: return # santy check
+                    self.switch_role(active_role = idx)
+                return do_switch
+            submenu.add_command(label = 'Open', command = get_switcher(i), state = tk.DISABLED if is_current else tk.ACTIVE)
+
+            def get_deleter(idx):
+                def do_delete():
+                    if idx == content.project.active_role:
+                        messagebox.showerror('Cannot delete active role', 'To delete this role, open a different role first')
+                        return
+
+                    name = content.project.roles[idx]['name']
+                    title = f'Delete role {name}'
+                    msg = f'Are you sure you would like to delete role {name}? This operation cannot be undone.'
+                    if messagebox.askyesno(title, msg, icon = 'warning', default = 'no'):
+                        del content.project.roles[idx]
+                        if content.project.active_role >= idx:
+                            content.project.active_role -= 1
+                        self.update_roles()
+                return do_delete
+            submenu.add_command(label = 'Delete', command = get_deleter(i), state = tk.DISABLED if is_current else tk.ACTIVE)
+
+            self.roles_dropdown.add_cascade(label = content.project.roles[i]['name'], menu = submenu)
+
+    def new_role(self):
+        pass
 
 def main():
     global root, main_menu, content
@@ -1536,11 +1649,11 @@ def main():
     main_menu = MainMenu(root)
 
     if len(sys.argv) <= 1:
-        main_menu.open_project(proj = ProjectEditor.DEFAULT_PROJECT)
+        main_menu.open_project(super_proj = ProjectEditor.DEFAULT_PROJECT)
     elif len(sys.argv) == 2:
         with open(sys.argv[1], 'r') as f:
             save_dict = json.load(f)
-        main_menu.open_project(proj = save_dict)
+        main_menu.open_project(super_proj = save_dict)
         main_menu.project_path = os.path.abspath(sys.argv[1])
     else:
         print(f'usage: {sys.argv[0]} (project)', file = sys.stderr)
