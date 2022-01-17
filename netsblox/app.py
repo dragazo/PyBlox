@@ -452,7 +452,6 @@ class ProjectEditor(tk.Frame):
         # it is not stored in project files or exports because conflicting ids would break messaging.
         self.project_id = common.generate_proj_id()
 
-        self.super_proj: dict = None # super proj contains all roles - sub proj are actual "projects" (one sub proj open at a time)
         self.roles: List[dict] = None
         self.active_role: int = None
 
@@ -642,12 +641,10 @@ class ProjectEditor(tk.Frame):
         return res
     def load(self, *, super_proj: Optional[dict] = None, active_role: Optional[int] = None) -> None:
         if super_proj is None:
-            super_proj = self.super_proj
             roles = self.roles
         else:
             super_proj = copy.deepcopy(super_proj)
-            roles = super_proj.get('roles', [super_proj]) # backward compat
-        assert super_proj is not None
+            roles = super_proj.get('roles', [super_proj]) # default is for backward compat
 
         if active_role is None:
             active_role = 0
@@ -681,7 +678,6 @@ class ProjectEditor(tk.Frame):
             'turtle': proj.get('turtle_blocks', []),
         }, source = None)
 
-        self.super_proj = super_proj
         self.roles = roles
         self.active_role = active_role
 
@@ -695,7 +691,8 @@ class ProjectEditor(tk.Frame):
             self.editors[i].destroy()
         self.editors = []
 
-        self.show_blocks = super_proj['show_blocks']
+        if super_proj is not None:
+            self.show_blocks = super_proj['show_blocks']
 
         for info in proj['editors']:
             ty = info['type']
@@ -1447,8 +1444,7 @@ class MainMenu(tk.Menu):
                 with open(self.project_path, 'w') as f:
                     json.dump(save_dict, f, separators = (', ', ': '), indent = 2)
                 self.saved_project_dict = save_dict
-                active_idx = content.project.active_role
-                content.project.roles[active_idx] = save_dict['roles'][active_idx] # sync the in-memory role content
+                content.project.roles = save_dict['roles'] # sync the in-memory role content
                 return True
             except Exception as e:
                 messagebox.showerror('Failed to save project', str(e))
@@ -1486,7 +1482,7 @@ class MainMenu(tk.Menu):
                 with open(p, 'r') as f:
                     super_proj = json.load(f)
 
-            if content.project.super_proj is not None:
+            if content.project.roles is not None:
                 rstor = content.project.get_save_dict() # in case load fails
 
             content.project.load(super_proj = super_proj, active_role = active_role)
@@ -1628,9 +1624,6 @@ class MainMenu(tk.Menu):
             submenu.add_command(label = 'Delete', command = get_deleter(i), state = tk.DISABLED if is_current else tk.ACTIVE)
 
             self.roles_dropdown.add_cascade(label = content.project.roles[i]['name'], menu = submenu)
-
-    def new_role(self):
-        pass
 
 def main():
     global root, main_menu, content
