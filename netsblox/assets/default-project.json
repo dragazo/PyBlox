@@ -2,6 +2,7 @@
     "show_blocks": true,
     "roles": [
         {
+            "name": "untitled",
             "block_sources": [
                 "netsblox://assets/default-blocks.json"
             ],
