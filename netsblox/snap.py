@@ -28,9 +28,12 @@ class Int(int):
         return wrap(_numerify(other) + int(self))
 
     def __sub__(self, other: Any) -> Any:
-        return self + -wrap(other)
+        other = wrap(other)
+        if isinstance(other, List): return other.__rsub__(self)
+        return wrap(int(self) - _numerify(other))
     def __rsub__(self, other: Any) -> Any:
-        return wrap(other) + -self
+        if not is_wrapped(other): return wrap(other) - self
+        return wrap(_numerify(other) - int(self))
 
     def __mul__(self, other: Any) -> Any:
         other = wrap(other)
@@ -39,6 +42,30 @@ class Int(int):
     def __rmul__(self, other: Any) -> Any:
         if not is_wrapped(other): return wrap(other) * self
         return wrap(_numerify(other) * int(self))
+
+    def __truediv__(self, other: Any) -> Any:
+        other = wrap(other)
+        if isinstance(other, List): return other.__rtruediv__(self)
+        return wrap(int(self) / _numerify(other))
+    def __rtruediv__(self, other: Any) -> Any:
+        if not is_wrapped(other): return wrap(other) / self
+        return wrap(_numerify(other) / int(self))
+
+    def __floordiv__(self, other: Any) -> Any:
+        other = wrap(other)
+        if isinstance(other, List): return other.__rfloordiv__(self)
+        return wrap(int(self) // _numerify(other))
+    def __rfloordiv__(self, other: Any) -> Any:
+        if not is_wrapped(other): return wrap(other) // self
+        return wrap(_numerify(other) // int(self))
+
+    def __pow__(self, other: Any) -> Any:
+        other = wrap(other)
+        if isinstance(other, List): return other.__rpow__(self)
+        return wrap(int(self) ** _numerify(other))
+    def __rpow__(self, other: Any) -> Any:
+        if not is_wrapped(other): return wrap(other) ** self
+        return wrap(_numerify(other) ** int(self))
 
     def __neg__(self) -> 'Int':
         return Int(-int(self))
@@ -60,9 +87,12 @@ class Float(float):
         return wrap(_numerify(float(other) + float(self)))
 
     def __sub__(self, other: Any) -> Any:
-        return self + -wrap(other)
+        other = wrap(other)
+        if isinstance(other, List): return other.__rsub__(self)
+        return wrap(_numerify(float(self) - float(other)))
     def __rsub__(self, other: Any) -> Any:
-        return wrap(other) + -self
+        if not is_wrapped(other): return wrap(other) - self
+        return wrap(_numerify(float(other) - float(self)))
 
     def __mul__(self, other: Any) -> Any:
         other = wrap(other)
@@ -71,6 +101,30 @@ class Float(float):
     def __rmul__(self, other: Any) -> Any:
         if not is_wrapped(other): return wrap(other) * self
         return wrap(_numerify(float(other) * float(self)))
+
+    def __truediv__(self, other: Any) -> Any:
+        other = wrap(other)
+        if isinstance(other, List): return other.__rtruediv__(self)
+        return wrap(_numerify(float(self) / float(other)))
+    def __rtruediv__(self, other: Any) -> Any:
+        if not is_wrapped(other): return wrap(other) / self
+        return wrap(_numerify(float(other) / float(self)))
+
+    def __floordiv__(self, other: Any) -> Any:
+        other = wrap(other)
+        if isinstance(other, List): return other.__rfloordiv__(self)
+        return wrap(_numerify(float(self) // float(other)))
+    def __rfloordiv__(self, other: Any) -> Any:
+        if not is_wrapped(other): return wrap(other) // self
+        return wrap(_numerify(float(other) // float(self)))
+
+    def __pow__(self, other: Any) -> Any:
+        other = wrap(other)
+        if isinstance(other, List): return other.__rpow__(self)
+        return wrap(_numerify(float(self) ** float(other)))
+    def __rpow__(self, other: Any) -> Any:
+        if not is_wrapped(other): return wrap(other) ** self
+        return wrap(_numerify(float(other) ** float(self)))
 
     def __neg__(self) -> Union['Int', 'Float']:
         return wrap(-_numerify(self))
@@ -90,15 +144,34 @@ class Str(str):
         return wrap(other + _numerify(self))
 
     def __sub__(self, other: Any) -> Any:
-        return self + -wrap(other)
+        return self.__cvt() - other
     def __rsub__(self, other: Any) -> Any:
-        return wrap(other) + -self
+        if not is_wrapped(other): return wrap(other) - self
+        return wrap(other - _numerify(self))
 
     def __mul__(self, other: Any) -> Any:
         return self.__cvt() * wrap(other)
     def __rmul__(self, other: Any) -> Any:
         if not is_wrapped(other): return wrap(other) * self
         return wrap(other * _numerify(self))
+
+    def __truediv__(self, other: Any) -> Any:
+        return self.__cvt() / wrap(other)
+    def __rtruediv__(self, other: Any) -> Any:
+        if not is_wrapped(other): return wrap(other) / self
+        return wrap(other / _numerify(self))
+
+    def __floordiv__(self, other: Any) -> Any:
+        return self.__cvt() // wrap(other)
+    def __rfloordiv__(self, other: Any) -> Any:
+        if not is_wrapped(other): return wrap(other) // self
+        return wrap(other // _numerify(self))
+
+    def __pow__(self, other: Any) -> Any:
+        return self.__cvt() ** wrap(other)
+    def __rpow__(self, other: Any) -> Any:
+        if not is_wrapped(other): return wrap(other) ** self
+        return wrap(other ** _numerify(self))
 
     def __neg__(self) -> Union['Int', 'Float']:
         return -self.__cvt()
@@ -127,14 +200,29 @@ class List(list):
         return self.__list_rop(other, lambda a, b: a + b)
 
     def __sub__(self, other: Any) -> 'List':
-        return self + -wrap(other)
+        return self.__list_op(other, lambda a, b: a - b)
     def __rsub__(self, other: Any) -> 'List':
-        return wrap(other) + -self
+        return self.__list_rop(other, lambda a, b: a - b)
 
     def __mul__(self, other: Any) -> 'List':
         return self.__list_op(other, lambda a, b: a * b)
     def __rmul__(self, other: Any) -> 'List':
         return self.__list_rop(other, lambda a, b: a * b)
+
+    def __truediv__(self, other: Any) -> 'List':
+        return self.__list_op(other, lambda a, b: a / b)
+    def __rtruediv__(self, other: Any) -> 'List':
+        return self.__list_rop(other, lambda a, b: a / b)
+
+    def __floordiv__(self, other: Any) -> 'List':
+        return self.__list_op(other, lambda a, b: a // b)
+    def __rfloordiv__(self, other: Any) -> 'List':
+        return self.__list_rop(other, lambda a, b: a // b)
+
+    def __pow__(self, other: Any) -> 'List':
+        return self.__list_op(other, lambda a, b: a ** b)
+    def __rpow__(self, other: Any) -> 'List':
+        return self.__list_rop(other, lambda a, b: a ** b)
 
     def __neg__(self) -> 'List':
         return List(-x for x in self)
@@ -226,10 +314,16 @@ if __name__ == '__main__':
     assert wrap([4,7,2])[0] == 4 and wrap([4,7,2])[wrap(1.0)] == 7 and len(wrap([4,7,2])) == 3
 
     assert _list_depth(2.3) == 0 and _list_depth([]) == 1 and _list_depth([[]]) == 2 and _list_depth([[True]]) == 2
-    assert wrap([[1,5,2], [1,2], [0], []]) - wrap([1,3,2]) == [[0,2,0], [0,-1], [-1], []]
-    assert wrap([[1,5,2], [1,2], [0], 3]) - wrap([1,3,2]) == [[0,2,0], [0,-1], [-1], [2,0,1]]
+    assert wrap([[1,5,2], [1,2], [0], []]) - wrap(['1.0',3,2]) == [[0,2,0], [0,-1], [-1], []]
+    assert wrap([[1,5,2], [1,2], ['0'], 3]) - wrap(['1',3.0,2]) == [[0,2,0], [0,-1], [-1], [2,0,1]]
     assert wrap([[1,5,2], [1,2], [0], []]) * wrap([1,3,2]) == [[1,15,4], [1,6], [0], []]
-    assert wrap([[1,5,2], [1,2], [0], 3]) * wrap([1,3,2]) == [[1,15,4], [1,6], [0], [3,9,6]]
+    assert wrap([[1,5,2], [1,2], [0], '3']) * wrap([1,3,2]) == [[1,15,4], [1,6], [0], [3,9,6]]
+    assert wrap([[1,5,2], [1,2], [0], []]) / wrap([1,'3.0',2]) * 3 == [[3,5,3], [3,2], [0], []]
+    assert wrap([[1,5,2], [1,'2'], [0], '3']) / wrap([1,3,2]) * 6 == [[6,10,6], [6,4], [0], [18,6,9]]
+    assert wrap([[1,5,2], [1,2], [0], []]) // wrap([1,3,2]) == [[1,1,1], [1,0], [0], []]
+    assert wrap([[1,'5',2], [1,2], [0], 3]) // wrap(['1.0',3,2.0]) == [[1,1,1], [1,0], [0], [3,1,1]]
+    assert wrap([[1,5.0,2], [1,2], [0], []]) ** wrap([1,3,2]) == [[1,125,4], [1,8], [0], []]
+    assert wrap([[1,'5',2], [1,2.0], [0], 3]) ** wrap(['1.0',3,2.0]) == [[1,125,4], [1,8], [0], [3,27,9]]
 
     assert wrap(3) == wrap('3') and wrap(3.0) == wrap('3') and wrap(3) == wrap('3.0') and wrap(3.0) == wrap('3.0')
     assert -wrap(3) == -wrap('3') and is_wrapped(-wrap(3)) and is_wrapped(-wrap('4'))
