@@ -7,11 +7,6 @@ def _numerify(val: Any) -> Union[int, float]:
     vf = float(val)
     vi = int(vf)
     return vi if vi == vf else vf
-def _list_depth(val: Any) -> int:
-    val = wrap(val)
-    if isinstance(val, List):
-        return 1 if len(val) == 0 else 1 + max(_list_depth(x) for x in val)
-    return 0
 
 class Int(int):
     def __eq__(self, other: Any) -> bool:
@@ -176,6 +171,21 @@ class Str(str):
     def __neg__(self) -> Union['Int', 'Float']:
         return -self.__cvt()
 
+def _is_matrix(v: Any) -> bool:
+    return isinstance(v, list) and len(v) > 0 and isinstance(list.__getitem__(v, 0), list)
+def _is_list(v: Any) -> bool:
+    return isinstance(v, list)
+def _list_op(a: Any, b: Any, op: Callable, matrix_mode: bool = True):
+    assert is_wrapped(a) and is_wrapped(b)
+    checker = _is_matrix if matrix_mode else _is_list
+    if checker(a):
+        if checker(b):
+            return List(_list_op(wrap(list.__getitem__(a, i)), wrap(list.__getitem__(b, i)), op, matrix_mode) for i in range(min(len(a), len(b))))
+        return List(_list_op(wrap(list.__getitem__(a, i)), b, op, matrix_mode) for i in range(len(a)))
+    if checker(b):
+        return List(_list_op(a, wrap(list.__getitem__(b, i)), op, matrix_mode) for i in range(len(b)))
+    return List(_list_op(a, b, op, False)) if matrix_mode else op(a, b)
+
 class List(list):
     def __bool__(self) -> bool:
         return True
@@ -183,46 +193,45 @@ class List(list):
     def __getitem__(self, idx: Any) -> Any:
         return wrap(list.__getitem__(self, _numerify(idx)))
 
-    def __list_op(self, other: Any, op: Callable) -> 'List':
-        other = wrap(other)
-        if isinstance(other, List):
-            if _list_depth(self) == _list_depth(other):
-                return List(op(wrap(self[i]), wrap(other[i])) for i in range(min(len(self), len(other))))
-            return List(op(wrap(x), other) for x in self)
-        return List(op(wrap(x), other) for x in self)
-    def __list_rop(self, other: Any, op: Callable) -> 'List':
-        other = wrap(other)
-        return List(op(other, x) for x in self)
+    # def __list_op(self, other: Any, op: Callable, checker: Callable = _is_matrix) -> 'List':
+    #     other = wrap(other)
+    #     if isinstance(other, List):
+    #         return List(op(wrap(self[i]), wrap(other[i])) for i in range(min(len(self), len(other))))
+    #     return List(op(wrap(x), other) for x in self)
+    # def __list_rop(self, other: Any, op: Callable) -> 'List':
+    #     other = wrap(other)
+    #     if isinstance(other, List): return other.__list_op(self, op)
+    #     return List(op(other, x) for x in self)
 
     def __add__(self, other: Any) -> 'List':
-        return self.__list_op(other, lambda a, b: a + b)
+        return _list_op(self, wrap(other), lambda a, b: a + b)
     def __radd__(self, other: Any) -> 'List':
-        return self.__list_rop(other, lambda a, b: a + b)
+        return _list_op(wrap(other), self, lambda a, b: a + b)
 
     def __sub__(self, other: Any) -> 'List':
-        return self.__list_op(other, lambda a, b: a - b)
+        return _list_op(self, wrap(other), lambda a, b: a - b)
     def __rsub__(self, other: Any) -> 'List':
-        return self.__list_rop(other, lambda a, b: a - b)
+        return _list_op(wrap(other), self, lambda a, b: a - b)
 
     def __mul__(self, other: Any) -> 'List':
-        return self.__list_op(other, lambda a, b: a * b)
+        return _list_op(self, wrap(other), lambda a, b: a * b)
     def __rmul__(self, other: Any) -> 'List':
-        return self.__list_rop(other, lambda a, b: a * b)
+        return _list_op(wrap(other), self, lambda a, b: a * b)
 
     def __truediv__(self, other: Any) -> 'List':
-        return self.__list_op(other, lambda a, b: a / b)
+        return _list_op(self, wrap(other), lambda a, b: a / b)
     def __rtruediv__(self, other: Any) -> 'List':
-        return self.__list_rop(other, lambda a, b: a / b)
+        return _list_op(wrap(other), self, lambda a, b: a / b)
 
     def __floordiv__(self, other: Any) -> 'List':
-        return self.__list_op(other, lambda a, b: a // b)
+        return _list_op(self, wrap(other), lambda a, b: a // b)
     def __rfloordiv__(self, other: Any) -> 'List':
-        return self.__list_rop(other, lambda a, b: a // b)
+        return _list_op(wrap(other), self, lambda a, b: a // b)
 
     def __pow__(self, other: Any) -> 'List':
-        return self.__list_op(other, lambda a, b: a ** b)
+        return _list_op(self, wrap(other), lambda a, b: a ** b)
     def __rpow__(self, other: Any) -> 'List':
-        return self.__list_rop(other, lambda a, b: a ** b)
+        return _list_op(wrap(other), self, lambda a, b: a ** b)
 
     def __neg__(self) -> 'List':
         return List(-x for x in self)
@@ -313,7 +322,7 @@ if __name__ == '__main__':
     assert 5 + wrap([3,2,5]) == [8,7,10] and wrap(5) + wrap([3,2,5]) == [8,7,10] and '5' + wrap([3,2,5]) == [8,7,10] and wrap('5') + wrap([3,2,5]) == [8,7,10]
     assert wrap([4,7,2])[0] == 4 and wrap([4,7,2])[wrap(1.0)] == 7 and len(wrap([4,7,2])) == 3
 
-    assert _list_depth(2.3) == 0 and _list_depth([]) == 1 and _list_depth([[]]) == 2 and _list_depth([[True]]) == 2
+    assert wrap([[1,[5],2], [1,2], [0], []]) + wrap(['1.0',3,2]) == [[2,[8],4], [2,5], [1], []]
     assert wrap([[1,5,2], [1,2], [0], []]) - wrap(['1.0',3,2]) == [[0,2,0], [0,-1], [-1], []]
     assert wrap([[1,5,2], [1,2], ['0'], 3]) - wrap(['1',3.0,2]) == [[0,2,0], [0,-1], [-1], [2,0,1]]
     assert wrap([[1,5,2], [1,2], [0], []]) * wrap([1,3,2]) == [[1,15,4], [1,6], [0], []]

@@ -592,6 +592,16 @@ class StageBase(_Ref):
         '''
         return self.__proj.get_drawings()
 
+    def clear_drawings(self) -> None:
+        '''
+        Clears (erases) all of the drawings on the stage.
+
+        ```
+        self.clear()
+        ```
+        '''
+        self.__proj.clear_drawings() # invalidates project internally
+
 def _get_meta_name(obj):
     cls = getattr(obj, '_Derived__DerivedFrom', None)
     return cls.__name__ if cls is not None else 'turtle'
@@ -923,16 +933,6 @@ class TurtleBase(_Ref):
         self.heading += float(angle) if angle is not None else self.__degrees / 4 # invalidates project internally
 
     # -------------------------------------------------------
-
-    def clear(self) -> None:
-        '''
-        Clears (erases) all of the drawings made by this turtle.
-
-        ```
-        self.clear()
-        ```
-        '''
-        self.__proj.clear_drawings() # invalidates project internally
 
     def stamp(self) -> None:
         '''
