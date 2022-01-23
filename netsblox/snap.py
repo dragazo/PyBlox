@@ -8,62 +8,28 @@ def _numerify(val: Any) -> Union[int, float]:
     vi = int(vf)
     return vi if vi == vf else vf
 
-class Int(int):
-    def __eq__(self, other: Any) -> bool:
-        if isinstance(other, str):
-            return wrap(int(self) == float(other))
-        return wrap(int(self) == other)
+def _is_matrix(v: Any) -> bool:
+    return isinstance(v, list) and len(v) > 0 and isinstance(list.__getitem__(v, 0), list)
+def _is_list(v: Any) -> bool:
+    return isinstance(v, list)
 
-    def __add__(self, other: Any) -> Any:
-        other = wrap(other)
-        if isinstance(other, List): return other.__radd__(self)
-        return wrap(int(self) + _numerify(other))
-    def __radd__(self, other: Any) -> Any:
-        if not is_wrapped(other): return wrap(other) + self
-        return wrap(_numerify(other) + int(self))
+def _list_op(a: Any, b: Any, op: Callable, matrix_mode: bool = True) -> 'List':
+    assert is_wrapped(a) and is_wrapped(b)
+    checker = _is_matrix if matrix_mode else _is_list
+    if checker(a):
+        if checker(b):
+            return List(_list_op(wrap(list.__getitem__(a, i)), wrap(list.__getitem__(b, i)), op, matrix_mode) for i in range(min(len(a), len(b))))
+        return List(_list_op(wrap(list.__getitem__(a, i)), b, op, matrix_mode) for i in range(len(a)))
+    if checker(b):
+        return List(_list_op(a, wrap(list.__getitem__(b, i)), op, matrix_mode) for i in range(len(b)))
+    return _list_op(a, b, op, False) if matrix_mode else op(a, b)
 
-    def __sub__(self, other: Any) -> Any:
-        other = wrap(other)
-        if isinstance(other, List): return other.__rsub__(self)
-        return wrap(int(self) - _numerify(other))
-    def __rsub__(self, other: Any) -> Any:
-        if not is_wrapped(other): return wrap(other) - self
-        return wrap(_numerify(other) - int(self))
-
-    def __mul__(self, other: Any) -> Any:
-        other = wrap(other)
-        if isinstance(other, List): return other.__rmul__(self)
-        return wrap(int(self) * _numerify(other))
-    def __rmul__(self, other: Any) -> Any:
-        if not is_wrapped(other): return wrap(other) * self
-        return wrap(_numerify(other) * int(self))
-
-    def __truediv__(self, other: Any) -> Any:
-        other = wrap(other)
-        if isinstance(other, List): return other.__rtruediv__(self)
-        return wrap(int(self) / _numerify(other))
-    def __rtruediv__(self, other: Any) -> Any:
-        if not is_wrapped(other): return wrap(other) / self
-        return wrap(_numerify(other) / int(self))
-
-    def __floordiv__(self, other: Any) -> Any:
-        other = wrap(other)
-        if isinstance(other, List): return other.__rfloordiv__(self)
-        return wrap(int(self) // _numerify(other))
-    def __rfloordiv__(self, other: Any) -> Any:
-        if not is_wrapped(other): return wrap(other) // self
-        return wrap(_numerify(other) // int(self))
-
-    def __pow__(self, other: Any) -> Any:
-        other = wrap(other)
-        if isinstance(other, List): return other.__rpow__(self)
-        return wrap(int(self) ** _numerify(other))
-    def __rpow__(self, other: Any) -> Any:
-        if not is_wrapped(other): return wrap(other) ** self
-        return wrap(_numerify(other) ** int(self))
-
-    def __neg__(self) -> 'Int':
-        return Int(-int(self))
+def _scalar_op(a: Any, b: Any, op: Callable) -> 'Float':
+    a, b = float(a), float(b)
+    try:
+        return Float(op(a, b))
+    except OverflowError:
+        return Float(math.inf)
 
 class Float(float):
     def __eq__(self, other: Any) -> bool:
@@ -76,115 +42,97 @@ class Float(float):
     def __add__(self, other: Any) -> Any:
         other = wrap(other)
         if isinstance(other, List): return other.__radd__(self)
-        return wrap(_numerify(float(self) + float(other)))
+        return _scalar_op(self, other, lambda a, b: a + b)
     def __radd__(self, other: Any) -> Any:
         if not is_wrapped(other): return wrap(other) + self
-        return wrap(_numerify(float(other) + float(self)))
+        return _scalar_op(other, self, lambda a, b: a + b)
 
     def __sub__(self, other: Any) -> Any:
         other = wrap(other)
         if isinstance(other, List): return other.__rsub__(self)
-        return wrap(_numerify(float(self) - float(other)))
+        return _scalar_op(self, other, lambda a, b: a - b)
     def __rsub__(self, other: Any) -> Any:
         if not is_wrapped(other): return wrap(other) - self
-        return wrap(_numerify(float(other) - float(self)))
+        return _scalar_op(other, self, lambda a, b: a - b)
 
     def __mul__(self, other: Any) -> Any:
         other = wrap(other)
         if isinstance(other, List): return other.__rmul__(self)
-        return wrap(_numerify(float(self) * float(other)))
+        return _scalar_op(self, other, lambda a, b: a * b)
     def __rmul__(self, other: Any) -> Any:
         if not is_wrapped(other): return wrap(other) * self
-        return wrap(_numerify(float(other) * float(self)))
+        return _scalar_op(other, self, lambda a, b: a * b)
 
     def __truediv__(self, other: Any) -> Any:
         other = wrap(other)
         if isinstance(other, List): return other.__rtruediv__(self)
-        return wrap(_numerify(float(self) / float(other)))
+        return _scalar_op(self, other, lambda a, b: a / b)
     def __rtruediv__(self, other: Any) -> Any:
         if not is_wrapped(other): return wrap(other) / self
-        return wrap(_numerify(float(other) / float(self)))
+        return _scalar_op(other, self, lambda a, b: a / b)
 
     def __floordiv__(self, other: Any) -> Any:
         other = wrap(other)
         if isinstance(other, List): return other.__rfloordiv__(self)
-        return wrap(_numerify(float(self) // float(other)))
+        return _scalar_op(self, other, lambda a, b: a // b)
     def __rfloordiv__(self, other: Any) -> Any:
         if not is_wrapped(other): return wrap(other) // self
-        return wrap(_numerify(float(other) // float(self)))
+        return _scalar_op(other, self, lambda a, b: a // b)
 
     def __pow__(self, other: Any) -> Any:
         other = wrap(other)
         if isinstance(other, List): return other.__rpow__(self)
-        return wrap(_numerify(float(self) ** float(other)))
+        return _scalar_op(self, other, lambda a, b: a ** b)
     def __rpow__(self, other: Any) -> Any:
         if not is_wrapped(other): return wrap(other) ** self
-        return wrap(_numerify(float(other) ** float(self)))
+        return _scalar_op(other, self, lambda a, b: a ** b)
 
-    def __neg__(self) -> Union['Int', 'Float']:
-        return wrap(-_numerify(self))
+    def __neg__(self) -> 'Float':
+        return Float(-float(self))
 
 class Str(str):
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, int) or isinstance(other, float): return float(self) == other
         return str(self) == other
 
-    def __cvt(self) -> Union[Int, Float]:
-        return wrap(_numerify(self))
-
     def __add__(self, other: Any) -> Any:
-        return self.__cvt() + other
+        return Float(self) + other
     def __radd__(self, other: Any) -> Any:
         if not is_wrapped(other): return wrap(other) + self
-        return wrap(other + _numerify(self))
+        return wrap(other + float(self))
 
     def __sub__(self, other: Any) -> Any:
-        return self.__cvt() - other
+        return Float(self) - other
     def __rsub__(self, other: Any) -> Any:
         if not is_wrapped(other): return wrap(other) - self
-        return wrap(other - _numerify(self))
+        return wrap(other - float(self))
 
     def __mul__(self, other: Any) -> Any:
-        return self.__cvt() * wrap(other)
+        return Float(self) * wrap(other)
     def __rmul__(self, other: Any) -> Any:
         if not is_wrapped(other): return wrap(other) * self
-        return wrap(other * _numerify(self))
+        return wrap(other * float(self))
 
     def __truediv__(self, other: Any) -> Any:
-        return self.__cvt() / wrap(other)
+        return Float(self) / wrap(other)
     def __rtruediv__(self, other: Any) -> Any:
         if not is_wrapped(other): return wrap(other) / self
-        return wrap(other / _numerify(self))
+        return wrap(other / float(self))
 
     def __floordiv__(self, other: Any) -> Any:
-        return self.__cvt() // wrap(other)
+        return Float(self) // wrap(other)
     def __rfloordiv__(self, other: Any) -> Any:
         if not is_wrapped(other): return wrap(other) // self
-        return wrap(other // _numerify(self))
+        return wrap(other // float(self))
 
     def __pow__(self, other: Any) -> Any:
-        return self.__cvt() ** wrap(other)
+        return Float(self) ** wrap(other)
     def __rpow__(self, other: Any) -> Any:
         if not is_wrapped(other): return wrap(other) ** self
-        return wrap(other ** _numerify(self))
+        return wrap(other ** float(self))
 
-    def __neg__(self) -> Union['Int', 'Float']:
-        return -self.__cvt()
-
-def _is_matrix(v: Any) -> bool:
-    return isinstance(v, list) and len(v) > 0 and isinstance(list.__getitem__(v, 0), list)
-def _is_list(v: Any) -> bool:
-    return isinstance(v, list)
-def _list_op(a: Any, b: Any, op: Callable, matrix_mode: bool = True):
-    assert is_wrapped(a) and is_wrapped(b)
-    checker = _is_matrix if matrix_mode else _is_list
-    if checker(a):
-        if checker(b):
-            return List(_list_op(wrap(list.__getitem__(a, i)), wrap(list.__getitem__(b, i)), op, matrix_mode) for i in range(min(len(a), len(b))))
-        return List(_list_op(wrap(list.__getitem__(a, i)), b, op, matrix_mode) for i in range(len(a)))
-    if checker(b):
-        return List(_list_op(a, wrap(list.__getitem__(b, i)), op, matrix_mode) for i in range(len(b)))
-    return List(_list_op(a, b, op, False)) if matrix_mode else op(a, b)
+    def __neg__(self) -> 'Float':
+        return -Float(self)
 
 class List(list):
     def __bool__(self) -> bool:
@@ -237,7 +185,7 @@ class List(list):
         return List(-x for x in self)
 
 _listify = lambda v: List(wrap(x) for x in v)
-_wrappers = { int: Int, float: Float, str: Str, list: _listify, tuple: _listify, set: _listify, dict: lambda v: List(wrap(x) for x in v.items()) }
+_wrappers = { int: Float, float: Float, str: Str, list: _listify, tuple: _listify, set: _listify, dict: lambda v: List(wrap(x) for x in v.items()) }
 def wrap(value: Any) -> Any:
     '''
     Wraps a value in a new type which changes operators like `+`, `-`, `*`, `/`, etc. to act like they do in Snap!.
@@ -250,22 +198,23 @@ def is_wrapped(value: Any) -> bool:
     '''
     return type(value) == type(wrap(value))
 
-def rand(a: Any, b: Any) -> Union[Int, Float]:
+def rand(a: Any, b: Any) -> Union[Float, List]:
     '''
     Returns a random number in the range `[a, b]`.
 
     If both `a` and `b` are integer-valued (including floats holding integer values), returns an integer.
     Otherwise, returns a float in the continuous range.
     '''
-    a, b = float(a), float(b)
-    if a == b: return wrap(a)
-    if a > b: a, b = b, a
+    def single(a, b):
+        a, b = float(a), float(b)
+        if a == b: return wrap(a)
+        if a > b: a, b = b, a
 
-    ai, bi = int(a), int(b)
-    if ai == a and bi == b:
-        return wrap(random.randint(ai, bi))
-
-    return wrap(a + random.random() * (b - a))
+        ai, bi = int(a), int(b)
+        if ai == a and bi == b:
+            return wrap(random.randint(ai, bi))
+        return wrap(a + random.random() * (b - a))
+    return _list_op(wrap(a), wrap(b), single)
 
 def lnot(value: Any) -> Any:
     value = wrap(value)
@@ -274,7 +223,7 @@ def lnot(value: Any) -> Any:
 if __name__ == '__main__':
     assert is_wrapped(True)
     v = wrap('hello world') ; assert v is wrap(v) and isinstance(v, Str) and isinstance(v, str)
-    v = wrap(1223847982) ; assert v is wrap(v) and isinstance(v, Int) and isinstance(v, int)
+    v = wrap(1223847982) ; assert v is wrap(v) and isinstance(v, Float) and isinstance(v, float)
     v = wrap(1223847982.453) ; assert v is wrap(v) and isinstance(v, Float) and isinstance(v, float)
     v = wrap([1,4,2,5,43]) ; assert v is wrap(v) and isinstance(v, List) and isinstance(v, list)
     v = wrap((1,4,2,5,43)) ; assert v is wrap(v) and isinstance(v, List) and isinstance(v, list)
@@ -309,9 +258,8 @@ if __name__ == '__main__':
     assert wrap(5) * wrap(5) == 25 and wrap(5) * wrap('5') == 25 and wrap('5') * wrap(5) == 25 and wrap('5') * wrap('5') == 25
     assert 5 * wrap(5) == 25 and wrap(5) * 5 == 25 and wrap('5') * 5 == 25 and wrap('5') * '5' == 25
     assert 5.25 * wrap(4) == 21 and wrap(5.25) * 4 == 21 and wrap('5.25') * 4 == 21 and wrap('5.25') * '4' == 21
-    assert isinstance(wrap(5.25) * 4, Int)
-    assert isinstance(wrap('5.25') * 4, Int)
-    assert isinstance(wrap('5.25') * '4', Int)
+    assert isinstance(wrap(5.25) * 4, Float) and isinstance(wrap('5.25') * 4, Float) and isinstance(wrap('5.25') * '4', Float)
+    assert wrap(1000) ** wrap(1000) == math.inf
 
     assert wrap([1,2,3]) + wrap(['6.0',2,-2]) == [7,4,1] and wrap([1,2,3]) - wrap([6,2,-2]) == [-5,0,5] and wrap([1,2,3]) - wrap([6,2]) == [-5,0] and wrap([1]) - wrap([6,2]) == [-5]
     assert wrap([[1,5,2], [1,2], [0], []]) + wrap('4') == [[5,9,6], [5,6], [4], []] and wrap([[1,5,2], [1,2], [0], []]) + '4' == [[5,9,6], [5,6], [4], []]
@@ -344,10 +292,10 @@ if __name__ == '__main__':
     assert is_wrapped(wrap(3.75) + wrap(2.5)) and is_wrapped(wrap(3.75) - wrap(2.5)) and is_wrapped(wrap(3.75) - 2.5) and is_wrapped(3.75 - wrap(2.5))
     assert wrap(3.75) + wrap(2.5) == 6.25 and wrap(3.75) - wrap(2.5) == 1.25 and 3.75 - wrap(2.5) == 1.25 and wrap(3.75) - 2.5 == 1.25
     assert is_wrapped(wrap('3') + wrap('3')) and is_wrapped(wrap('3') - wrap('3')) and is_wrapped('3' - wrap('3')) and is_wrapped(wrap('3') - '3')
-    assert wrap('3') + wrap('7') == 10 and wrap('3') + '7' == 10 and isinstance(wrap('3') + wrap('7'), Int) and isinstance(wrap('3') + '7', Int)
+    assert wrap('3') + wrap('7') == 10 and wrap('3') + '7' == 10 and isinstance(wrap('3') + wrap('7'), Float) and isinstance(wrap('3') + '7', Float)
     assert is_wrapped(wrap('3') + wrap(3)) and is_wrapped(wrap('3') - wrap(3)) and is_wrapped('3' - wrap(3)) and is_wrapped(wrap('3') - 3)
     assert is_wrapped(wrap('3') + wrap(3.9)) and is_wrapped(wrap('3') - wrap(3.8)) and is_wrapped('3' - wrap(3.7)) and is_wrapped(wrap('3') - 3.6)
-    assert wrap('3') + wrap(7) == 10 and wrap('3') + 7 == 10 and isinstance(wrap('3') + wrap(7), Int) and isinstance(wrap('3') + 7, Int) and isinstance(wrap('3.0') + 7, Int)
-    assert wrap('3') + wrap(7.5) == 10.5 and wrap('3') + 7.5 == 10.5 and isinstance(wrap('3.5') + wrap(7.5), Int) and isinstance(wrap('3.5') + 7.5, Int)
+    assert wrap('3') + wrap(7) == 10 and wrap('3') + 7 == 10 and isinstance(wrap('3') + wrap(7), Float) and isinstance(wrap('3') + 7, Float) and isinstance(wrap('3.0') + 7, Float)
+    assert wrap('3') + wrap(7.5) == 10.5 and wrap('3') + 7.5 == 10.5 and isinstance(wrap('3.5') + wrap(7.5), Float) and isinstance(wrap('3.5') + 7.5, Float)
 
     print('passed all snap wrapper tests')
