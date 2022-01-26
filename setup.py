@@ -23,6 +23,7 @@ setup(
         'requests',
         'gelidum',
         'pillow>=8.2', # 8.2 needed for ImageDraw.rounded_rectangle()
+        'nb2pb>=0.1.0', # our compiler - needs version updates occassionally
         'numpy',
         'parso',
         'jedi',

@@ -23,6 +23,8 @@ from PIL import Image
 
 from typing import List, Tuple, Any, Optional
 
+import nb2pb
+
 import netsblox
 from netsblox import transform
 from netsblox import common
@@ -32,7 +34,8 @@ NETSBLOX_PY_PATH = os.path.dirname(netsblox.__file__)
 SUGGESTION_UPDATE_INTERVAL = 200
 
 xux = lambda x: f'{x} {x.upper()}'
-PROJECT_FILETYPES = [('Project Files', xux('.json')), ('All Files', '.*')]
+PROJECT_FILETYPES = [('PyBlox Project Files', xux('.json')), ('All Files', '.*')]
+NB_PROJECT_FILETYPES = [('NetsBlox Project Files', xux('.xml')), ('All Files', '.*')]
 PYTHON_FILETYPES = [('Python Files', xux('.py')), ('All Files', '.*')]
 IMAGE_FILETYPES = [('Images', xux('.png .jpg .jpeg')), ('All Files', '.*')]
 
@@ -1342,6 +1345,7 @@ class MainMenu(tk.Menu):
         submenu = tk.Menu(self, **MENU_STYLE)
         submenu.add_command(label = 'New', command = lambda: self.open_project(super_proj = ProjectEditor.DEFAULT_PROJECT), accelerator = f'{SYS_INFO["mod-str"]}+N')
         submenu.add_command(label = 'Open', command = self.open_project, accelerator = f'{SYS_INFO["mod-str"]}+O')
+        submenu.add_command(label = 'Import NetsBlox project', command = self.open_trans_xml)
 
         subsubmenu = tk.Menu(submenu, **MENU_STYLE)
         for file in sorted(os.listdir(f'{common._NETSBLOX_PY_PATH}/assets/examples/')):
@@ -1493,6 +1497,21 @@ class MainMenu(tk.Menu):
             messagebox.showerror('Failed to load project', str(e))
             if rstor is not None:
                 content.project.load(rstor)
+
+    def open_trans_xml(self):
+        content.project.on_tab_change()
+        if not self.try_close_project(): return
+
+        try:
+            p = filedialog.askopenfilename(filetypes = NB_PROJECT_FILETYPES)
+            if type(p) is not str or not p:
+                return
+            with open(p, 'r') as f:
+                xml = f.read()
+            proj = json.loads(nb2pb.translate(xml)[1])
+            self.open_project(super_proj = proj)
+        except Exception as e:
+            messagebox.showerror('Failed to import project', str(e))
 
     def switch_role(self, *, active_role: int):
         content.project.on_tab_change()
