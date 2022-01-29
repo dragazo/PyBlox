@@ -1,1 +1,5 @@
 recursive-include netsblox/assets/ *
+
+exclude netsblox/assets/Azure-ttk-theme/*
+include netsblox/assets/Azure-ttk-theme/azure.tcl
+include netsblox/assets/Azure-ttk-theme/LICENSE

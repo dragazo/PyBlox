@@ -55,12 +55,6 @@ try:
 except:
     pass
 
-IS_DARK = darkdetect.isDark()
-COLOR_INFO = {
-    'text-background':          '#1f1e1e' if IS_DARK else '#ffffff',
-    'text-background-disabled': '#1f1e1e' if IS_DARK else '#ffffff',
-}
-
 SYS_INFO = None
 if platform.system() == 'Darwin':
     SYS_INFO = {
@@ -348,7 +342,7 @@ class BlocksList(tk.Frame):
         super().__init__(parent)
 
         self.scrollbar = ttk.Scrollbar(self)
-        self.text = tk.Text(self, wrap = tk.NONE, width = 24, yscrollcommand = self.scrollbar.set, bg = COLOR_INFO['text-background-disabled'])
+        self.text = tk.Text(self, wrap = tk.NONE, width = 24, yscrollcommand = self.scrollbar.set, relief = 'flat')
         self.scrollbar.configure(command = self.text.yview)
 
         self.scrollbar.pack(side = tk.RIGHT, fill = tk.Y)
@@ -390,7 +384,7 @@ class BlocksList(tk.Frame):
         self.imgs = [] # for some reason we need to keep a reference to the images or they disappear
         for block in blocks:
             img = common.load_tkimage(block['url'], scale = block['scale'])
-            label = tk.Label(self.text, image = img, bg = COLOR_INFO['text-background-disabled'])
+            label = tk.Label(self.text, image = img)
 
             self.text.window_create('end', window = label)
             self.text.insert('end', '\n')
@@ -970,15 +964,15 @@ class CodeEditor(ScrolledText):
             ]
             cdg.prog = re.compile('|'.join(patterns))
 
-            cdg.tagdefs['COMMENT']    = {'foreground': '#a3a3a3' if IS_DARK else '#a3a3a3', 'background': COLOR_INFO['text-background']}
-            cdg.tagdefs['MYNUMBER']   = {'foreground': '#e8821c' if IS_DARK else '#c26910', 'background': COLOR_INFO['text-background']}
-            cdg.tagdefs['MYSELF']     = {'foreground': '#fc72d0' if IS_DARK else '#d943aa', 'background': COLOR_INFO['text-background']}
-            cdg.tagdefs['MYPROP']     = {'foreground': '#fc72d0' if IS_DARK else '#d943aa', 'background': COLOR_INFO['text-background']}
-            cdg.tagdefs['BUILTIN']    = {'foreground': '#b576f5' if IS_DARK else '#6414b5', 'background': COLOR_INFO['text-background']}
-            cdg.tagdefs['DEFINITION'] = {'foreground': '#b576f5' if IS_DARK else '#6414b5', 'background': COLOR_INFO['text-background']}
-            cdg.tagdefs['MYDECO']     = {'foreground': '#b576f5' if IS_DARK else '#6414b5', 'background': COLOR_INFO['text-background']}
-            cdg.tagdefs['KEYWORD']    = {'foreground': '#5b96f5' if IS_DARK else '#0d15b8', 'background': COLOR_INFO['text-background']}
-            cdg.tagdefs['STRING']     = {'foreground': '#f24141' if IS_DARK else '#961a1a', 'background': COLOR_INFO['text-background']}
+            cdg.tagdefs['COMMENT']    = {'foreground': '#a3a3a3' if IS_DARK else '#a3a3a3'}
+            cdg.tagdefs['MYNUMBER']   = {'foreground': '#e8821c' if IS_DARK else '#c26910'}
+            cdg.tagdefs['MYSELF']     = {'foreground': '#fc72d0' if IS_DARK else '#d943aa'}
+            cdg.tagdefs['MYPROP']     = {'foreground': '#fc72d0' if IS_DARK else '#d943aa'}
+            cdg.tagdefs['BUILTIN']    = {'foreground': '#b576f5' if IS_DARK else '#6414b5'}
+            cdg.tagdefs['DEFINITION'] = {'foreground': '#b576f5' if IS_DARK else '#6414b5'}
+            cdg.tagdefs['MYDECO']     = {'foreground': '#b576f5' if IS_DARK else '#6414b5'}
+            cdg.tagdefs['KEYWORD']    = {'foreground': '#5b96f5' if IS_DARK else '#0d15b8'}
+            cdg.tagdefs['STRING']     = {'foreground': '#f24141' if IS_DARK else '#961a1a'}
 
             percolator.Percolator(self.text).insertfilter(cdg)
 
@@ -1329,7 +1323,7 @@ class TerminalOutput(tk.Frame):
     def write_line(self, txt):
         self.write(f'{txt}\n')
 
-MENU_STYLE = { 'tearoff': False, 'relief': 'flat', 'bg': '#bdbdbd' }
+MENU_STYLE = { 'tearoff': False, 'relief': 'flat' }
 class MainMenu(tk.Menu):
     def __init__(self, parent):
         super().__init__(parent, **MENU_STYLE)
@@ -1650,6 +1644,9 @@ def main():
     root = tk.Tk()
     root.geometry('1200x600')
     root.minsize(width = 800, height = 400)
+
+    root.tk.call('source', f'{common._NETSBLOX_PY_PATH}/assets/Azure-ttk-theme/azure.tcl')
+    root.tk.call('set_theme', 'dark')
 
     style = ttk.Style(root)
     style.configure('TNotebook', tabposition = 'n')
