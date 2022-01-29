@@ -80,6 +80,9 @@ root = None
 main_menu = None
 content = None
 
+def is_dark():
+    return darkdetect.isDark()
+
 _print_queue = mproc.Queue(maxsize = 256)
 _print_batchsize = 256
 _print_targets = []
@@ -943,38 +946,30 @@ class CodeEditor(ScrolledText):
         self.text.bind('<BackSpace>', lambda e: self.do_backspace())
         self.text.bind('<Return>', lambda e: self.do_newline())
 
+        self.__color_perc = percolator.Percolator(self.text)
+        self.__color_last_is_dark = None
+        self.__color_last_cdg = None
+
+        props = set()
+        for T in [netsblox.turtle.TurtleBase, netsblox.turtle.StageBase]:
+            for key in dir(T):
+                if not key.startswith('_') and not key.endswith('_') and isinstance(getattr(T, key), property):
+                    props.add(key)
+
+        def get_pattern(p): # newer versions of python don't allow concatenating pattern objects directly
+            return getattr(p, 'pattern') if hasattr(p, 'pattern') else p
+        patterns = [
+            rf'\.(?P<MYPROP>{"|".join(props)})\b',
+            r'(?P<MYDECO>@(\w+\.)*\w+)\b',
+            r'\b(?P<MYSELF>self)\b',
+            r'\b(?P<MYNUMBER>(\d+\.?|\.\d)\d*(e[-+]?\d+)?)\b',
+            get_pattern(colorizer.make_pat()),
+        ]
+        self.__color_regex = re.compile('|'.join(patterns))
         if color_enabled:
-            # source: https://stackoverflow.com/questions/38594978/tkinter-syntax-highlighting-for-text-widget
-            cdg = colorizer.ColorDelegator()
-
-            props = set()
-            for T in [netsblox.turtle.TurtleBase, netsblox.turtle.StageBase]:
-                for key in dir(T):
-                    if not key.startswith('_') and not key.endswith('_') and isinstance(getattr(T, key), property):
-                        props.add(key)
-
-            def get_pattern(p): # newer versions of python don't allow concatenating pattern objects directly
-                return getattr(p, 'pattern') if hasattr(p, 'pattern') else p
-            patterns = [
-                rf'\.(?P<MYPROP>{"|".join(props)})\b',
-                r'(?P<MYDECO>@(\w+\.)*\w+)\b',
-                r'\b(?P<MYSELF>self)\b',
-                r'\b(?P<MYNUMBER>(\d+\.?|\.\d)\d*(e[-+]?\d+)?)\b',
-                get_pattern(colorizer.make_pat()),
-            ]
-            cdg.prog = re.compile('|'.join(patterns))
-
-            cdg.tagdefs['COMMENT']    = {'foreground': '#a3a3a3' if IS_DARK else '#a3a3a3'}
-            cdg.tagdefs['MYNUMBER']   = {'foreground': '#e8821c' if IS_DARK else '#c26910'}
-            cdg.tagdefs['MYSELF']     = {'foreground': '#fc72d0' if IS_DARK else '#d943aa'}
-            cdg.tagdefs['MYPROP']     = {'foreground': '#fc72d0' if IS_DARK else '#d943aa'}
-            cdg.tagdefs['BUILTIN']    = {'foreground': '#b576f5' if IS_DARK else '#6414b5'}
-            cdg.tagdefs['DEFINITION'] = {'foreground': '#b576f5' if IS_DARK else '#6414b5'}
-            cdg.tagdefs['MYDECO']     = {'foreground': '#b576f5' if IS_DARK else '#6414b5'}
-            cdg.tagdefs['KEYWORD']    = {'foreground': '#5b96f5' if IS_DARK else '#0d15b8'}
-            cdg.tagdefs['STRING']     = {'foreground': '#f24141' if IS_DARK else '#961a1a'}
-
-            percolator.Percolator(self.text).insertfilter(cdg)
+            self.update_color()
+            color_updater = lambda *a,**b: self.update_color()
+            custom_on_root_focus.append(color_updater)
 
         if force_enabled:
             def trigger():
@@ -988,6 +983,31 @@ class CodeEditor(ScrolledText):
 
             # this one really should be ctrl+space on all platforms
             self.text.bind('<Control-Key-space>', lambda e: self.show_suggestion())
+
+    def update_color(self):
+        if not color_enabled: return
+
+        IS_DARK = is_dark()
+        if IS_DARK == self.__color_last_is_dark: return
+        self.__color_last_is_dark = IS_DARK
+
+        cdg = colorizer.ColorDelegator()
+        cdg.prog = self.__color_regex
+
+        cdg.tagdefs['COMMENT']    = {'foreground': '#a3a3a3' if IS_DARK else '#a3a3a3'}
+        cdg.tagdefs['MYNUMBER']   = {'foreground': '#e8821c' if IS_DARK else '#c26910'}
+        cdg.tagdefs['MYSELF']     = {'foreground': '#fc72d0' if IS_DARK else '#d943aa'}
+        cdg.tagdefs['MYPROP']     = {'foreground': '#fc72d0' if IS_DARK else '#d943aa'}
+        cdg.tagdefs['BUILTIN']    = {'foreground': '#b576f5' if IS_DARK else '#6414b5'}
+        cdg.tagdefs['DEFINITION'] = {'foreground': '#b576f5' if IS_DARK else '#6414b5'}
+        cdg.tagdefs['MYDECO']     = {'foreground': '#b576f5' if IS_DARK else '#6414b5'}
+        cdg.tagdefs['KEYWORD']    = {'foreground': '#5b96f5' if IS_DARK else '#0d15b8'}
+        cdg.tagdefs['STRING']     = {'foreground': '#f24141' if IS_DARK else '#961a1a'}
+
+        if self.__color_last_cdg is not None:
+            self.__color_perc.removefilter(self.__color_last_cdg)
+        self.__color_perc.insertfilter(cdg)
+        self.__color_last_cdg = cdg
 
     def line_count(self):
         if self.__line_count:
@@ -1639,14 +1659,19 @@ class MainMenu(tk.Menu):
             self.roles_dropdown.add_cascade(label = content.project.roles[i]['name'], menu = submenu)
 
 def main():
-    global root, main_menu, content
+    global root, main_menu, content, custom_on_root_focus
 
     root = tk.Tk()
     root.geometry('1200x600')
     root.minsize(width = 800, height = 400)
 
+    custom_on_root_focus = []
+    def on_root_focus(*args, **kwargs):
+        for event in custom_on_root_focus:
+            event(*args, **kwargs)
+    root.bind('<FocusIn>', on_root_focus)
+
     root.tk.call('source', f'{common._NETSBLOX_PY_PATH}/assets/Azure-ttk-theme/azure.tcl')
-    root.tk.call('set_theme', 'dark')
 
     style = ttk.Style(root)
     style.configure('TNotebook', tabposition = 'n')
