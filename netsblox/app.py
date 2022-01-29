@@ -1672,6 +1672,7 @@ def main():
     root.bind('<FocusIn>', on_root_focus)
 
     root.tk.call('source', f'{common._NETSBLOX_PY_PATH}/assets/Azure-ttk-theme/azure.tcl')
+    root.tk.call('set_theme', 'dark' if is_dark() else 'light')
 
     style = ttk.Style(root)
     style.configure('TNotebook', tabposition = 'n')
