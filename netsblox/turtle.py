@@ -760,6 +760,21 @@ class TurtleBase(_Ref):
             self.__x, self.__y = x, y
             self.__proj.invalidate()
 
+    def goto(self, target: Union[Tuple[float, float], Any]) -> None:
+        '''
+        Goes to the specified location.
+        The target can either be a tuple/list of `[x, y]` coordinates, or another turtle.
+
+        ```
+        self.goto([15, 23])
+        self.goto(other_turtle)
+        ```
+        '''
+        if isinstance(target, list) or isinstance(target, tuple):
+            self.pos = target
+        else:
+            self.pos = target.pos
+
     @property
     def x_pos(self) -> float:
         '''
