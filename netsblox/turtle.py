@@ -1343,8 +1343,8 @@ def _watch_update() -> None:
         scroll = _tk.Scrollbar(_watch_tk, command = _watch_tree.yview)
         _watch_tree.configure(yscrollcommand = scroll.set)
 
-        scroll.pack(side = _tk.RIGHT, fill = _tk.Y, expand = True)
-        _watch_tree.pack(fill = _tk.BOTH, expand = True)
+        scroll.pack(side = _tk.RIGHT, fill = _tk.Y)
+        _watch_tree.pack(side = _tk.RIGHT, fill = _tk.BOTH, expand = True)
     else:
         compute_open_paths(None, '') # record open paths before we delete them
         _watch_tree.delete(*_watch_tree.get_children())
@@ -1353,20 +1353,33 @@ def _watch_update() -> None:
     def get_iid():
         iid_pos[0] += 1
         return iid_pos[0]
-    def add_value(parent_path: str, text: str, value: Any, *, parent: Union[Tuple[int, int], None] = None):
+    def add_value(parent_path: str, text: str, value: Any, visited: _common.PointerSet, *, parent: Union[Tuple[int, int], None] = None):
         my_path = f'{parent_path}@?{text}'
         is_open = my_path in open_paths
         iid = get_iid()
 
         t = type(value)
-        if t is list or t is tuple:
-            _watch_tree.insert('', _tk.END, iid = iid, text = text, open = is_open, values = [f'{t.__name__} ({len(value)} items)'])
-            for i, v in enumerate(value):
-                add_value(my_path, f'item {i}', v, parent = (iid, i))
-        elif t is dict:
-            _watch_tree.insert('', _tk.END, iid = iid, text = text, open = is_open, values = [f'{t.__name__} ({len(value)} items)'])
-            for i, (k, v) in enumerate(value.items()):
-                add_value(my_path, f'key {repr(k)}', v, parent = (iid, i))
+        if t is list or t is tuple or t is dict:
+            expand = visited.add(value)
+            mod_txt = text if expand else f'{text} (...)'
+            _watch_tree.insert('', _tk.END, iid = iid, text = mod_txt, open = is_open, values = [f'{t.__name__} ({len(value)} items)'])
+            if expand:
+                def over_limit(i: int) -> bool:
+                    if i >= 1024:
+                        class Ellipses:
+                            def __repr__(self): return '...'
+                        add_value(my_path, '...', Ellipses(), visited, parent = (iid, i))
+                        return True
+                    return False
+                if t is list or t is tuple:
+                    for i, v in enumerate(value):
+                        if over_limit(i): break
+                        add_value(my_path, f'item {i}', v, visited, parent = (iid, i))
+                else:
+                    for i, (k, v) in enumerate(value.items()):
+                        if over_limit(i): break
+                        add_value(my_path, f'key {repr(k)}', v, visited, parent = (iid, i))
+                visited.remove(value)
         else:
             _watch_tree.insert('', _tk.END, iid = iid, text = text, open = is_open, values = [repr(value)])
 
@@ -1374,7 +1387,7 @@ def _watch_update() -> None:
             _watch_tree.move(iid, parent[0], parent[1])
 
     for name, watcher in _watch_watchers.items():
-        add_value('', name, watcher['getter']())
+        add_value('', name, watcher['getter'](), _common.PointerSet())
 
 def _watch_start():
     global _watch_started

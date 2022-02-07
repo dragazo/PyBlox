@@ -141,16 +141,6 @@ class List(list):
     def __getitem__(self, idx: Any) -> Any:
         return wrap(list.__getitem__(self, _numerify(idx)))
 
-    # def __list_op(self, other: Any, op: Callable, checker: Callable = _is_matrix) -> 'List':
-    #     other = wrap(other)
-    #     if isinstance(other, List):
-    #         return List(op(wrap(self[i]), wrap(other[i])) for i in range(min(len(self), len(other))))
-    #     return List(op(wrap(x), other) for x in self)
-    # def __list_rop(self, other: Any, op: Callable) -> 'List':
-    #     other = wrap(other)
-    #     if isinstance(other, List): return other.__list_op(self, op)
-    #     return List(op(other, x) for x in self)
-
     def __add__(self, other: Any) -> 'List':
         return _list_op(self, wrap(other), lambda a, b: a + b)
     def __radd__(self, other: Any) -> 'List':

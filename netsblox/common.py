@@ -14,7 +14,7 @@ import os as _os
 
 from PIL import Image as _Image, ImageTk as _ImageTk
 
-from typing import Tuple, List
+from typing import Tuple, List, Any
 
 _NETSBLOX_PY_PATH = _os.path.dirname(_netsblox.__file__)
 
@@ -156,6 +156,28 @@ def paginate_str(text: str, max_len: int) -> List[str]:
         else: res.append(word)
     return res
 
+class PointerSet:
+    def __init__(self):
+        self.__items = []
+
+    def __len__(self) -> int:
+        return len(self.__items)
+
+    def __contains__(self, obj: Any) -> bool:
+        return any(x is obj for x in self.__items)
+
+    def add(self, obj: Any) -> bool:
+        do_add = obj not in self
+        if do_add: self.__items.append(obj)
+        return do_add
+
+    def remove(self, obj: Any) -> bool:
+        for i in range(len(self.__items)-1,-1,-1):
+            if self.__items[i] is not obj: continue
+            del self.__items[i]
+            return True
+        return False
+
 if __name__ == '__main__':
     import sys
     failures = [0]
@@ -174,6 +196,39 @@ if __name__ == '__main__':
     assert_eq(paginate_str('hello world this is a long message', 16), ['hello world this', ' is a long ', 'message'])
     assert_eq(paginate_str('hello world this is a long message', 17), ['hello world this ', 'is a long message'])
     assert_eq(paginate_str('empty                     space', 10), ['empty     ', '          ', '      ', 'space'])
+
+    ps = PointerSet()
+    assert_eq(len(ps), 0)
+    x = [1, 2, 3]
+    assert x not in ps
+    assert_eq(ps.add(x), True)
+    assert_eq(len(ps), 1)
+    assert_eq(ps.add(x), False)
+    assert_eq(x in ps, True)
+    assert_eq(len(ps), 1)
+    assert_eq(x in ps, True)
+    assert_eq('hello'not in ps, True)
+    assert_eq('hello' in ps, False)
+    assert_eq([1,2,3] not in ps, True)
+    assert_eq([1,2,3] in ps, False)
+    assert_eq((1,2,3) not in ps, True)
+    assert_eq((1,2,3) in ps, False)
+    assert_eq(ps.remove([1,2,3]), False)
+    assert_eq(len(ps), 1)
+    assert_eq(x in ps, True)
+    assert_eq(ps.remove(x), True)
+    assert_eq(x not in ps, True)
+    assert_eq(x in ps, False)
+    assert_eq(len(ps), 0)
+
+    foo0 = list(range(10))
+    foo1 = [foo0]
+    foo2 = [foo1]
+    foo0.append(foo2)
+    assert_eq(ps.add(foo0), True)
+    assert_eq(foo0 in ps, True)
+    assert_eq(foo1 in ps, False)
+    assert_eq(foo2 in ps, False)
 
     if failures[0] != 0:
         print(f'FAILED TESTS: {failures[0]}', file = sys.stderr)
