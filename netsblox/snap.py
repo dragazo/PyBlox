@@ -3,11 +3,6 @@ import math
 
 from typing import Any, Union, Callable
 
-def _numerify(val: Any) -> Union[int, float]:
-    vf = float(val)
-    vi = int(vf)
-    return vi if vi == vf else vf
-
 def _is_matrix(v: Any) -> bool:
     return isinstance(v, list) and len(v) > 0 and isinstance(list.__getitem__(v, 0), list)
 def _is_list(v: Any) -> bool:
@@ -89,6 +84,10 @@ class Float(float):
 
     def __neg__(self) -> 'Float':
         return Float(-float(self))
+    def __pos__(self) -> Union[int, float]:
+        vf = float(self)
+        vi = int(vf)
+        return vi if vi == vf else vf
 
 class Str(str):
     def __eq__(self, other: Any) -> bool:
@@ -133,13 +132,15 @@ class Str(str):
 
     def __neg__(self) -> 'Float':
         return -Float(self)
+    def __pos__(self) -> Union[int, float]:
+        return +Float(self)
 
 class List(list):
     def __bool__(self) -> bool:
         return True
 
     def __getitem__(self, idx: Any) -> Any:
-        return wrap(list.__getitem__(self, _numerify(idx)))
+        return wrap(list.__getitem__(self, +Float(idx)))
 
     def __add__(self, other: Any) -> 'List':
         return _list_op(self, wrap(other), lambda a, b: a + b)
@@ -287,5 +288,7 @@ if __name__ == '__main__':
     assert is_wrapped(wrap('3') + wrap(3.9)) and is_wrapped(wrap('3') - wrap(3.8)) and is_wrapped('3' - wrap(3.7)) and is_wrapped(wrap('3') - 3.6)
     assert wrap('3') + wrap(7) == 10 and wrap('3') + 7 == 10 and isinstance(wrap('3') + wrap(7), Float) and isinstance(wrap('3') + 7, Float) and isinstance(wrap('3.0') + 7, Float)
     assert wrap('3') + wrap(7.5) == 10.5 and wrap('3') + 7.5 == 10.5 and isinstance(wrap('3.5') + wrap(7.5), Float) and isinstance(wrap('3.5') + 7.5, Float)
+
+    assert type(+wrap(34)) is int and type(+wrap(34.53)) is float and type(+wrap('34')) is int and type(+wrap('34.53')) is float
 
     print('passed all snap wrapper tests')

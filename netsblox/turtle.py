@@ -156,8 +156,12 @@ class _Project:
         self.__tk_canvas.bind('<Tab>', lambda e: on_key('tab', e.widget))
         self.__tk_canvas.bind_all('<Key>', lambda e: on_key(e.keysym.lower(), e.widget))
 
+        self.__last_mouse_pos = (0, 0)
         self.__mouse_down_events = []
         self.__mouse_up_events = []
+        self.__mouse_scroll_up_events = []
+        self.__mouse_scroll_down_events = []
+        self.__mouse_move_events = []
 
         def on_mouse(e, events):
             if e.widget is not self.__tk_canvas: return
@@ -167,6 +171,7 @@ class _Project:
             scale = min(physical_size / logical_size)
             raw_pos = _np.array([e.x, e.y])
             x, y = (raw_pos - physical_size / 2) / scale * _np.array([1, -1])
+            self.__last_mouse_pos = (x, y) # cache this for async access by other entities
 
             for event, anywhere in events:
                 should_handle = True
@@ -181,8 +186,16 @@ class _Project:
             return 'break'
         self.__tk_canvas.bind_all('<Button-1>', lambda e: on_mouse(e, self.__mouse_down_events))
         self.__tk_canvas.bind_all('<ButtonRelease-1>', lambda e: on_mouse(e, self.__mouse_up_events))
+        self.__tk_canvas.bind_all('<MouseWheel>', lambda e: on_mouse(e, self.__mouse_scroll_up_events if e.delta > 0 else self.__mouse_scroll_down_events))
+        self.__tk_canvas.bind_all('<Button-4>', lambda e: on_mouse(e, self.__mouse_scroll_up_events))
+        self.__tk_canvas.bind_all('<Button-5>', lambda e: on_mouse(e, self.__mouse_scroll_down_events))
+        self.__tk_canvas.bind_all('<Motion>', lambda e: on_mouse(e, self.__mouse_move_events))
 
         self.__tk_canvas.focus_set() # grab focus so we can get key events (click events work either way)
+
+    def get_stage(self) -> Optional['StageBase']:
+        with self.__lock:
+            return self.__stages.get(0)
 
     def get_image(self) -> Image.Image:
         with self.__lock:
@@ -209,6 +222,10 @@ class _Project:
         with self.__lock:
             self.__logical_size = (width, height)
             self.clear_drawings() # invalidates project internally
+
+    @property
+    def mouse_pos(self) -> Tuple[float, float]:
+        return self.__last_mouse_pos
 
     @property
     def turtles(self) -> List[Any]:
@@ -334,6 +351,9 @@ class _Project:
         target = None
         if when == 'down': target = self.__mouse_down_events
         elif when == 'up': target = self.__mouse_up_events
+        elif when == 'scroll-down': target = self.__mouse_scroll_down_events
+        elif when == 'scroll-up': target = self.__mouse_scroll_up_events
+        elif when == 'move': target = self.__mouse_move_events
         else: raise ValueError(f'unknown mouse trigger: "{when}"')
 
         with self.__lock:
@@ -551,6 +571,18 @@ class StageBase(_Ref):
         ```
         '''
         return self.size[1]
+
+    @property
+    def mouse_pos(self) -> Tuple[float, float]:
+        '''
+        Gets the last known mouse location.
+        Note that the mouse is not tracked outside of the stage window.
+
+        ```
+        x, y = self.mouse_pos
+        ```
+        '''
+        return self.__proj.mouse_pos
 
     @property
     def turbo(self) -> bool:
@@ -947,6 +979,54 @@ class TurtleBase(_Ref):
         '''
         self.heading += float(angle) if angle is not None else self.__degrees / 4 # invalidates project internally
 
+    def keep_on_stage(self, *, bounce: bool = False) -> None:
+        '''
+        Moves the sprite to ensure it is entirely within the bounds of the stage/screen.
+        If the sprite is not at least partially off the stage/screen, this does nothing.
+
+        It is common to use this immediately after moving the sprite, though this is not required.
+
+        If the `bounce` keyword argument is set to true (default false), in addition to keeping the sprite on the stage,
+        the sprite will also be rotated upon "colliding" with a wall to give the appearance of bouncing off the wall.
+
+        ```
+        self.forward(10)
+        self.keep_on_stage() # no bouncing
+
+        self.forward(10)
+        self.keep_on_stage(bounce = True) # bouncing
+        ```
+        '''
+        stage = self.__proj.get_stage()
+        if stage is None: return
+
+        logical_size = self.__proj.logical_size
+        turtle_pos = self.pos
+        turtle_img = self.__display_image
+        top_left = tuple(round(logical_size[i] / 2 + turtle_pos[i] - turtle_img.size[i] / 2) for i in range(2))
+        box = (top_left[0], top_left[1], top_left[0] + turtle_img.size[0], top_left[1] + turtle_img.size[1])
+
+        h = self.__rot * 2 * _math.pi
+        fx, fy = _math.sin(h), _math.cos(h)
+        dx, dy = 0, 0
+
+        if box[0] < 0: # left
+            dx = -box[0]
+            fx = abs(fx)
+        elif box[2] > logical_size[0]: # right
+            dx = logical_size[0] - box[2]
+            fx = -abs(fx)
+
+        if box[3] > logical_size[1]: # top
+            dy = logical_size[1] - box[3]
+            fy = -abs(fy)
+        elif box[1] < 0: # bottom
+            dy = -box[1]
+            fy = abs(fy)
+
+        self.pos = (self.__x + dx, self.__y + dy) # using pos wrapper so we draw lines
+        if bounce: self.heading = (_math.atan2(fx, fy)) / (2 * _math.pi) * self.__degrees
+
     # -------------------------------------------------------
 
     def stamp(self) -> None:
@@ -1093,10 +1173,10 @@ def _derive(bases, cls):
                 for key in getattr(key_script, '__run_on_key'):
                     self.__proj.add_key_event(key, key_script)
 
-            click_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_click'))
-            for _, click_script in click_scripts:
-                for key in getattr(click_script, '__run_on_click'):
-                    self.__proj.add_mouse_event(key, click_script)
+            mouse_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_mouse'))
+            for _, mouse_script in mouse_scripts:
+                for key in getattr(mouse_script, '__run_on_mouse'):
+                    self.__proj.add_mouse_event(key, mouse_script)
 
             msg_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_message'))
             for _, msg_script in msg_scripts:
@@ -1278,39 +1358,44 @@ def onkey(*keys: str):
     proj =  _get_proj_handle()
     return _add_gui_event_wrapper('__run_on_key', proj.add_key_event, mapped_keys)
 
-def onclick(*, when: str = 'down', anywhere: bool = False):
+def onmouse(when: str, *, anywhere: bool = False):
     '''
-    The `@onclick()` decorator can be applied to a function to make it run
-    when a user clicks on the turtle or display.
-    The function you apply it to will receive the `x` and `y` position of the click.
+    The `@onmouse()` decorator can be applied to a function to make it run
+    when a user interacts with the turtle or display with their mouse.
+    The function you apply it to will receive the `x` and `y` position of the mouse.
 
     When used on sprite methods, by default this will only be triggered when the user
-    clicks on the sprite itself, rather than anywhere on the display.
-    If you want a sprite method to run when clicking anywhere on the display,
+    interacts with the sprite itself, rather than anywhere on the display.
+    If you want a sprite method to run when interacting anywhere on the display,
     pass the `anywhere = True` keyword argument (see examples below).
 
     The `when` keyword argument controls when the function is called - there are the following options:
-     - 'down' (default) - run when the mouse button is pressed down.
-     - 'up' - run when the mouse button is released.
+     - 'down' - run when the mouse button is pressed down (clicked).
+     - 'up' - run when the mouse button is released (click released).
+     - 'scroll-down' - run when the mouse wheel is scrolled down.
+     - 'scroll-up' - run when the mouse wheel is scrolled up.
+     - 'move' - run any time the mouse moves.
 
     ```
-    @onclick()
-    def mouse_click_1(self, x, y):
+    @onmouse(when = 'down')
+    def mouse_down_1(self, x, y):
         pass
 
-    @onclick(anywhere = True)
-    def mouse_click_2(self, x, y):
+    @onmouse(when = 'down', anywhere = True)
+    def mouse_down_2(self, x, y):
         pass
 
-    @onclick(when = 'up')
-    def mouse_click_3(self, x, y):
+    @onmouse(when = 'scroll-up')
+    def mouse_scroll_up(self, x, y):
         pass
     ```
     '''
-    if when not in ['down', 'up']:
-        raise ValueError(f'Unknown @onclick when mode: "{when}". Expected "down" or "up".')
+    modes = ['down', 'up', 'scroll-down', 'scroll-up', 'move']
+    if when not in modes:
+        expected = ", ".join(f"\"{x}\"" for x in modes)
+        raise ValueError(f'Unknown @onmouse when mode: "{when}". Expected {expected}.')
     proj = _get_proj_handle()
-    return _add_gui_event_wrapper('__run_on_click', proj.add_mouse_event, [(when, anywhere)])
+    return _add_gui_event_wrapper('__run_on_mouse', proj.add_mouse_event, [(when, anywhere)])
 
 _WATCH_UPDATE_INTERVAL = 500
 _watch_tk = None
