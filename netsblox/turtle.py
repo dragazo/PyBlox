@@ -585,6 +585,18 @@ class StageBase(_Ref):
         return self.__proj.mouse_pos
 
     @property
+    def gps_location(self) -> Tuple[float, float]:
+        '''
+        Approximates the gps location of this computer.
+        Returns a tuple of `(latitude, longitude)`.
+
+        ```
+        lat, long, = self.gps_location
+        ```
+        '''
+        return _common.get_location()
+
+    @property
     def turbo(self) -> bool:
         '''
         Get or set whether or not turbo mode is enabled (for all sprites).

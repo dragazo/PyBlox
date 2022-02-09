@@ -1,23 +1,28 @@
 import random
 import math
 
-from typing import Any, Union, Callable
+from typing import Any, Union, Callable, Sequence
 
 def _is_matrix(v: Any) -> bool:
     return isinstance(v, list) and len(v) > 0 and isinstance(list.__getitem__(v, 0), list)
 def _is_list(v: Any) -> bool:
     return isinstance(v, list)
 
-def _list_op(a: Any, b: Any, op: Callable, matrix_mode: bool = True) -> 'List':
+def _list_binary_op(a: Any, b: Any, op: Callable, matrix_mode: bool = True) -> 'List':
     assert is_wrapped(a) and is_wrapped(b)
     checker = _is_matrix if matrix_mode else _is_list
     if checker(a):
         if checker(b):
-            return List(_list_op(wrap(list.__getitem__(a, i)), wrap(list.__getitem__(b, i)), op, matrix_mode) for i in range(min(len(a), len(b))))
-        return List(_list_op(wrap(list.__getitem__(a, i)), b, op, matrix_mode) for i in range(len(a)))
+            return List(_list_binary_op(wrap(list.__getitem__(a, i)), wrap(list.__getitem__(b, i)), op, matrix_mode) for i in range(min(len(a), len(b))))
+        return List(_list_binary_op(wrap(list.__getitem__(a, i)), b, op, matrix_mode) for i in range(len(a)))
     if checker(b):
-        return List(_list_op(a, wrap(list.__getitem__(b, i)), op, matrix_mode) for i in range(len(b)))
-    return _list_op(a, b, op, False) if matrix_mode else op(a, b)
+        return List(_list_binary_op(a, wrap(list.__getitem__(b, i)), op, matrix_mode) for i in range(len(b)))
+    return _list_binary_op(a, b, op, False) if matrix_mode else op(a, b)
+def _list_unary_op(a: Any, op: Callable) -> 'List':
+    assert is_wrapped(a)
+    if _is_list(a):
+        return List(_list_unary_op(wrap(x), op) for x in a)
+    return op(a)
 
 def _scalar_op(a: Any, b: Any, op: Callable) -> 'Float':
     a, b = float(a), float(b)
@@ -141,36 +146,38 @@ class List(list):
 
     def __getitem__(self, idx: Any) -> Any:
         return wrap(list.__getitem__(self, +Float(idx)))
+    def __iter__(self) -> Sequence[Any]:
+        return (wrap(x) for x in list.__iter__(self))
 
     def __add__(self, other: Any) -> 'List':
-        return _list_op(self, wrap(other), lambda a, b: a + b)
+        return _list_binary_op(self, wrap(other), lambda a, b: a + b)
     def __radd__(self, other: Any) -> 'List':
-        return _list_op(wrap(other), self, lambda a, b: a + b)
+        return _list_binary_op(wrap(other), self, lambda a, b: a + b)
 
     def __sub__(self, other: Any) -> 'List':
-        return _list_op(self, wrap(other), lambda a, b: a - b)
+        return _list_binary_op(self, wrap(other), lambda a, b: a - b)
     def __rsub__(self, other: Any) -> 'List':
-        return _list_op(wrap(other), self, lambda a, b: a - b)
+        return _list_binary_op(wrap(other), self, lambda a, b: a - b)
 
     def __mul__(self, other: Any) -> 'List':
-        return _list_op(self, wrap(other), lambda a, b: a * b)
+        return _list_binary_op(self, wrap(other), lambda a, b: a * b)
     def __rmul__(self, other: Any) -> 'List':
-        return _list_op(wrap(other), self, lambda a, b: a * b)
+        return _list_binary_op(wrap(other), self, lambda a, b: a * b)
 
     def __truediv__(self, other: Any) -> 'List':
-        return _list_op(self, wrap(other), lambda a, b: a / b)
+        return _list_binary_op(self, wrap(other), lambda a, b: a / b)
     def __rtruediv__(self, other: Any) -> 'List':
-        return _list_op(wrap(other), self, lambda a, b: a / b)
+        return _list_binary_op(wrap(other), self, lambda a, b: a / b)
 
     def __floordiv__(self, other: Any) -> 'List':
-        return _list_op(self, wrap(other), lambda a, b: a // b)
+        return _list_binary_op(self, wrap(other), lambda a, b: a // b)
     def __rfloordiv__(self, other: Any) -> 'List':
-        return _list_op(wrap(other), self, lambda a, b: a // b)
+        return _list_binary_op(wrap(other), self, lambda a, b: a // b)
 
     def __pow__(self, other: Any) -> 'List':
-        return _list_op(self, wrap(other), lambda a, b: a ** b)
+        return _list_binary_op(self, wrap(other), lambda a, b: a ** b)
     def __rpow__(self, other: Any) -> 'List':
-        return _list_op(wrap(other), self, lambda a, b: a ** b)
+        return _list_binary_op(wrap(other), self, lambda a, b: a ** b)
 
     def __neg__(self) -> 'List':
         return List(-x for x in self)
@@ -197,7 +204,7 @@ def rand(a: Any, b: Any) -> Union[Float, List]:
     Otherwise, returns a float in the continuous range.
     '''
     def single(a, b):
-        a, b = float(a), float(b)
+        a, b = +wrap(a), +wrap(b)
         if a == b: return wrap(a)
         if a > b: a, b = b, a
 
@@ -205,11 +212,37 @@ def rand(a: Any, b: Any) -> Union[Float, List]:
         if ai == a and bi == b:
             return wrap(random.randint(ai, bi))
         return wrap(a + random.random() * (b - a))
-    return _list_op(wrap(a), wrap(b), single)
+    return _list_binary_op(wrap(a), wrap(b), single)
 
-def lnot(value: Any) -> Any:
-    value = wrap(value)
-    return List(lnot(x) for x in value) if isinstance(value, List) else not value
+def sxrange(a: Any, b: Any) -> Sequence[Any]:
+    '''
+    Returns a sequence of numbers starting at `a` and going up to and including `b`,
+    increasing or decreasing by `1` each step depending on if `a < b` or `b < a`.
+    The initial point, `a` is always included in the resulting sequence.
+
+    This is similar to `srange` except that it does not have to actually create a list of all the items.
+    For instance, you `srange(1, 1000000)` would create a (large) list of one million items,
+    whereas `sxrange(1, 1000000)` simply generates the numbers one at a times as needed.
+    '''
+    def single(a, b):
+        a, b = +wrap(a), +wrap(b)
+        step = 1 if b > a else -1
+        return (a + wrap(i * step) for i in range(math.floor(abs(b - a)) + 1))
+    return _list_binary_op(wrap(a), wrap(b), single)
+def srange(a: Any, b: Any) -> List:
+    '''
+    Returns the list of numbers starting at `a` and going up to and including `b`,
+    increasing or decreasing by `1` each step depending on if `a < b` or `b < a`.
+    The initial point, `a`, is always included in the resulting list.
+
+    Equivalent to collecting all of the sequences returned by `sxrange` into lists.
+    '''
+    return _list_unary_op(sxrange(a, b), List)
+
+def ssqrt(value: Any) -> Any:
+    return _list_unary_op(wrap(value), lambda x: wrap(math.sqrt(+x)))
+def sround(value: Any) -> Any:
+    return _list_unary_op(wrap(value), lambda x: wrap(round(+x)))
 
 if __name__ == '__main__':
     assert is_wrapped(True)
@@ -217,6 +250,8 @@ if __name__ == '__main__':
     v = wrap(1223847982) ; assert v is wrap(v) and isinstance(v, Float) and isinstance(v, float)
     v = wrap(1223847982.453) ; assert v is wrap(v) and isinstance(v, Float) and isinstance(v, float)
     v = wrap([1,4,2,5,43]) ; assert v is wrap(v) and isinstance(v, List) and isinstance(v, list)
+    assert all(is_wrapped(v[i]) for i in range(len(v))) ; v.append('hello world') ; assert all(is_wrapped(v[i]) for i in range(len(v)))
+    assert all(is_wrapped(x) for x in v) ; v.append(12) ; assert all(is_wrapped(x) for x in v)
     v = wrap((1,4,2,5,43)) ; assert v is wrap(v) and isinstance(v, List) and isinstance(v, list)
     v = wrap({1,3,2,54}) ; assert v is wrap(v) and isinstance(v, List) and isinstance(v, list)
     v = wrap({1:1,3:4,2:2,54:3}) ; assert v is wrap(v) and isinstance(v, List) and isinstance(v, list)
@@ -290,5 +325,20 @@ if __name__ == '__main__':
     assert wrap('3') + wrap(7.5) == 10.5 and wrap('3') + 7.5 == 10.5 and isinstance(wrap('3.5') + wrap(7.5), Float) and isinstance(wrap('3.5') + 7.5, Float)
 
     assert type(+wrap(34)) is int and type(+wrap(34.53)) is float and type(+wrap('34')) is int and type(+wrap('34.53')) is float
+
+    assert srange(wrap(6), wrap(6)) == [6] and srange(wrap(4), wrap(7)) == [4, 5, 6, 7] and srange(wrap(4), wrap('6.9')) == [4, 5, 6]
+    assert srange(wrap('5.25'), wrap('10.4')) == [5.25, 6.25, 7.25, 8.25, 9.25, 10.25] and srange(wrap('10.5'), wrap(5.25)) == [10.5, 9.5, 8.5, 7.5, 6.5, 5.5]
+    assert srange(wrap('5.5'), wrap(5.25)) == [5.5] and srange(wrap('5.5'), wrap(5.5)) == [5.5] and srange(wrap('5.5'), wrap(5.75)) == [5.5]
+    assert srange(wrap([2,3]), wrap([10, 6])) == [[2,3,4,5,6,7,8,9,10],[3,4,5,6]]
+    assert srange(wrap([2,'3.125']), wrap([10, ['-6.7'], 3])) == [[2,3,4,5,6,7,8,9,10],[[3.125, 2.125, 1.125, 0.125, -0.875, -1.875, -2.875, -3.875, -4.875, -5.875]]]
+    assert is_wrapped(ssqrt(wrap(25))) and is_wrapped(ssqrt(wrap('25.0'))) and is_wrapped(ssqrt(wrap([25, ['49', 16], '4.0'])))
+    assert ssqrt(wrap(25)) == 5 and ssqrt(wrap('25.0')) == 5 and ssqrt(wrap([25, ['49', 16], '4.0'])) == [5, [7, 4], 2]
+
+    assert is_wrapped(sround(wrap(25.2))) and is_wrapped(sround(wrap('25.56'))) and is_wrapped(sround(wrap([[12.2, 24, [['-346.3'], 0], '12.9']])))
+    assert sround(wrap(25.2)) == 25 and sround(wrap('25.56')) == 26 and sround(wrap([[12.2, 24, [['-346.3'], 0], '12.9']])) == [[12, 24, [[-346], 0], 13]]
+
+    vv = sxrange(wrap(1.25), wrap(1e300)) ; assert not isinstance(vv, list) and not isinstance(vv, tuple)
+    assert sxrange(1, 100) != srange(1, 100) # generator != list
+    assert list(sxrange(wrap(12.2), wrap('-6.7'))) == srange(wrap(12.2), wrap('-6.7'))
 
     print('passed all snap wrapper tests')
