@@ -28,6 +28,7 @@ import nb2pb
 import netsblox
 from netsblox import transform
 from netsblox import common
+from netsblox import rooms
 
 NETSBLOX_PY_PATH = os.path.dirname(netsblox.__file__)
 
@@ -82,6 +83,7 @@ else:
         'right-click': 'Button-3',
     }
 
+nb = None
 root = None
 main_menu = None
 content = None
@@ -1196,7 +1198,8 @@ from netsblox.turtle import *
 from netsblox.concurrency import *
 nb = netsblox.Client(proj_name = """$proj_name""", proj_id = $proj_id)
 'A connection to NetsBlox, which allows you to use services and RPCs from python.'
-getattr(netsblox.turtle._get_proj_handle(), '_Project__tk').title(f'PyBlox - {nb.get_public_id()}')
+getattr(netsblox.turtle._get_proj_handle(), '_Project__tk').title(f'PyBlox - {nb.public_id}')
+nb.set_room($room_handle)
 setup_stdio()
 setup_yielding()
 import time as _time
@@ -1205,7 +1208,7 @@ def _yield_(x):
     return x
 
 '''.lstrip()
-    BASE_PREFIX_LINES = 13
+    BASE_PREFIX_LINES = 14
 
     prefix = BASE_PREFIX
     prefix_lines = BASE_PREFIX_LINES
@@ -1220,6 +1223,13 @@ def _yield_(x):
         pre = GlobalEditor.prefix
         pre = pre.replace('$proj_name', main_menu.project_name)
         pre = pre.replace('$proj_id', 'None' if is_export else f'\'{content.project.project_id}\'')
+
+        room = main_menu.room_manager
+        role_str = f'\'{content.project.roles[content.project.active_role]["name"]}\''
+        room_id_str = f'\'{room.room_id}\''
+        password_str = 'None' if room.room_password is None else f'\'{room.room_password}\''
+        pre = pre.replace('$room_handle', 'None' if room.room_name is None else f'netsblox.rooms.RuntimeRoomManager(client = nb, role = {role_str}, room_id = {room_id_str}, password = {password_str})')
+
         return pre + self.text.get('1.0', 'end-1c')
 
 class StageEditor(CodeEditor):
@@ -1339,6 +1349,7 @@ class MainMenu(tk.Menu):
 
         def kill():
             if self.try_close_project():
+                self.room_manager.destroy()
                 root.destroy()
         root.protocol('WM_DELETE_WINDOW', kill)
 
@@ -1377,6 +1388,8 @@ class MainMenu(tk.Menu):
         self.add_cascade(label = 'View', menu = submenu)
 
         root.bind_all(f'<{SYS_INFO["mod"]}-b>', lambda e: self.toggle_blocks())
+
+        self.room_manager = rooms.EditorRoomManager(client = nb)
 
         self.roles_dropdown = tk.Menu(self, **MENU_STYLE)
         self.add_cascade(label = 'Roles', menu = self.roles_dropdown)
@@ -1593,26 +1606,41 @@ class MainMenu(tk.Menu):
     def update_roles(self):
         self.roles_dropdown.delete(0, 'end')
 
-        def make_role():
-            name = None
-            while True:
-                name = simpledialog.askstring(title = 'Name Role', prompt = 'Enter the name of the new role, which should be a valid variable name')
-                if name is None: return
-                if not is_valid_ident(name):
-                    messagebox.showerror('Invalid name', message = f'"{name}" is not a valid python variable name')
-                    continue
-                if any(x['name'] == name for x in content.project.roles):
-                    messagebox.showerror(title = 'Invalid name', message = f'A role named {name} already exists.')
-                    continue
-                break
-            role = copy.deepcopy(ProjectEditor.DEFAULT_PROJECT['roles'][0])
-            role['name'] = name
-            content.project.roles.append(role)
-            self.update_roles()
-        self.roles_dropdown.add_command(label = 'New Role', command = make_role)
+        submenu = tk.Menu(**MENU_STYLE)
 
-        if len(content.project.roles) != 0:
-            self.roles_dropdown.add_separator()
+        def create_room():
+            password = simpledialog.askstring(title = 'New Room Password', prompt = 'Enter the password for the new room, or nothing for no password')
+            if password is None: return
+            if password == '': password = None
+            try:
+                self.room_manager.create_room(password)
+            except Exception as e:
+                messagebox.showerror('Failed to create room', message = str(e))
+            self.update_roles()
+        submenu.add_command(label = 'Create New Room', command = create_room)
+
+        def join_room():
+            room_name = simpledialog.askstring(title = 'Room Name', prompt = 'Enter the name of the room to join')
+            if room_name is None or room_name == '': return
+            password = simpledialog.askstring(title = 'Room Password', prompt = f'Enter the password for room \'{room_name}\', or nothing if not password protected')
+            if password is None: return
+            if password == '': password = None
+            try:
+                self.room_manager.join_room(room_name, password)
+            except Exception as e:
+                messagebox.showerror('Failed to join room', message = str(e))
+            self.update_roles()
+        submenu.add_command(label = 'Join Room', command = join_room)
+
+        def leave_room():
+            self.room_manager.leave_room()
+            self.update_roles()
+        submenu.add_command(label = f'Leave Room ({self.room_manager.room_name})' if self.room_manager.room_name is not None else 'Leave Room',
+            command = leave_room, state = tk.ACTIVE if self.room_manager.room_name is not None else tk.DISABLED)
+
+        self.roles_dropdown.add_cascade(label = 'Room', menu = submenu)
+
+        self.roles_dropdown.add_separator()
 
         for i, role in enumerate(content.project.roles):
             submenu = tk.Menu(**MENU_STYLE)
@@ -1644,8 +1672,31 @@ class MainMenu(tk.Menu):
 
             self.roles_dropdown.add_cascade(label = content.project.roles[i]['name'], menu = submenu)
 
+        if len(content.project.roles) != 0:
+            self.roles_dropdown.add_separator()
+
+        def make_role():
+            name = None
+            while True:
+                name = simpledialog.askstring(title = 'Name Role', prompt = 'Enter the name of the new role, which should be a valid variable name')
+                if name is None: return
+                if not is_valid_ident(name):
+                    messagebox.showerror('Invalid name', message = f'"{name}" is not a valid python variable name')
+                    continue
+                if any(x['name'] == name for x in content.project.roles):
+                    messagebox.showerror(title = 'Invalid name', message = f'A role named {name} already exists.')
+                    continue
+                break
+            role = copy.deepcopy(ProjectEditor.DEFAULT_PROJECT['roles'][0])
+            role['name'] = name
+            content.project.roles.append(role)
+            self.update_roles()
+        self.roles_dropdown.add_command(label = 'New Role', command = make_role)
+
 def main():
-    global root, main_menu, content
+    global nb, root, main_menu, content
+
+    nb = netsblox.Client()
 
     root = tk.Tk()
     root.geometry('1200x600')

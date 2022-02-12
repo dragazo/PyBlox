@@ -19,6 +19,7 @@ import certifi
 
 import netsblox.common as _common
 import netsblox.events as _events
+import netsblox.rooms as _rooms
 
 _websocket.enableTrace(False) # disable auto-outputting of socket events
 
@@ -44,6 +45,7 @@ class $client_name:
 
         self._client_id = proj_id or _common.generate_proj_id()
         self._base_url = '$base_url'
+        self._room_handle = None
 
         # set these up before the websocket since it might send us messages
         self._message_cv = _threading.Condition(_threading.Lock())
@@ -51,7 +53,7 @@ class $client_name:
         self._message_handlers = {}
         self._message_last = {} # maps msg type to {received_count, last_content, waiters (count)}
         self._message_stream_stopped = False
-        
+
         # create a websocket and start it before anything non-essential (has some warmup communication)
         self._ws_lock = _threading.Lock()
         self._ws = _websocket.WebSocketApp(self._base_url.replace('http', 'ws'),
@@ -111,8 +113,18 @@ $service_instances
                     self._message_cv.notify()
         except:
             pass
-    
-    def get_public_id(self):
+
+    def set_room(self, room: Optional[_rooms.RuntimeRoomManager]) -> None:
+        '''
+        Sets the room that this client should be part of.
+        Unless you know what you're doing, you should probably not use this function directly.
+        The PyBlox IDE will manage this for you automatically.
+        '''
+        assert self._room_handle is None
+        self._room_handle = room
+
+    @property
+    def public_id(self) -> str:
         '''
         Gets the public id, which can be used as a target for `send_message()` to directly send a message to you.
         '''
@@ -147,7 +159,7 @@ $service_instances
                     'msgType': msg_type,
                     'content': values,
                     'dstId': target,
-                    'srcId': self.get_public_id(),
+                    'srcId': self.public_id,
                 }))
 
     @staticmethod
@@ -189,7 +201,7 @@ $service_instances
                     if last['waiters'] > 0:
                         last['waiters'] = 0
                         self._message_cv.notify_all()
-                
+
                 content = message['content']
                 for handler in handlers: # without mutex lock so we don't block new ws messages or on_message()
                     try:
@@ -203,7 +215,7 @@ $service_instances
                         _traceback.print_exc(file = _sys.stderr)
             except:
                 _traceback.print_exc(file = _sys.stderr)
-    
+
     def wait_for_message(self, msg_type: str) -> dict:
         '''
         Waits until we receive the next message of the given type.

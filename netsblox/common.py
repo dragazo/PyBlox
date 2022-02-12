@@ -90,10 +90,9 @@ def small_json(obj):
 def prep_send(val):
     if val is None:
         return '' # NetsBlox expects empty string for no value
-    t = type(val)
-    if t == list or t == tuple:
+    if any(isinstance(val, t) for t in [list, tuple, set]):
         return [prep_send(v) for v in val]
-    elif t == dict:
+    elif isinstance(val, dict):
         return [[prep_send(k), prep_send(v)] for k,v in val.items()]
     else:
         return val
