@@ -2,8 +2,9 @@ import collections as _collections
 import threading as _threading
 import traceback as _traceback
 import inspect as _inspect
-import time as _time
+import copy as _copy
 import json as _json
+import time as _time
 import sys as _sys
 import io as _io
 
@@ -129,11 +130,11 @@ $service_instances
         Gets the public id, which can be used as a target for `send_message()` to directly send a message to you.
         '''
         return f'{self._project_name}@{self._client_id}'
-    def send_message(self, msg_type: str, target: Union[str, List[str]] = 'myself', **values):
+    def send_message(self, msg_type: str, target: Union[str, List[str]] = 'local', **values):
         '''
         Sends a message of the given type to the target(s), which is either the public id of a single target
         or a list of multiple ids for multiple targets.
-        The default value for target, `'myself'`, will send the message to your own project (not just the sprite that sends the message).
+        The default value for target, `'local'`, will send the message to your own project (not just the sprite that sends the message).
         You can receive messages with `@nb.on_message`.
 
         This is similar to broadcast/receive in Snap! except that you can send messages over the internet
@@ -142,24 +143,54 @@ $service_instances
         For instance, the following example sends a message called `'message'` with a field called `'msg'`:
 
         ```
-        nb.send_message('message', 'myself', msg = 'hello world')
+        nb.send_message('message', 'local', msg = 'hello world')
         ```
         '''
-        if target == 'myself':
+        values = { k: _common.prep_send(v) for k, v in values.items() }
+        targets = [target] if isinstance(target, str) else target
+        my_addr = self.public_id
+
+        role_info = []
+        def get_roles():
+            if len(role_info) != 0: return role_info[0]
+            role_info.append({} if self._room_handle is None else self._room_handle.get_roles())
+            return role_info[0]
+
+        extern_targets = []
+        local_count = 0
+        for target in targets:
+            if '@' in target:
+                extern_targets.append(target)
+            elif target == 'local':
+                local_count += 1
+            elif target == 'everyone in room' or target == 'others in room':
+                for addrs in get_roles().values():
+                    for addr in addrs:
+                        if addr != my_addr: extern_targets.append(addr)
+                if target == 'everyone in room':
+                    local_count += 1
+            else:
+                for addr in get_roles().get(target, []):
+                    if addr != my_addr: extern_targets.append(addr)
+                    else: local_count += 1
+
+        if local_count > 0:
+            copies = [_copy.deepcopy(values) for _ in range(local_count)]
             with self._message_cv:
-                self._message_queue.append({
-                    'msgType': msg_type,
-                    'content': values,
-                })
+                for copy in copies:
+                    self._message_queue.append({
+                        'msgType': msg_type,
+                        'content': copy,
+                    })
                 self._message_cv.notify()
-        else:
+        if len(extern_targets) > 0:
             with self._ws_lock:
                 self._ws.send(_common.small_json({
                     'type': 'message',
                     'msgType': msg_type,
                     'content': values,
-                    'dstId': target,
-                    'srcId': self.public_id,
+                    'dstId': extern_targets,
+                    'srcId': my_addr,
                 }))
 
     @staticmethod
