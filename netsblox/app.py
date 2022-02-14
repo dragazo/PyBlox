@@ -33,6 +33,9 @@ from netsblox import rooms
 NETSBLOX_PY_PATH = os.path.dirname(netsblox.__file__)
 
 SUGGESTION_UPDATE_INTERVAL = 200
+PANED_WINDOW_OPTS = {
+    'sashwidth': 5,
+}
 
 xux = lambda x: f'{x} {x.upper()}'
 PROJECT_FILETYPES = [('PyBlox Project Files', xux('.json')), ('All Files', '.*')]
@@ -302,15 +305,14 @@ class Content(tk.Frame):
         super().__init__(parent)
         self.pack(side = tk.BOTTOM, fill = tk.BOTH, expand = True)
 
-        self.project = ProjectEditor(self)
-        self.display = Display(self)
+        self.pane = tk.PanedWindow(self, orient = tk.HORIZONTAL, **PANED_WINDOW_OPTS)
+        self.pane.pack(fill = tk.BOTH, expand = True)
 
-        self.project.grid(row = 0, column = 0, sticky = tk.NSEW)
-        self.display.grid(row = 0, column = 1, sticky = tk.NSEW)
+        self.project = ProjectEditor(self.pane)
+        self.display = Display(self.pane)
 
-        self.grid_columnconfigure(0, weight = 5, uniform = 'content')
-        self.grid_columnconfigure(1, weight = 3, uniform = 'content')
-        self.grid_rowconfigure(0, weight = 1)
+        self.pane.add(self.project, stretch = 'always', width = 5, minsize = 300)
+        self.pane.add(self.display, stretch = 'always', width = 3, minsize = 300)
 
 class DndTarget:
     def __init__(self, widget, on_start, on_stop, on_drop):
@@ -1268,17 +1270,16 @@ class Display(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
 
-        self.docs = ScrolledText(self, readonly = True)
-        self.terminal = TerminalOutput(self)
+        self.pane = tk.PanedWindow(self, orient = tk.VERTICAL, **PANED_WINDOW_OPTS)
+        self.pane.pack(fill = tk.BOTH, expand = True)
+
+        self.docs = ScrolledText(self.pane, readonly = True)
+        self.terminal = TerminalOutput(self.pane)
 
         self.docs.text.configure(wrap = tk.WORD)
 
-        self.docs.grid(row = 0, column = 0, sticky = tk.NSEW)
-        self.terminal.grid(row = 1, column = 0, sticky = tk.NSEW)
-
-        self.grid_columnconfigure(0, weight = 1)
-        self.grid_rowconfigure(0, weight = 1, uniform = 'display')
-        self.grid_rowconfigure(1, weight = 1, uniform = 'display')
+        self.pane.add(self.docs, stretch = 'always', minsize = 100)
+        self.pane.add(self.terminal, stretch = 'always', minsize = 100)
 
 class TerminalOutput(tk.Frame):
     def __init__(self, parent):
