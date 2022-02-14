@@ -796,8 +796,11 @@ class ChangedText(tk.Text):
         try:
             result = self.tk.call(cmd)
         except Exception as e:
-            # for some reason our proxying breaks undo/redo if the stacks are empty, so just catch and ignore
-            if cmd[1:] not in [('edit', 'undo'), ('edit', 'redo')]:
+            # for some reason our proxying breaks some ops in some cases, so just catch and ignore
+            ignore_patterns = [
+                ('edit', 'undo'), ('edit', 'redo'), # fails if stack is empty (undo) or at top of stack (redo)
+            ]
+            if cmd[1:] not in ignore_patterns:
                 raise e
 
         # generate an event if something was added or deleted, or the cursor position changed
@@ -856,14 +859,6 @@ class ScrolledText(tk.Frame):
         if readonly:
             # make text readonly be ignoring all (default) keystrokes
             self.text.bind('<Key>', lambda e: 'break')
-
-            # catching all keys above means we can't copy anymore - impl manually
-            def on_copy(e):
-                self.clipboard_clear()
-                self.clipboard_append(self.text.selection_get())
-                return 'break'
-            self.text.bind(f'<{SYS_INFO["mod"]}-Key-c>', on_copy)
-            self.text.bind(f'<{SYS_INFO["mod"]}-Key-C>', on_copy)
         else:
             def on_redo(e):
                 self.text.edit_redo()
@@ -881,6 +876,17 @@ class ScrolledText(tk.Frame):
                 return 'break'
             self.text.bind(f'<{SYS_INFO["mod"]}-Key-v>', on_paste)
             self.text.bind(f'<{SYS_INFO["mod"]}-Key-V>', on_paste)
+
+        # custom copy behavior - (also in readonly case above, catching all keys means we can't copy without override anyway)
+        def on_copy(e):
+            self.clipboard_clear()
+            if self.text.tag_ranges(tk.SEL):
+                self.clipboard_append(self.text.get(tk.SEL_FIRST, tk.SEL_LAST))
+            else: # if no selection, copy the current line
+                self.clipboard_append(self.text.get('insert linestart', 'insert lineend'))
+            return 'break'
+        self.text.bind(f'<{SYS_INFO["mod"]}-Key-c>', on_copy)
+        self.text.bind(f'<{SYS_INFO["mod"]}-Key-C>', on_copy)
 
         if linenumbers:
             self.linenumbers = TextLineNumbers(self, target = self.text, width = 40)
@@ -1087,7 +1093,7 @@ class CodeEditor(ScrolledText):
         if should_show:
             if self.help_popup is not None:
                 self.help_popup.destroy()
-            
+
             try:
                 x, y, w, h = self.text.bbox(tk.INSERT)
             except:
@@ -1103,7 +1109,7 @@ class CodeEditor(ScrolledText):
                 if not item.name.startswith('_'): # hide private stuff - would only confuse beginners and they shouldn't touch it anyway
                     self.help_popup.insert(tk.END, item.name)
                     self.help_completions[item.name] = item.complete
-            
+
             self.help_popup.bind('<Double-Button-1>', lambda e: self.do_completion())
         else:
             self.hide_suggestion()
@@ -1142,7 +1148,7 @@ class CodeEditor(ScrolledText):
         self.text.delete(*sel_padded)
         self.text.insert(sel_padded[0], mutated)
         self.text.edit_separator()
-        
+
         new_sel_start = f'{sel_start_pieces[0]}.{max(0, int(sel_start_pieces[1]) + line_deltas[0])}'
         new_sel_end = f'{sel_end_pieces[0]}.{max(0, int(sel_end_pieces[1]) + line_deltas[-1])}'
         new_ins = f'{ins_pieces[0]}.{max(0, int(ins_pieces[1]) + ins_delta)}'
