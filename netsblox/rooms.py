@@ -4,6 +4,10 @@ import threading
 import randomname
 from typing import Any, Optional, Dict, MutableSet, Literal, Tuple
 
+LOGGING = False
+def log(*args, **kwargs):
+    if LOGGING: print(*args, **kwargs)
+
 def format_room_id(room_name: str) -> str:
     return f'_pyblox_room({room_name})'
 
@@ -19,6 +23,8 @@ class RcRoomHandle:
     '''
 
     def __init__(self, client: Any, room_id: str, password: Optional[str] = None, *, mode: Literal['create', 'join']):
+        self.__constructed = False
+
         self.__client = client
         self.__id = room_id
         self.__password = password
@@ -28,45 +34,51 @@ class RcRoomHandle:
 
         if mode == 'create':
             try:
-                print('creating room', self.__id, self.__password)
+                log('creating room', self.__id, 'pass:', self.__password)
                 self.__client.cloud_variables.set_variable(self.__id, [1, {}], self.__password)
             except Exception as e:
                 err = str(e).lower()
+                log('failed...', err)
                 if 'incorrect password' in err: raise RuntimeError(f'Failed to create room: room already exists')
                 raise e
         elif mode == 'join':
             try:
-                print('incrementing room ref counter')
+                log('incrementing room ref counter')
                 self.__client.cloud_variables.lock_variable(self.__id, self.__password)
                 raw = self.__client.cloud_variables.get_variable(self.__id, self.__password)
                 raw[0] += 1
                 self.__client.cloud_variables.set_variable(self.__id, raw, self.__password)
                 self.__client.cloud_variables.unlock_variable(self.__id, self.__password)
-                print('new counter value', raw[0])
+                log('new counter value', raw[0])
             except Exception as e:
                 err = str(e).lower()
+                log('failed...', err)
                 if 'not found' in err: raise RuntimeError(f'Failed to connect to room: room does not exist')
                 if 'incorrect password' in err: raise RuntimeError(f'Failed to connect to room: incorrect password')
                 raise e
         else:
             raise RuntimeError(f'Unknown RcRoomHandle mode: \'{mode}\'')
 
+        self.__constructed = True
+
     def destroy(self) -> None:
+        if not self.__constructed: return
+
         if self.__destroyed: return
         with self.__destroyed_lock:
             if self.__destroyed: return
             self.__destroyed = True
 
-        print('decrementing room ref counter')
+        log('decrementing room ref counter')
         self.__client.cloud_variables.lock_variable(self.__id, self.__password)
         raw = self.__client.cloud_variables.get_variable(self.__id, self.__password)
         raw[0] -= 1
         self.__client.cloud_variables.set_variable(self.__id, raw, self.__password)
         self.__client.cloud_variables.unlock_variable(self.__id, self.__password)
-        print('new counter value', raw[0])
+        log('new counter value', raw[0])
 
         if raw[0] == 0:
-            print('deleting room')
+            log('deleting room')
             self.__client.cloud_variables.delete_variable(self.__id, self.__password)
 
         self.__client = None
