@@ -740,6 +740,17 @@ class TurtleBase(_Ref):
 
     # ----------------------------------------
 
+    def get_image(self) -> Image.Image:
+        '''
+        Gets an image of this sprite, with nothing else and a transparent background.
+        This returned image will include effects like color, rotation, and any active graphical effects.
+
+        ```
+        img = self.get_image()
+        ```
+        '''
+        return self.__display_image
+
     @property
     def costume(self) -> Any:
         '''

@@ -93,6 +93,16 @@ class Float(float):
         vf = float(self)
         vi = int(vf)
         return vi if vi == vf else vf
+    def __abs__(self) -> 'Float':
+        return Float(abs(float(self)))
+    def __round__(self) -> 'Float':
+        return Float(round(float(self)))
+    def __trunc__(self) -> 'Float':
+        return Float(math.trunc(float(self)))
+    def __ceil__(self) -> 'Float':
+        return Float(math.ceil(float(self)))
+    def __floor__(self) -> 'Float':
+        return Float(math.floor(float(self)))
 
 class Str(str):
     def __eq__(self, other: Any) -> bool:
@@ -139,13 +149,63 @@ class Str(str):
         return -Float(self)
     def __pos__(self) -> Union[int, float]:
         return +Float(self)
+    def __abs__(self) -> 'Float':
+        return Float(abs(Float(self)))
+    def __round__(self) -> 'Float':
+        return round(Float(self))
+    def __trunc__(self) -> 'Float':
+        return math.trunc(Float(self))
+    def __ceil__(self) -> 'Float':
+        return math.ceil(Float(self))
+    def __floor__(self) -> 'Float':
+        return math.floor(Float(self))
+
+def _parse_index(idx: Any) -> Union['List', int, str]:
+    idx = wrap(idx)
+    if type(idx) is List: return idx
+
+    try:
+        idx = +idx
+    except:
+        return str(idx)
+
+    return idx if type(idx) is int else str(idx)
 
 class List(list):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # these are volatile - we don't persist them on e.g. list concat and they don't count toward size, indexing, etc.
+        self.__str_keys = {}
+
     def __bool__(self) -> bool:
         return True
 
     def __getitem__(self, idx: Any) -> Any:
-        return wrap(list.__getitem__(self, +Float(idx)))
+        idx = _parse_index(idx)
+        t = type(idx)
+        if t is List: return wrap('')
+        elif t is str: return wrap(self.__str_keys.get(idx, ''))
+        elif t is int:
+            if idx < 0: return wrap(self.__str_keys.get(str(idx), ''))
+            elif idx < len(self): return wrap(list.__getitem__(self, idx))
+            else: return wrap('')
+        else: assert False
+    def __setitem__(self, idx: Any, value: Any):
+        value = wrap(value)
+        idx = _parse_index(idx)
+        t = type(idx)
+        if t is List: pass
+        elif t is str: self.__str_keys[idx] = value
+        elif t is int:
+            if idx < 0: self.__str_keys[str(idx)] = value
+            elif idx < len(self): list.__setitem__(self, idx, value)
+            else:
+                for _ in range(len(self), idx):
+                    self.append(wrap(''))
+                self.append(value)
+        else: assert False
+
     def __iter__(self) -> Sequence[Any]:
         return (wrap(x) for x in list.__iter__(self))
 
@@ -181,6 +241,28 @@ class List(list):
 
     def __neg__(self) -> 'List':
         return List(-x for x in self)
+    def __abs__(self) -> 'List':
+        return List(abs(x) for x in self)
+    def __round__(self) -> 'List':
+        return List(round(x) for x in self)
+    def __trunc__(self) -> 'List':
+        return List(math.trunc(x) for x in self)
+    def __ceil__(self) -> 'List':
+        return List(math.ceil(x) for x in self)
+    def __floor__(self) -> 'List':
+        return List(math.floor(x) for x in self)
+
+    def random(self) -> Any:
+        if len(self) == 0: return wrap('')
+        return random.choice(self)
+    def last(self) -> Any:
+        return self[len(self) - 1]
+
+    def index(self, *args, **kwargs) -> Float:
+        try:
+            return Float(list.index(self, *args, **kwargs))
+        except ValueError:
+            return Float(-1)
 
 _listify = lambda v: List(wrap(x) for x in v)
 _wrappers = { int: Float, float: Float, str: Str, list: _listify, tuple: _listify, set: _listify, dict: lambda v: List(wrap(x) for x in v.items()) }
@@ -239,10 +321,34 @@ def srange(a: Any, b: Any) -> List:
     '''
     return _list_unary_op(sxrange(a, b), List)
 
-def ssqrt(value: Any) -> Any:
+def sqrt(value: Any) -> Any:
     return _list_unary_op(wrap(value), lambda x: wrap(math.sqrt(+x)))
-def sround(value: Any) -> Any:
-    return _list_unary_op(wrap(value), lambda x: wrap(round(+x)))
+
+def sin(value: Any) -> Any:
+    return _list_unary_op(wrap(value), lambda x: wrap(math.sin(+x * (math.pi / 180))))
+def cos(value: Any) -> Any:
+    return _list_unary_op(wrap(value), lambda x: wrap(math.cos(+x * (math.pi / 180))))
+def tan(value: Any) -> Any:
+    return _list_unary_op(wrap(value), lambda x: wrap(math.tan(+x * (math.pi / 180))))
+
+def asin(value: Any) -> Any:
+    return _list_unary_op(wrap(value), lambda x: wrap(math.asin(+x) * (180 / math.pi)))
+def acos(value: Any) -> Any:
+    return _list_unary_op(wrap(value), lambda x: wrap(math.acos(+x) * (180 / math.pi)))
+def atan(value: Any) -> Any:
+    return _list_unary_op(wrap(value), lambda x: wrap(math.atan(+x) * (180 / math.pi)))
+
+def get_ord(value: Any) -> Any:
+    return _list_unary_op(wrap(value), lambda x: wrap(ord(str(x))))
+def get_chr(value: Any) -> Any:
+    return _list_unary_op(wrap(value), lambda x: wrap(chr(+x)))
+
+def identical(a: Any, b: Any) -> Any:
+    a, b = wrap(a), wrap(b)
+    la, lb = _is_list(a), _is_list(b)
+    if la and lb: return a is b
+    if la or lb: return False
+    return a == b
 
 if __name__ == '__main__':
     assert is_wrapped(True)
@@ -256,7 +362,7 @@ if __name__ == '__main__':
     v = wrap({1,3,2,54}) ; assert v is wrap(v) and isinstance(v, List) and isinstance(v, list)
     v = wrap({1:1,3:4,2:2,54:3}) ; assert v is wrap(v) and isinstance(v, List) and isinstance(v, list)
     assert all(isinstance(x, List) and len(x) == 2 for x in v)
-    assert v[1][0] == 3 and v[1][1] == 4 and v[-1][0] == 54 and v[-1][-1] == 3
+    assert v[1][0] == 3 and v[1][1] == 4 and v.last()[0] == 54 and v.last().last() == 3
     v = wrap([]) ; v.append(5) ; assert is_wrapped(v['0'])
     v = wrap([{'foo': 'bar'}]) ; assert isinstance(list.__getitem__(v, 0), List) and isinstance(list.__getitem__(list.__getitem__(v, 0), 0), List)
     assert list.__getitem__(list.__getitem__(v, 0), 0) == ['foo', 'bar'] and is_wrapped(list.__getitem__(list.__getitem__(list.__getitem__(v, 0), 0), 0))
@@ -331,14 +437,67 @@ if __name__ == '__main__':
     assert srange(wrap('5.5'), wrap(5.25)) == [5.5] and srange(wrap('5.5'), wrap(5.5)) == [5.5] and srange(wrap('5.5'), wrap(5.75)) == [5.5]
     assert srange(wrap([2,3]), wrap([10, 6])) == [[2,3,4,5,6,7,8,9,10],[3,4,5,6]]
     assert srange(wrap([2,'3.125']), wrap([10, ['-6.7'], 3])) == [[2,3,4,5,6,7,8,9,10],[[3.125, 2.125, 1.125, 0.125, -0.875, -1.875, -2.875, -3.875, -4.875, -5.875]]]
-    assert is_wrapped(ssqrt(wrap(25))) and is_wrapped(ssqrt(wrap('25.0'))) and is_wrapped(ssqrt(wrap([25, ['49', 16], '4.0'])))
-    assert ssqrt(wrap(25)) == 5 and ssqrt(wrap('25.0')) == 5 and ssqrt(wrap([25, ['49', 16], '4.0'])) == [5, [7, 4], 2]
+    assert is_wrapped(sqrt(wrap(25))) and is_wrapped(sqrt(wrap('25.0'))) and is_wrapped(sqrt(wrap([25, ['49', 16], '4.0'])))
+    assert sqrt(wrap(25)) == 5 and sqrt(wrap('25.0')) == 5 and sqrt(wrap([25, ['49', 16], '4.0'])) == [5, [7, 4], 2]
 
-    assert is_wrapped(sround(wrap(25.2))) and is_wrapped(sround(wrap('25.56'))) and is_wrapped(sround(wrap([[12.2, 24, [['-346.3'], 0], '12.9']])))
-    assert sround(wrap(25.2)) == 25 and sround(wrap('25.56')) == 26 and sround(wrap([[12.2, 24, [['-346.3'], 0], '12.9']])) == [[12, 24, [[-346], 0], 13]]
+    assert is_wrapped(round(wrap(25.2))) and is_wrapped(round(wrap('25.56'))) and is_wrapped(round(wrap([[12.2, 24, [['-346.3'], 0], '12.9']])))
+    assert round(wrap(25.2)) == 25 and round(wrap('25.56')) == 26 and round(wrap([[12.2, 24, [['-346.3'], 0], '12.9']])) == [[12, 24, [[-346], 0], 13]]
 
     vv = sxrange(wrap(1.25), wrap(1e300)) ; assert not isinstance(vv, list) and not isinstance(vv, tuple)
     assert sxrange(1, 100) != srange(1, 100) # generator != list
     assert list(sxrange(wrap(12.2), wrap('-6.7'))) == srange(wrap(12.2), wrap('-6.7'))
+
+    v = wrap([1,4,2,3,2])
+    assert v[wrap('1')] == 4 and is_wrapped(v[wrap('1')]) and v['4'] == 2 and is_wrapped(v['4'])
+    assert v[34] == '' and is_wrapped(v[34])
+    assert v.index(wrap('4')) == 1 and v.index('4') == 1 and v.index(4.0) == 1 and v.index('2') == 2 and is_wrapped(v.index('2'))
+    assert v.index(7) == -1 and is_wrapped(v.index(7))
+    assert wrap([]).random() == '' and is_wrapped(wrap([]).random())
+    assert wrap([]).last() == '' and is_wrapped(wrap([]).last())
+    assert wrap([3]).last() == 3 and is_wrapped(wrap([3]).last())
+    assert wrap([3, 46]).last() == 46 and is_wrapped(wrap([3, 46]).last())
+    assert wrap([3, 101, 46]).last() == 46 and is_wrapped(wrap([3, 101, 46]).last())
+
+    assert identical(wrap('768') + wrap('0'), wrap('768')) and identical(wrap('768') + wrap('0'), wrap(768))
+    assert not identical(wrap([1,2,3]), wrap([1,2,3]))
+    v = wrap([1,2,3]) ; assert identical(v, v)
+
+    assert abs(wrap('-45')) == 45 and is_wrapped(abs(wrap('-45')))
+    assert abs(wrap(-45)) == 45 and is_wrapped(abs(wrap(-45)))
+    assert abs(wrap(['-45', 4, -4])) == [45,4,4] and is_wrapped(abs(wrap(['-45', 4, -4])))
+
+    v = round(wrap([1, 3.4, 6.7, -4.2, '-8.8'])) ; assert v == [1, 3, 7, -4, -9] and is_wrapped(v)
+    v = math.trunc(wrap([1, 3.4, '6.7', -4.2, -8.8])) ; assert v == [1, 3, 6, -4, -8] and is_wrapped(v)
+    v = math.ceil(wrap([1, '3.4', 6.7, -4.2, -8.8])) ; assert v == [1, 4, 7, -4, -8] and is_wrapped(v)
+    v = math.floor(wrap([1, '3.4', 6.7, -4.2, -8.8])) ; assert v == [1, 3, 6, -5, -9] and is_wrapped(v)
+
+    v = wrap([])
+    v[wrap('14.5')] = 'test 1'
+    v[wrap('-14.5')] = 'test 2'
+    v[wrap(7.5)] = 'test 3'
+    v[wrap(-7.5)] = 'test 4'
+    v[wrap('hello pony')] = 'test 5'
+    assert len(v) == 0 and v == []
+    assert v[wrap('14.5')] == 'test 1' and is_wrapped(v[wrap('14.5')]) and v[wrap('-14.5')] == 'test 2' and is_wrapped(v[wrap('-14.5')])
+    assert v[wrap(7.5)] == 'test 3' and is_wrapped(v[wrap(7.5)]) and v[wrap(-7.5)] == 'test 4' and is_wrapped(v[wrap(-7.5)])
+    assert v[wrap('hello pony')] == 'test 5' and is_wrapped(v[wrap('hello pony')])
+    assert v[wrap('14.6')] == '' and is_wrapped(v[wrap('14.6')]) and v[wrap('-14.6')] == '' and is_wrapped(v[wrap('-14.6')])
+    assert v[wrap(7.6)] == '' and is_wrapped(v[wrap(7.6)]) and v[wrap(-7.6)] == '' and is_wrapped(v[wrap(-7.6)])
+    assert v[wrap('hello ponyy')] == '' and is_wrapped(v[wrap('hello ponyy')])
+    v[wrap(-5)] = 'test 6'
+    v[wrap('-1')] = 'test 7'
+    assert len(v) == 0 and v == []
+    assert v[wrap(-5)] == 'test 6' and is_wrapped(v[wrap(-5)]) and v[wrap('-5')] == 'test 6' and is_wrapped(v[wrap('-5')])
+    assert v[wrap('-1')] == 'test 7' and is_wrapped(v[wrap('-1')]) and v[wrap(-1.0)] == 'test 7' and is_wrapped(v[wrap(-1.0)])
+    v[5] = 'test 8'
+    assert len(v) == 6 and v == ['', '', '', '', '', 'test 8'] and v[5] == 'test 8' and is_wrapped(v[5])
+    v[2] = 'test 9'
+    assert len(v) == 6 and v == ['', '', 'test 9', '', '', 'test 8']
+
+    assert abs(sin(1) - 0.01745240643728351) < 1e-10 and abs(cos(1) - 0.9998476951563913) < 1e-10 and abs(tan(1) - 0.017455064928217585) < 1e-10
+    assert abs(asin(0.75) - 48.590377890729144) < 1e-10 and abs(acos(0.75) - 41.40962210927086) < 1e-10 and abs(atan(0.75) - 36.86989764584402) < 1e-10
+
+    v = get_ord(wrap(["a", "b", ["c", [["d"]], "e"]])) ; assert v == [97, 98, [99, [[100]], 101]] and is_wrapped(v)
+    v = get_chr(v) ; assert v == ["a", "b", ["c", [["d"]], "e"]] and is_wrapped(v)
 
     print('passed all snap wrapper tests')
