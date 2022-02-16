@@ -31,6 +31,17 @@ def _scalar_op(a: Any, b: Any, op: Callable) -> 'Float':
     except OverflowError:
         return Float(math.inf)
 
+def _parse_index(idx: Any) -> Union['List', int, str]:
+    idx = wrap(idx)
+    if type(idx) is List: return idx
+
+    try:
+        idx = +idx
+    except:
+        return str(idx)
+
+    return idx if type(idx) is int else str(idx)
+
 class Float(float):
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, str): return wrap(float(self) == float(other))
@@ -105,6 +116,16 @@ class Float(float):
         return Float(math.floor(float(self)))
 
 class Str(str):
+    def __getitem__(self, idx: Any) -> str:
+        idx = _parse_index(idx)
+        t = type(idx)
+        if t is List: return _list_unary_op(idx, lambda x: self[+x])
+        elif t is str: return wrap('')
+        elif t is int:
+            if idx < 0 or idx >= len(self): return wrap('')
+            else: return str.__getitem__(self, idx)
+        else: assert False
+
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, int) or isinstance(other, float): return float(self) == other
         return str(self) == other
@@ -159,17 +180,6 @@ class Str(str):
         return math.ceil(Float(self))
     def __floor__(self) -> 'Float':
         return math.floor(Float(self))
-
-def _parse_index(idx: Any) -> Union['List', int, str]:
-    idx = wrap(idx)
-    if type(idx) is List: return idx
-
-    try:
-        idx = +idx
-    except:
-        return str(idx)
-
-    return idx if type(idx) is int else str(idx)
 
 class List(list):
     def __init__(self, *args, **kwargs):
@@ -257,6 +267,9 @@ class List(list):
         return random.choice(self)
     def last(self) -> Any:
         return self[len(self) - 1]
+    def all_but_first(self) -> 'List':
+        if len(self) == 0: return List()
+        return wrap(list.__getitem__(self, slice(1, len(self))))
 
     def index(self, *args, **kwargs) -> Float:
         try:
@@ -499,5 +512,17 @@ if __name__ == '__main__':
 
     v = get_ord(wrap(["a", "b", ["c", [["d"]], "e"]])) ; assert v == [97, 98, [99, [[100]], 101]] and is_wrapped(v)
     v = get_chr(v) ; assert v == ["a", "b", ["c", [["d"]], "e"]] and is_wrapped(v)
+
+    v = wrap('abcdefghijklmnopqrstuvwxyz')
+    assert v[-1] == '' and is_wrapped(v[-1]) and v[123] == '' and is_wrapped(v[123])
+    assert v['hello'] == '' and is_wrapped(v['hello'])
+    vv = v[[[4,2],2,[[3,1]]]] ; assert vv == [['e', 'c'], 'c', [['d', 'b']]] and is_wrapped(vv)
+
+    v = wrap([])
+    vv = v.all_but_first() ; assert vv == [] and is_wrapped(vv) and vv is not v and not identical(vv, v)
+    v = wrap([7])
+    vv = v.all_but_first() ; assert vv == [] and is_wrapped(vv) and vv is not wrap([]).all_but_first()
+    v = wrap([3, 6, 3, 8, 7])
+    vv = v.all_but_first() ; assert vv == [6, 3, 8, 7] and is_wrapped(vv) and v == [3,6,3,8,7]
 
     print('passed all snap wrapper tests')
