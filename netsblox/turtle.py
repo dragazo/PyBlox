@@ -1269,7 +1269,7 @@ def _add_gui_event_wrapper(field, register, keys):
         return f
     return wrapper
 
-def onstart(*, when: str = 'original'):
+def onstart(when: str = 'original'):
     '''
     The `@onstart()` decorator can be applied to a method definition inside a stage or turtle
     to make that function run whenever the stage/turtle is created.
@@ -1284,7 +1284,7 @@ def onstart(*, when: str = 'original'):
     def start(self):
         self.forward(75)
 
-    @onstart(when = 'clone')
+    @onstart('clone')
     def cloned(self):
         self.pos = (0, 0)
     ```
@@ -1400,15 +1400,15 @@ def onmouse(when: str, *, anywhere: bool = False):
      - 'move' - run any time the mouse moves.
 
     ```
-    @onmouse(when = 'down')
+    @onmouse('down')
     def mouse_down_1(self, x, y):
         pass
 
-    @onmouse(when = 'down', anywhere = True)
+    @onmouse('down', anywhere = True)
     def mouse_down_2(self, x, y):
         pass
 
-    @onmouse(when = 'scroll-up')
+    @onmouse('scroll-up')
     def mouse_scroll_up(self, x, y):
         pass
     ```

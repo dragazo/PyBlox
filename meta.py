@@ -1,7 +1,7 @@
 import os
 
 name = 'netsblox'
-version = '0.5.5'
+version = '0.5.6'
 description = 'A python interface for accessing NetsBlox services'
 url = 'https://github.com/dragazo/NetsBlox-python'
 author = 'Devin Jean'
