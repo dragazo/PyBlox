@@ -774,10 +774,10 @@ class TurtleBase(_Ref):
     @property
     def scale(self) -> float:
         '''
-        Get or set the current turtle scale.
+        Get or set the current turtle scale (default 1.0).
         Larger values make the turtle larger.
 
-        This should be a positive number
+        This should be a positive number.
 
         ```
         self.scale = 2.5
@@ -1185,7 +1185,7 @@ def _derive(bases, cls):
                 self.__is_clone = None
                 cls.__init__(self, *args, **kwargs)
 
-            exec_start_tag = 'clone' if self.__is_clone else 'original'
+            exec_start_tag = 'clone' if self.__is_clone else 'now'
             start_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_start'))
             for _, start_script in start_scripts:
                 for key in getattr(start_script, '__run_on_start'):
@@ -1269,14 +1269,14 @@ def _add_gui_event_wrapper(field, register, keys):
         return f
     return wrapper
 
-def onstart(when: str = 'original'):
+def onstart(when: str = 'now'):
     '''
     The `@onstart()` decorator can be applied to a method definition inside a stage or turtle
     to make that function run whenever the stage/turtle is created.
 
     The `when` keyword argument controls when the function should be called.
     The following options are available:
-     - 'original' (default) - run when the original (non-clone) sprite is created. This mode can also be used on stage methods or global functions.
+     - 'now' (default) - run immediately when the original (non-clone) sprite is created. This mode can also be used on stage methods or global functions.
      - 'clone' - run when a clone is created. Note that clone mode should only be used on a sprite method.
 
     ```
@@ -1289,8 +1289,9 @@ def onstart(when: str = 'original'):
         self.pos = (0, 0)
     ```
     '''
-    if when not in ['original', 'clone']:
-        raise ValueError(f'Unknown @onstart() when mode - got "{when}", expected "original" or "clone"')
+    expected = ['now', 'clone']
+    if when not in expected:
+        raise ValueError(f'Unknown @onstart() when mode - got "{when}", expected: {", ".join(expected)}')
     return _add_gui_event_wrapper('__run_on_start', lambda _, f: _start_safe_thread(f), [when])
 
 _KEYSYM_MAPS = { # anything not listed here passes through as-is (lower case)
