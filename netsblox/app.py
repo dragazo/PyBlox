@@ -163,6 +163,14 @@ IDENT_REGEX = re.compile('^[a-zA-Z_][0-9a-zA-Z_]*$')
 def is_valid_ident(ident: str) -> bool:
     return bool(IDENT_REGEX.match(ident))
 
+SIZE_REGEX = re.compile('^\s*(\d+)\s*[xX]\s*(\d+)\s*$')
+def parse_size(value: str) -> Optional[Tuple[int, int]]:
+    m = SIZE_REGEX.match(value)
+    return (int(m.group(1)), int(m.group(2))) if m is not None else None
+
+MIN_CANV_SIZE = (64, 64)
+MAX_CANV_SIZE = (8192, 8192)
+
 def normalize_strip(content: str) -> str:
     raw_lines = [x.rstrip() for x in content.splitlines()]
     raw_pos = 0
@@ -616,6 +624,7 @@ class ProjectEditor(tk.Frame):
             res['roles'].append(role_res)
 
             role_res['name'] = role['name']
+            role_res['stage_size'] = role['stage_size']
             role_res['block_sources'] = self.block_sources[:]
             role_res['blocks'] = {
                 'global': [x.copy() for x in GlobalEditor.blocks if x['source'] == None],
@@ -659,11 +668,13 @@ class ProjectEditor(tk.Frame):
             active_role = 0
         proj = roles[active_role]
 
-        counter = 0
+        name_counter = 0
         for role in roles:
-            if 'name' in role: continue
-            role['name'] = 'untitled' if counter == 0 else f'untitled_{counter}'
-            counter += 1
+            if 'name' not in role:
+                role['name'] = 'untitled' if name_counter == 0 else f'untitled_{name_counter}'
+                name_counter += 1
+            if 'stage_size' not in role:
+                role['stage_size'] = (1080, 720)
 
         new_blocks = { 'global': [], 'stage': [], 'turtle': [] }
         new_sources = proj.get('block_sources', [])
@@ -1206,6 +1217,7 @@ from netsblox.turtle import *
 from netsblox.concurrency import *
 nb = netsblox.Client(proj_name = """$proj_name""", proj_id = $proj_id)
 'A connection to NetsBlox, which allows you to use services and RPCs from python.'
+netsblox.turtle._INITIAL_SIZE = $stage_size
 getattr(netsblox.turtle._get_proj_handle(), '_Project__tk').title(f'PyBlox - {nb.public_id}')
 nb.set_room($room_handle)
 setup_stdio()
@@ -1216,7 +1228,7 @@ def _yield_(x):
     return x
 
 '''.lstrip()
-    BASE_PREFIX_LINES = 14
+    BASE_PREFIX_LINES = 15
 
     prefix = BASE_PREFIX
     prefix_lines = BASE_PREFIX_LINES
@@ -1231,6 +1243,10 @@ def _yield_(x):
         pre = GlobalEditor.prefix
         pre = pre.replace('$proj_name', main_menu.project_name)
         pre = pre.replace('$proj_id', 'None' if is_export else f'\'{content.project.project_id}\'')
+
+        role = content.project.roles[content.project.active_role]
+        width, height = role['stage_size']
+        pre = pre.replace('$stage_size', f'({width}, {height})')
 
         room = main_menu.room_manager
         role_str = f'\'{content.project.roles[content.project.active_role]["name"]}\''
@@ -1649,18 +1665,33 @@ class MainMenu(tk.Menu):
 
         self.roles_dropdown.add_cascade(label = 'Room', menu = submenu)
 
-        def make_role():
-            name = None
+        def prompt_role_name(*, title: str, prompt: str) -> Optional[str]:
             while True:
-                name = simpledialog.askstring(title = 'Name Role', prompt = 'Enter the name of the new role, which should be a valid variable name')
-                if name is None: return
+                name = simpledialog.askstring(title = title, prompt = prompt)
+                if name is None: return None
                 if not is_valid_ident(name):
                     messagebox.showerror('Invalid name', message = f'"{name}" is not a valid python variable name')
                     continue
                 if any(x['name'] == name for x in content.project.roles):
                     messagebox.showerror(title = 'Invalid name', message = f'A role named {name} already exists.')
                     continue
-                break
+                return name
+        def prompt_canvas_size(*, title: str, prompt: str) -> Optional[Tuple[int, int]]:
+            while True:
+                value = simpledialog.askstring(title = title, prompt = prompt)
+                if value is None: return None
+                res = parse_size(value)
+                if res is None:
+                    messagebox.showerror('Invalid canvas size', message = f'\'{value}\' is not a valid canvas size. Should be a width and height pair like \'720x480\'')
+                    continue
+                if any(res[i] < MIN_CANV_SIZE[i] or res[i] > MAX_CANV_SIZE[i] for i in range(2)):
+                    messagebox.showerror('Invalid canvas size', message = f'Size {res[0]}x{res[1]} is not a valid canvas size. Width should be [{MIN_CANV_SIZE[0]}, {MAX_CANV_SIZE[0]}] and height should be [{MIN_CANV_SIZE[1]}, {MAX_CANV_SIZE[1]}].')
+                    continue
+                return res
+
+        def make_role():
+            name = prompt_role_name(title = 'Name Role', prompt = 'Enter the name of the new role, which should be a valid variable name')
+            if name is None: return
             role = copy.deepcopy(ProjectEditor.DEFAULT_PROJECT['roles'][0])
             role['name'] = name
             content.project.roles.append(role)
@@ -1698,8 +1729,43 @@ class MainMenu(tk.Menu):
                 return do_delete
             submenu.add_command(label = 'Delete', command = get_deleter(i), state = tk.DISABLED if is_current else tk.ACTIVE)
 
-            role_name = content.project.roles[i]['name']
-            self.roles_dropdown.add_cascade(label = f'{role_name} (active)' if is_current else role_name, menu = submenu)
+            submenu.add_separator()
+
+            def renamer(idx):
+                def do_rename():
+                    old_name = content.project.roles[idx]['name']
+                    name = prompt_role_name(title = 'Rename Role', prompt = f'Enter the new name for role {old_name}, which should be a valid variable name')
+                    if name is None: return
+                    content.project.roles[idx]['name'] = name
+                    self.update_roles()
+                return do_rename
+            submenu.add_command(label = 'Rename', command = renamer(i))
+
+            def duplicator(idx, is_current):
+                def do_duplicate():
+                    src = content.project.roles[idx]
+                    name = prompt_role_name(title = 'Duplicate Role', prompt = f'Duplicating role {src["name"]}. Enter the name for the new role, which should be a valid variable name')
+                    if name is None: return
+                    role = copy.deepcopy(src) if not is_current else content.project.get_save_dict()['roles'][idx]
+                    role['name'] = name
+                    content.project.roles.append(role)
+                    self.update_roles()
+                return do_duplicate
+            submenu.add_command(label = 'Duplicate', command = duplicator(i, is_current))
+
+            def canvas_resizer(idx):
+                def do_resize():
+                    src = content.project.roles[idx]
+                    old_size = src['stage_size']
+                    new_size = prompt_canvas_size(title = f'Resize Canvas', prompt = f'Resizing canvas for role {src["name"]} (old size {old_size[0]}x{old_size[1]}). Enter the new size, which should be a width/height pair like \'720x480\'.')
+                    if new_size is None: return
+                    src['stage_size'] = new_size
+                    self.update_roles()
+                return do_resize
+            width, height = role['stage_size']
+            submenu.add_command(label = f'Canvas Size ({width}x{height})', command = canvas_resizer(i))
+
+            self.roles_dropdown.add_cascade(label = f'{role["name"]} (active)' if is_current else role['name'], menu = submenu)
 
 def main():
     global nb, root, main_menu, content

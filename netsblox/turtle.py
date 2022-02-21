@@ -26,6 +26,8 @@ from typing import Any, Union, Tuple, Optional, List, Callable
 
 from PIL import Image, ImageTk, ImageDraw, ImageFont
 
+_INITIAL_SIZE = (1080, 720)
+
 _FONT_SRC = f'{_common._NETSBLOX_PY_PATH}/assets/fonts/Droid/DroidSansFallback.ttf'
 _FONT_LOCK = _threading.Lock()
 _CACHED_FONT = None
@@ -399,7 +401,7 @@ def _get_proj_handle():
     if _proj_handle_obj is not None: return _proj_handle_obj
     with _proj_handle_lock: # double checked lock for speed
         if _proj_handle_obj is None:
-            _proj_handle_obj = _Project(logical_size = (1080, 720), physical_size = (1080, 720))
+            _proj_handle_obj = _Project(logical_size = _INITIAL_SIZE, physical_size = _INITIAL_SIZE)
     return _proj_handle_obj
 
 def start_project():
