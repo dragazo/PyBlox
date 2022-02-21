@@ -113,8 +113,7 @@ async def generate_service(session, base_url: str, service_name: str, types_meta
 
         rpcs = []
         for rpc_name, rpc_meta in meta['rpcs'].items():
-            if 'deprecated' in rpc_meta and rpc_meta['deprecated']:
-                continue
+            is_deprecated = rpc_meta.get('deprecated', False)
 
             required, non_required = [], []
             for arg_meta in rpc_meta['args']:
@@ -132,8 +131,11 @@ async def generate_service(session, base_url: str, service_name: str, types_meta
             code = f'res = {code}\nreturn {ret_info[3]}(res)' if ret_info[3] else f'return {code}'
 
             fn_name = clean_fn_name(rpc_name)
+            meta_name = f'_{fn_name}' if is_deprecated else fn_name
+            prefix = '    @deprecated()\n' if is_deprecated else ''
+
             ret_str = f' -> {ret_info[1]}' if 'returns' in rpc_meta else ''
-            rpcs.append((fn_name, f"    def {fn_name}({', '.join(args)}){ret_str}:\n{desc}\n{indent(code, 8)}"))
+            rpcs.append((fn_name, f"{prefix}    def {meta_name}({', '.join(args)}){ret_str}:\n{desc}\n{indent(code, 8)}"))
 
         rpcs = [x[1] for x in sorted(rpcs)] # sort rpcs so they'll be in alphabetical order by name
         service_desc = f"'''\n{meta['description']}\n'''" if 'description' in meta and meta['description'] else ''

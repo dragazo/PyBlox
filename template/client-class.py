@@ -8,6 +8,8 @@ import time as _time
 import sys as _sys
 import io as _io
 
+from deprecation import deprecated
+
 from PIL import Image
 
 from typing import Optional, Any, List, Union
