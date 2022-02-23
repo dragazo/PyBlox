@@ -42,12 +42,20 @@ def _parse_index(idx: Any) -> Union['List', int, str]:
 
     return idx if type(idx) is int else str(idx)
 
+def _float_div(a: Any, b: Any) -> 'Float':
+    a, b = float(a), float(b)
+    if b != 0: return Float(a / b)
+    if a == 0: return Float(math.nan)
+    return Float(math.inf if a > 0 else -math.inf)
+
 class Float(float):
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, str): return wrap(float(self) == float(other))
         return wrap(float(self) == other)
 
     def __str__(self) -> str:
+        if math.isnan(self): return 'NaN'
+        if math.isinf(self): return 'Infinity' if self > 0 else '-Infinity'
         return str(+self)
 
     def __bool__(self) -> bool:
@@ -80,10 +88,10 @@ class Float(float):
     def __truediv__(self, other: Any) -> Any:
         other = wrap(other)
         if isinstance(other, List): return other.__rtruediv__(self)
-        return _scalar_op(self, other, lambda a, b: a / b)
+        return _scalar_op(self, other, _float_div)
     def __rtruediv__(self, other: Any) -> Any:
         if not is_wrapped(other): return wrap(other) / self
-        return _scalar_op(other, self, lambda a, b: a / b)
+        return _scalar_op(other, self, _float_div)
 
     def __floordiv__(self, other: Any) -> Any:
         other = wrap(other)
@@ -105,6 +113,7 @@ class Float(float):
         return Float(-float(self))
     def __pos__(self) -> Union[int, float]:
         vf = float(self)
+        if not math.isfinite(vf): return vf
         vi = int(vf)
         return vi if vi == vf else vf
     def __abs__(self) -> 'Float':
@@ -573,5 +582,14 @@ if __name__ == '__main__':
     assert lnot(wrap(True)) == False and lnot(wrap(False)) == True
     assert lnot('') == True and lnot('h') == False and lnot(0) and lnot(math.nan)
     v = lnot(wrap(['hello', '', True, [0, 4, False, -1], '0'])) ; assert v == [False, True, False, [True, False, True, False], False] and is_wrapped(v)
+
+    assert str(wrap(1) / wrap(0)) == 'Infinity' and str(wrap('1') / wrap('0')) == 'Infinity'
+    assert str(wrap(-1) / wrap(0)) == '-Infinity' and str(wrap('-1') / wrap('0')) == '-Infinity'
+    assert str(wrap(0) / wrap(0)) == 'NaN' and str(wrap('0') / wrap('0')) == 'NaN'
+    assert str(wrap(-0) / wrap(0)) == 'NaN' and str(wrap('-0') / wrap('0')) == 'NaN'
+
+    v = +wrap('Infinity') ; assert v > 0 and math.isinf(v)
+    v = +wrap('-Infinity') ; assert v < 0 and math.isinf(v)
+    v = +wrap('NaN') ; assert math.isnan(v)
 
     print('passed all snap wrapper tests')
