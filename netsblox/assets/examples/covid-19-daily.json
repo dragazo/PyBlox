@@ -1,40 +1,49 @@
 {
-  "block_sources": [
-    "netsblox://assets/default-blocks.json"
-  ],
-  "blocks": {
-    "global": [], 
-    "stage": [], 
-    "turtle": []
-  }, 
-  "show_blocks": true, 
-  "imports": [], 
-  "editors": [
+  "roles": [
     {
-      "type": "global", 
-      "name": "global", 
-      "value": "days_averaged = 14\n\ndef difference(raw_data):\n    data = [max(0, raw_data[i][1] - raw_data[i-1][1]) for i in range(1, len(raw_data))]\n    for i in range(1, len(raw_data)):\n        raw_data[i][1] = data[i-1]\n    return raw_data[1:]\n\ndef moving_average(data, n):\n    output = []\n    for i in range(len(data)):\n        start = max(0, i - n)\n        total = sum(data[start:i+1])\n        output.append(total / (i - start + 1))\n    return output\n\ndef process_data(data, n):\n    data = difference(data)\n    dates = [data[i][0] for i in range(len(data))]\n    vals = moving_average([data[i][1] for i in range(len(data))], n)\n    return [[dates[i], vals[i]] for i in range(len(dates))]"
-    }, 
-    {
-      "type": "stage", 
-      "name": "stage", 
-      "value": "mode = None # 'Map' or 'Street View'\n\nmap_lat, map_long = 40, -90\nmap_zoom = 3\n\ndef update_map(self):\n    self.costume = nb.google_maps.get_map(self.map_lat, self.map_long,\n        self.width, self.height, self.map_zoom)\n\ndef zoom_by(self, zoom_delta, fov_delta):\n    if self.mode == 'Map':\n        self.map_zoom = min(25, max(1, self.map_zoom + zoom_delta))\n        self.update_map()\n@onkey('+')\ndef zoom_in(self): self.zoom_by(1, -10)\n@onkey('-')\ndef zoom_out(self): self.zoom_by(-1, 10)\n\ndef pan_h(self, mult):\n    if self.mode == 'Map':\n        self.map_long = nb.google_maps.get_longitude_from_x(mult * self.width / 2)\n        self.update_map()\n@onkey('left arrow', 'a')\ndef pan_left(self): self.pan_h(-1)\n@onkey('right arrow', 'd')\ndef pan_right(self): self.pan_h(1)\n\ndef pan_v(self, mult):\n    if self.mode == 'Map':\n        self.map_lat = nb.google_maps.get_latitude_from_y(mult * self.height / 2)\n        self.update_map()\n@onkey('up arrow', 'w')\ndef pan_up(self): self.pan_v(1)\n@onkey('down arrow', 's')\ndef pan_down(self): self.pan_v(-1)\n\n@onclick()\ndef clicked(self, x, y):\n    if self.mode == 'Map':\n        self.mode = 'Chart'\n        nb.send_message('update charts', x = x, y = y)\n    elif self.mode == 'Chart':\n        self.mode = 'Map'\n        turtle2.visible = False\n        turtle3.visible = False\n\n@onkey('q')\ndef do_search(self):\n    if self.mode != 'Map':\n        return\n\n    addr = input('Enter an address:')\n    place = nb.geolocation.geolocate(addr)\n    self.map_lat = place['latitude']\n    self.map_long = place['longitude']\n    self.map_zoom = 15\n    self.update_map()\n"
-    }, 
-    {
-      "type": "turtle", 
-      "name": "turtle", 
-      "value": "@onstart()\ndef start(self):\n    self.visible = False\n    \n    self.pos = (-340, 120)\n    self.pen_color = 'red'\n    self.write('COVID-19 Daily Cases in NetsBlox-python', size = 24)\n    \n    self.pen_color = 'blue'\n    self.pos = (-280, 60)\n    self.write('Use the arrow keys or wasd to pan and +/- to zoom', size = 16)\n    \n    self.pos = (-255, 20)\n    self.write('When on the map, press Q to search for places', size = 16)\n    \n    self.pos = (-235, -20)\n    self.write('Click on the map to get daily covid statistics', size = 16)\n    \n    self.pos = (-300, -120)\n    self.pen_color = 'red'\n    self.write('Click anywhere or press any key to continue', size = 20)\n\n@onclick(anywhere = True)\n@onkey('any')\ndef do_continue(self, *args):\n    if stage.mode is None:\n        stage.mode = 'Map'\n        self.clear()\n        stage.update_map()\n"
-    }, 
-    {
-      "type": "turtle", 
-      "name": "turtle2", 
-      "value": "@onstart()\ndef start(self):\n    self.visible = False\n\n@nb.on_message('update charts')\ndef update_chart(self, x, y):\n    lat = nb.google_maps.get_latitude_from_y(y)\n    long = nb.google_maps.get_longitude_from_x(x)\n    country = nb.geolocation.country(lat, long)\n    state = nb.geolocation.state(lat, long)\n    \n    options = {\n        'isTimeSeries': True,\n        'timeInputFormat': '%m/%d/%Y',\n        'timeDisplayFormat': '%m/%d',\n        'types': ['boxes'],\n        'height': stage.height / 2,\n        'width': stage.width,\n    }\n    \n    cases = None\n    if country == 'United States':\n        cases = process_data(nb.covid19.get_confirmed_counts('US', state), days_averaged)\n        options['title'] = f'Number of New Daily COVID-19 Cases in {state} (averaged over {days_averaged} days)'\n    else:\n        cases = process_data(nb.covid19.get_confirmed_counts(country), days_averaged)\n        options['title'] = f'Number of New Daily COVID-19 Cases in {country} (averaged over {days_averaged} days)'\n    \n    self.pos = (0, stage.height / 4)\n    self.costume = nb.chart.draw([cases], options)\n    self.visible = True"
-    }, 
-    {
-      "type": "turtle", 
-      "name": "turtle3", 
-      "value": "@onstart()\ndef start(self):\n    self.visible = False\n\n@nb.on_message('update charts')\ndef update_chart(self, x, y):\n    lat = nb.google_maps.get_latitude_from_y(y)\n    long = nb.google_maps.get_longitude_from_x(x)\n    country = nb.geolocation.country(lat, long)\n    state = nb.geolocation.state(lat, long)\n    \n    options = {\n        'isTimeSeries': True,\n        'timeInputFormat': '%m/%d/%Y',\n        'timeDisplayFormat': '%m/%d',\n        'types': ['boxes'],\n        'height': stage.height / 2,\n        'width': stage.width,\n    }\n    \n    cases = None\n    if country == 'United States':\n        cases = process_data(nb.covid19.get_death_counts('US', state), days_averaged)\n        options['title'] = f'Number of Daily COVID-19 Deaths in {state} (averaged over {days_averaged} days)'\n    else:\n        cases = process_data(nb.covid19.get_death_counts(country), days_averaged)\n        options['title'] = f'Number of Daily COVID-19 Deaths in {country} (averaged over {days_averaged} days)'\n    \n    self.pos = (0, -stage.height / 4)\n    self.costume = nb.chart.draw([cases], options)\n    self.visible = True"
+      "name": "untitled", 
+      "stage_size": [
+        1080, 
+        720
+      ], 
+      "block_sources": [
+        "netsblox://assets/default-blocks.json"
+      ], 
+      "blocks": {
+        "global": [], 
+        "stage": [], 
+        "turtle": []
+      }, 
+      "imports": [], 
+      "editors": [
+        {
+          "type": "global", 
+          "name": "global", 
+          "value": "days_averaged = 14\n\ndef difference(raw_data):\n    data = [max(0, raw_data[i][1] - raw_data[i-1][1]) for i in range(1, len(raw_data))]\n    for i in range(1, len(raw_data)):\n        raw_data[i][1] = data[i-1]\n    return raw_data[1:]\n\ndef moving_average(data, n):\n    output = []\n    for i in range(len(data)):\n        start = max(0, i - n)\n        total = sum(data[start:i+1])\n        output.append(total / (i - start + 1))\n    return output\n\ndef process_data(data, n):\n    data = difference(data)\n    dates = [data[i][0] for i in range(len(data))]\n    vals = moving_average([data[i][1] for i in range(len(data))], n)\n    return [[dates[i], vals[i]] for i in range(len(dates))]"
+        }, 
+        {
+          "type": "stage", 
+          "name": "stage", 
+          "value": "mode = None # 'Map' or 'Street View'\n\nmap_lat, map_long = 40, -90\nmap_zoom = 3\n\ndef update_map(self):\n    self.costume = nb.google_maps.get_map(self.map_lat, self.map_long,\n        self.width, self.height, self.map_zoom)\n\ndef zoom_by(self, zoom_delta, fov_delta):\n    if self.mode == 'Map':\n        self.map_zoom = min(25, max(1, self.map_zoom + zoom_delta))\n        self.update_map()\n@onkey('+')\ndef zoom_in(self): self.zoom_by(1, -10)\n@onkey('-')\ndef zoom_out(self): self.zoom_by(-1, 10)\n\ndef pan_h(self, mult):\n    if self.mode == 'Map':\n        self.map_long = nb.google_maps.get_longitude_from_x(mult * self.width / 2)\n        self.update_map()\n@onkey('left arrow', 'a')\ndef pan_left(self): self.pan_h(-1)\n@onkey('right arrow', 'd')\ndef pan_right(self): self.pan_h(1)\n\ndef pan_v(self, mult):\n    if self.mode == 'Map':\n        self.map_lat = nb.google_maps.get_latitude_from_y(mult * self.height / 2)\n        self.update_map()\n@onkey('up arrow', 'w')\ndef pan_up(self): self.pan_v(1)\n@onkey('down arrow', 's')\ndef pan_down(self): self.pan_v(-1)\n\n@onmouse('down')\ndef clicked(self, x, y):\n    if self.mode == 'Map':\n        self.mode = 'Chart'\n        nb.send_message('update charts', x = x, y = y)\n    elif self.mode == 'Chart':\n        self.mode = 'Map'\n        turtle2.visible = False\n        turtle3.visible = False\n\n@onkey('q')\ndef do_search(self):\n    if self.mode != 'Map':\n        return\n\n    addr = input('Enter an address:')\n    place = nb.geolocation.geolocate(addr)\n    self.map_lat = place['latitude']\n    self.map_long = place['longitude']\n    self.map_zoom = 15\n    self.update_map()\n"
+        }, 
+        {
+          "type": "turtle", 
+          "name": "turtle", 
+          "value": "@onstart()\ndef start(self):\n    self.visible = False\n    \n    self.pos = (-340, 120)\n    self.pen_color = 'red'\n    self.write('COVID-19 Daily Cases in NetsBlox-python', size = 24)\n    \n    self.pen_color = 'blue'\n    self.pos = (-280, 60)\n    self.write('Use the arrow keys or wasd to pan and +/- to zoom', size = 16)\n    \n    self.pos = (-255, 20)\n    self.write('When on the map, press Q to search for places', size = 16)\n    \n    self.pos = (-235, -20)\n    self.write('Click on the map to get daily covid statistics', size = 16)\n    \n    self.pos = (-300, -120)\n    self.pen_color = 'red'\n    self.write('Click anywhere or press any key to continue', size = 20)\n\n@onmouse('down', anywhere = True)\n@onkey('any')\ndef do_continue(self, *args):\n    if stage.mode is None:\n        stage.mode = 'Map'\n        stage.clear_drawings()\n        stage.update_map()\n"
+        }, 
+        {
+          "type": "turtle", 
+          "name": "turtle2", 
+          "value": "@onstart()\ndef start(self):\n    self.visible = False\n\n@nb.on_message('update charts')\ndef update_chart(self, x, y):\n    lat = nb.google_maps.get_latitude_from_y(y)\n    long = nb.google_maps.get_longitude_from_x(x)\n    country = nb.geolocation.country(lat, long)\n    state = nb.geolocation.state(lat, long)\n    \n    options = {\n        'isTimeSeries': True,\n        'timeInputFormat': '%m/%d/%Y',\n        'timeDisplayFormat': '%m/%d',\n        'types': ['boxes'],\n        'height': stage.height / 2,\n        'width': stage.width,\n    }\n    \n    cases = None\n    if country == 'United States':\n        cases = process_data(nb.covid19.get_confirmed_counts('US', state), days_averaged)\n        options['title'] = f'Number of New Daily COVID-19 Cases in {state} (averaged over {days_averaged} days)'\n    else:\n        cases = process_data(nb.covid19.get_confirmed_counts(country), days_averaged)\n        options['title'] = f'Number of New Daily COVID-19 Cases in {country} (averaged over {days_averaged} days)'\n    \n    self.pos = (0, stage.height / 4)\n    self.costume = nb.chart.draw([cases], options)\n    self.visible = True"
+        }, 
+        {
+          "type": "turtle", 
+          "name": "turtle3", 
+          "value": "@onstart()\ndef start(self):\n    self.visible = False\n\n@nb.on_message('update charts')\ndef update_chart(self, x, y):\n    lat = nb.google_maps.get_latitude_from_y(y)\n    long = nb.google_maps.get_longitude_from_x(x)\n    country = nb.geolocation.country(lat, long)\n    state = nb.geolocation.state(lat, long)\n    \n    options = {\n        'isTimeSeries': True,\n        'timeInputFormat': '%m/%d/%Y',\n        'timeDisplayFormat': '%m/%d',\n        'types': ['boxes'],\n        'height': stage.height / 2,\n        'width': stage.width,\n    }\n    \n    cases = None\n    if country == 'United States':\n        cases = process_data(nb.covid19.get_death_counts('US', state), days_averaged)\n        options['title'] = f'Number of Daily COVID-19 Deaths in {state} (averaged over {days_averaged} days)'\n    else:\n        cases = process_data(nb.covid19.get_death_counts(country), days_averaged)\n        options['title'] = f'Number of Daily COVID-19 Deaths in {country} (averaged over {days_averaged} days)'\n    \n    self.pos = (0, -stage.height / 4)\n    self.costume = nb.chart.draw([cases], options)\n    self.visible = True"
+        }
+      ], 
+      "images": {}
     }
   ], 
-  "images": {}
+  "show_blocks": true
 }

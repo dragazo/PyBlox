@@ -1,30 +1,39 @@
 {
-  "block_sources": [
-    "netsblox://assets/default-blocks.json"
-  ],
-  "blocks": {
-    "global": [], 
-    "stage": [], 
-    "turtle": []
-  }, 
-  "show_blocks": true, 
-  "imports": [], 
-  "editors": [
+  "roles": [
     {
-      "type": "global", 
-      "name": "global", 
-      "value": ""
-    }, 
-    {
-      "type": "stage", 
-      "name": "stage", 
-      "value": "mode = None # 'Map' or 'Street View'\nview = None # 'Map' or 'Sat' (for satellite map)\n\nmap_lat, map_long = netsblox.get_location()\nmap_zoom = 15\n\nstreet_lat, street_long = map_lat, map_long\nstreet_fov = 90\nstreet_heading = 0\nstreet_pitch = 0\n\ndef update_map(self):\n    if self.view == 'Map':\n        self.costume = nb.google_maps.get_map(self.map_lat, self.map_long,\n            self.width, self.height, self.map_zoom)\n    elif self.view == 'Sat':\n        self.costume = nb.google_maps.get_satellite_map(self.map_lat, self.map_long,\n            self.width, self.height, self.map_zoom)\n\ndef update_street_view(self):\n    self.costume = nb.google_street_view.get_view(self.street_lat, self.street_long,\n        self.width, self.height, self.street_fov, self.street_heading, self.street_pitch)\n\ndef zoom_by(self, zoom_delta, fov_delta):\n    if self.mode == 'Map':\n        self.map_zoom = min(25, max(1, self.map_zoom + zoom_delta))\n        self.update_map()\n    elif self.mode == 'Street View':\n        self.street_fov = min(120, max(10, self.street_fov + fov_delta))\n        self.update_street_view()\n@onkey('+')\ndef zoom_in(self): self.zoom_by(1, -10)\n@onkey('-')\ndef zoom_out(self): self.zoom_by(-1, 10)\n\n@onkey('space')\ndef exit_street_view(self):\n    if self.mode == 'Street View':\n        self.mode = 'Map'\n        self.update_map()\n@onkey('x')\ndef toggle_map_sat(self):\n    if self.mode == 'Map':\n        self.view = 'Sat' if self.view == 'Map' else 'Map'\n        self.update_map()\n\ndef pan_h(self, mult):\n    if self.mode == 'Map':\n        self.map_long = nb.google_maps.get_longitude_from_x(mult * self.width / 2)\n        self.update_map()\n    elif self.mode == 'Street View':\n        self.street_heading = (self.street_heading + mult * self.street_fov / 9) % 360\n        self.update_street_view()\n@onkey('left arrow', 'a')\ndef pan_left(self): self.pan_h(-1)\n@onkey('right arrow', 'd')\ndef pan_right(self): self.pan_h(1)\n\ndef pan_v(self, mult):\n    if self.mode == 'Map':\n        self.map_lat = nb.google_maps.get_latitude_from_y(mult * self.height / 2)\n        self.update_map()\n    elif self.mode == 'Street View':\n        self.street_pitch = min(90, max(-90, self.street_pitch + mult * self.street_fov / 9))\n        self.update_street_view()\n@onkey('up arrow', 'w')\ndef pan_up(self): self.pan_v(1)\n@onkey('down arrow', 's')\ndef pan_down(self): self.pan_v(-1)\n\n@onclick()\ndef clicked(self, x, y):\n    if self.mode == 'Map':\n        self.mode = 'Street View'\n        self.street_lat = nb.google_maps.get_latitude_from_y(y)\n        self.street_long = nb.google_maps.get_longitude_from_x(x)\n        self.street_fov = 90\n        self.street_heading = 0\n        self.street_pitch = 0\n        self.update_street_view()    \n    elif self.mode == 'Street View':\n        self.mode = 'Map'\n        self.update_map()\n\n@onkey('q')\ndef do_search(self):\n    if self.mode != 'Map':\n        return\n\n    addr = input('Enter an address:')\n    place = nb.geolocation.geolocate(addr)\n    self.map_lat = place['latitude']\n    self.map_long = place['longitude']\n    self.map_zoom = 15\n    self.update_map()\n"
-    }, 
-    {
-      "type": "turtle", 
-      "name": "turtle", 
-      "value": "@onstart()\ndef start(self):\n    self.visible = False\n    \n    self.pos = (-310, 120)\n    self.pen_color = 'red'\n    self.write('Google Street View in NetsBlox-python', size = 24)\n    \n    self.pen_color = 'blue'\n    self.pos = (-275, 60)\n    self.write('Use the arrow keys or wasd to pan and +/- to zoom', size = 16)\n    \n    self.pos = (-260, 20)\n    self.write('Press x to toggle between map and satellite view', size = 16)\n    \n    self.pos = (-250, -20)\n    self.write('When on the map, press Q to search for places', size = 16)\n    \n    self.pos = (-180, -60)\n    self.write('Click on the map to get street view', size = 16)\n    \n    self.pos = (-230, -100)\n    self.write('The arrow keys/wasd and +/- work here too', size = 16)\n    \n    self.pos = (-300, -200)\n    self.pen_color = 'red'\n    self.write('Click anywhere or press any key to continue', size = 20)\n\n@onclick(anywhere = True)\n@onkey('any')\ndef do_continue(self, *args):\n    if stage.mode is None:\n        stage.mode = stage.view = 'Map'\n        self.clear()\n        stage.update_map()\n"
+      "name": "untitled", 
+      "stage_size": [
+        1080, 
+        720
+      ], 
+      "block_sources": [
+        "netsblox://assets/default-blocks.json"
+      ], 
+      "blocks": {
+        "global": [], 
+        "stage": [], 
+        "turtle": []
+      }, 
+      "imports": [], 
+      "editors": [
+        {
+          "type": "global", 
+          "name": "global", 
+          "value": ""
+        }, 
+        {
+          "type": "stage", 
+          "name": "stage", 
+          "value": "mode = None # 'Map' or 'Street View'\nview = None # 'Map' or 'Sat' (for satellite map)\n\nmap_lat, map_long = netsblox.get_location()\nmap_zoom = 15\n\nstreet_lat, street_long = map_lat, map_long\nstreet_fov = 90\nstreet_heading = 0\nstreet_pitch = 0\n\ndef update_map(self):\n    if self.view == 'Map':\n        self.costume = nb.google_maps.get_map(self.map_lat, self.map_long,\n            self.width, self.height, self.map_zoom)\n    elif self.view == 'Sat':\n        self.costume = nb.google_maps.get_satellite_map(self.map_lat, self.map_long,\n            self.width, self.height, self.map_zoom)\n\ndef update_street_view(self):\n    self.costume = nb.google_street_view.get_view(self.street_lat, self.street_long,\n        self.width, self.height, self.street_fov, self.street_heading, self.street_pitch)\n\ndef zoom_by(self, zoom_delta, fov_delta):\n    if self.mode == 'Map':\n        self.map_zoom = min(25, max(1, self.map_zoom + zoom_delta))\n        self.update_map()\n    elif self.mode == 'Street View':\n        self.street_fov = min(120, max(10, self.street_fov + fov_delta))\n        self.update_street_view()\n@onkey('+')\ndef zoom_in(self): self.zoom_by(1, -10)\n@onkey('-')\ndef zoom_out(self): self.zoom_by(-1, 10)\n\n@onkey('space')\ndef exit_street_view(self):\n    if self.mode == 'Street View':\n        self.mode = 'Map'\n        self.update_map()\n@onkey('x')\ndef toggle_map_sat(self):\n    if self.mode == 'Map':\n        self.view = 'Sat' if self.view == 'Map' else 'Map'\n        self.update_map()\n\ndef pan_h(self, mult):\n    if self.mode == 'Map':\n        self.map_long = nb.google_maps.get_longitude_from_x(mult * self.width / 2)\n        self.update_map()\n    elif self.mode == 'Street View':\n        self.street_heading = (self.street_heading + mult * self.street_fov / 9) % 360\n        self.update_street_view()\n@onkey('left arrow', 'a')\ndef pan_left(self): self.pan_h(-1)\n@onkey('right arrow', 'd')\ndef pan_right(self): self.pan_h(1)\n\ndef pan_v(self, mult):\n    if self.mode == 'Map':\n        self.map_lat = nb.google_maps.get_latitude_from_y(mult * self.height / 2)\n        self.update_map()\n    elif self.mode == 'Street View':\n        self.street_pitch = min(90, max(-90, self.street_pitch + mult * self.street_fov / 9))\n        self.update_street_view()\n@onkey('up arrow', 'w')\ndef pan_up(self): self.pan_v(1)\n@onkey('down arrow', 's')\ndef pan_down(self): self.pan_v(-1)\n\n@onmouse('down')\ndef clicked(self, x, y):\n    if self.mode == 'Map':\n        self.mode = 'Street View'\n        self.street_lat = nb.google_maps.get_latitude_from_y(y)\n        self.street_long = nb.google_maps.get_longitude_from_x(x)\n        self.street_fov = 90\n        self.street_heading = 0\n        self.street_pitch = 0\n        self.update_street_view()    \n    elif self.mode == 'Street View':\n        self.mode = 'Map'\n        self.update_map()\n\n@onkey('q')\ndef do_search(self):\n    if self.mode != 'Map':\n        return\n\n    addr = input('Enter an address:')\n    place = nb.geolocation.geolocate(addr)\n    self.map_lat = place['latitude']\n    self.map_long = place['longitude']\n    self.map_zoom = 15\n    self.update_map()\n"
+        }, 
+        {
+          "type": "turtle", 
+          "name": "turtle", 
+          "value": "@onstart()\ndef start(self):\n    self.visible = False\n    \n    self.pos = (-310, 120)\n    self.pen_color = 'red'\n    self.write('Google Street View in NetsBlox-python', size = 24)\n    \n    self.pen_color = 'blue'\n    self.pos = (-275, 60)\n    self.write('Use the arrow keys or wasd to pan and +/- to zoom', size = 16)\n    \n    self.pos = (-260, 20)\n    self.write('Press x to toggle between map and satellite view', size = 16)\n    \n    self.pos = (-250, -20)\n    self.write('When on the map, press Q to search for places', size = 16)\n    \n    self.pos = (-180, -60)\n    self.write('Click on the map to get street view', size = 16)\n    \n    self.pos = (-230, -100)\n    self.write('The arrow keys/wasd and +/- work here too', size = 16)\n    \n    self.pos = (-300, -200)\n    self.pen_color = 'red'\n    self.write('Click anywhere or press any key to continue', size = 20)\n\n@onmouse('down', anywhere = True)\n@onkey('any')\ndef do_continue(self, *args):\n    if stage.mode is None:\n        stage.mode = stage.view = 'Map'\n        stage.clear_drawings()\n        stage.update_map()\n"
+        }
+      ], 
+      "images": {}
     }
   ], 
-  "images": {}
+  "show_blocks": true
 }
