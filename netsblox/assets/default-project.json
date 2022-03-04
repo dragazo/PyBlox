@@ -3,6 +3,10 @@
     "roles": [
         {
             "name": "untitled",
+            "stage_size": [
+                1080,
+                720
+            ],
             "block_sources": [
                 "netsblox://assets/default-blocks.json"
             ],
