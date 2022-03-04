@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import builtins as _builtins
 
 import tkinter as _tk

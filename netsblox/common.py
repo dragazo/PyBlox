@@ -1,5 +1,3 @@
-#!/user/bin/env python
-
 import netsblox as _netsblox
 
 import randomname as _randomname

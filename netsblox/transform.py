@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from typing import Any, List
 
 import parso # docs: https://parso.readthedocs.io/_/downloads/en/latest/pdf/
