@@ -17,11 +17,10 @@ with open('template/service-class.py', 'r') as f:
 with open('template/client-class.py', 'r') as f:
     CLIENT_CLASS_TEMPLATE = Template(f.read())
 
-FN_NAME_SPECIAL_RULES = {
+FN_NAME_SPECIAL_RULES = { # truly special cases go here
     'PhoneIoT': 'phone_iot',
-    'ThisXDoesNotExist': 'this_x_does_not_exist',
 }
-FN_NAME_KEYWORD_FIXES = {
+FN_NAME_KEYWORD_FIXES = { # in case we run into a reserved word
     'from': '_from',
 }
 
@@ -30,24 +29,49 @@ def clean_fn_name(name: str) -> str:
         return FN_NAME_SPECIAL_RULES[name]
 
     name = re.sub('[^\w]+', '', name) # remove characters that make symbols invalid
-    name = re.sub('([A-Z]+)', lambda m: f'_{m.group(1).lower()}', name) # convert cammel case to snake case
-    name = name if not name.startswith('_') else name[1:]
+
+    pieces = ['']
+    chars = [None, *name, None]
+    for i in range(len(name)):
+        prev_ch, curr_ch, next_ch = chars[i:i+3]
+
+        if not curr_ch.isdigit():
+            ch_upper = curr_ch.isupper()
+            boundary = any([
+                ch_upper and prev_ch is not None and prev_ch.islower(),
+                ch_upper and next_ch is not None and next_ch.islower(),
+            ])
+            if boundary: pieces.append('')
+        pieces[-1] += curr_ch
+    name = '_'.join(x.lower() for x in pieces)
+
+    name = re.sub(r'^_+|_+$', '', name) # remove lead/tail underscores
     name = FN_NAME_KEYWORD_FIXES.get(name) or name
     return name
 def clean_class_name(name: str) -> str:
     name = re.sub('[^\w]+', '', name) # remove characters that make symbols invalid
+    name = re.sub(r'^_+|_+$', '', name) # remove lead/tail underscores
     return name
 
-assert clean_fn_name('getSensors') == 'get_sensors'
-assert clean_fn_name('getCO2Data') == 'get_co2_data'
-assert clean_fn_name('city*') == 'city'
-assert clean_fn_name('HelloKitty2021') == 'hello_kitty2021'
-assert clean_fn_name('PhoneIoT') == 'phone_iot'
+tests = [
+    ('PhoneIoT', 'phone_iot'),
+    ('getSensors', 'get_sensors'), ('ThisXDoesNotExist', 'this_x_does_not_exist'),
+    ('getCO2Data', 'get_co2_data'), ('getCO*2*Data', 'get_co2_data'),
+    ('city*', 'city'), ('_city*_', 'city'), ('__city*__', 'city'), ('___city*___', 'city'),
+    ('HelloKitty2021', 'hello_kitty2021'), ('C6H5O6', 'c6h5o6'), ('P2PNetwork', 'p2p_network'),
+    ('getXFromLongitude', 'get_x_from_longitude'), ('getYFromLatitude', 'get_y_from_latitude'),
+]
+for a, b in tests:
+    res = clean_fn_name(a)
+    if res != b: raise RuntimeError(f'clean_fn_name error: {a} -> {res} (expected {b})')
 
-assert clean_class_name('Merp') == 'Merp'
-assert clean_class_name('MerpDerp') == 'MerpDerp'
-assert clean_class_name('MerpDerp203') == 'MerpDerp203'
-assert clean_class_name('MerpDerp203*') == 'MerpDerp203'
+tests = [
+    ('Merp', 'Merp'), ('_Me*rp*_', 'Merp'), ('__*Me*rp__', 'Merp'),
+    ('MerpDerp', 'MerpDerp'), ('MerpDerp203', 'MerpDerp203'),
+]
+for a, b in tests:
+    res = clean_class_name(a)
+    if res != b: raise RuntimeError(f'clean_class_name error: {a} -> {res} (expected {b})')
 
 def indent(input: str, spaces: int) -> str:
     pad = ' ' * spaces
@@ -63,8 +87,7 @@ FIXED_TYPES = {
 
 # returns type name, type parser
 def parse_type(t, types_meta):
-    if t is None:
-        return 'Any', ''
+    if t is None: return 'Any', ''
 
     name = t['name'] if type(t) == dict else t
     name_lower = name.lower()
@@ -79,12 +102,14 @@ def parse_type(t, types_meta):
         inner_t = f'List[{inner_t}]' if inner_t != 'Any' else 'list'
         inner_parse = f'_common.vectorize({inner_parse})' if inner_parse else ''
         return inner_t, inner_parse
+    elif name_lower == 'image':
+        return 'Image.Image', ''
 
-    for k,v in FIXED_TYPES.items():
+    for k, v in FIXED_TYPES.items():
         if name_lower in v:
             return k, k
 
-    return parse_type((types_meta.get(name) or {}).get('baseType'), types_meta)
+    return parse_type(types_meta.get(name, {}).get('baseType'), types_meta)
 
 # returns arg meta, type name, description, type parser
 def parse_arg(arg_meta, types_meta, override_name: str = None):
