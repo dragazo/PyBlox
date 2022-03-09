@@ -1469,7 +1469,7 @@ class MainMenu(tk.Menu):
     def project_path(self, p):
         self._project_path = p
         self._project_name = 'untitled' if p is None else basename_noext(p)
-        root.title(f'NetsBlox-Python - {self.public_id} ({"unsaved" if p is None else p})')
+        root.title(f'PyBlox - {self.public_id} ({"unsaved" if p is None else p})')
     @property
     def project_name(self):
         return self._project_name
