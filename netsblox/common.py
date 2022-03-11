@@ -92,6 +92,8 @@ def prep_send(val):
         return [prep_send(v) for v in val]
     elif isinstance(val, dict):
         return [[prep_send(k), prep_send(v)] for k,v in val.items()]
+    elif isinstance(val, _Image.Image):
+        return f'<costume image="data:image/png;base64,{encode_image(val)}"/>'
     else:
         return val
 
