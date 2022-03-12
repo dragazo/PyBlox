@@ -12,18 +12,58 @@ import os as _os
 
 from PIL import Image as _Image, ImageTk as _ImageTk
 
-from typing import Tuple, List, Any
+from typing import Tuple, List, Any, Optional
 
 _NETSBLOX_PY_PATH = _os.path.dirname(_netsblox.__file__)
 
-class UnavailableService(Exception):
+class NetsBloxError(Exception):
+    'An error from calling a NetsBlox RPC'
     pass
-class NotFoundError(Exception):
-    pass
-class InvokeError(Exception):
-    pass
-class ServerError(Exception):
-    pass
+
+_SCRIPT_CONTEXT = _threading.local()
+def get_error() -> Optional[str]:
+    '''
+    Gets the most recent error from a nothrow function that was run by the calling script, or `None` if there was no error.
+
+    Typically, you want to see errors as exceptions when they happen so as not to let them "hide" in your code.
+    However, this is still useful for cases where you want to allow (and ignore errors),
+    for instance if you need to call an RPC that might fail, but you don't actually care if it succeeds (or what the return value would be).
+
+    ```
+    nothrow(nb.chart.draw)(my_data)
+    if get_error() is not None:
+        print('uhoh, there was an error!')
+    ```
+    '''
+    return getattr(_SCRIPT_CONTEXT, 'error', None)
+
+def nothrow(f):
+    '''
+    A wrapper that can be applied to a function to make it a nothrow variant.
+    The most recent error from a nothrow variant is accessible via `get_error()`.
+    Additionally, if an error occurs, the return value is the error message string.
+
+    Note that only `NetsBloxError` exceptions are caught in this way - all others are thrown as true (python) exception.
+
+    ```
+    # normal (throwing) version
+    nb.air_quality.quality_index('invalid', 'input')
+    # nothrow version
+    nothrow(nb.air_quality.quality_index)('invalid', 'input')
+    # you can save the nothrow version
+    quality_index = nothrow(nb.air_quality.quality_index)
+    quality_index('invalid', 'input')
+    ```
+    '''
+    def wrapped(*args, **kwargs):
+        try:
+            _SCRIPT_CONTEXT.error = None
+            return f(*args, **kwargs)
+        except NetsBloxError as e:
+            msg = str(e)
+            _SCRIPT_CONTEXT.error = msg
+            return msg
+    return wrapped
 
 def scale_image(img: _Image.Image, scale: float = 1) -> _Image.Image:
     if scale == 1: return img

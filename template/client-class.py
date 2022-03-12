@@ -302,7 +302,7 @@ $service_instances
             return f
         return wrapper
 
-    def call(self, service: str, rpc: str, arguments: dict = {}, **kwargs):
+    def call(self, service: str, rpc: str, **kwargs):
         '''
         Directly calls the specified NetsBlox RPC based on its name.
         This is needed to access unofficial or dynamically-generated (like create-a-service) services.
@@ -310,24 +310,22 @@ $service_instances
         Note that the `service` and `rpc` names must match those in NetsBlox,
         rather than the renamed versions used in the Python wrappers here.
 
-        The `arguments` input is the dictionary of input values to the RPC.
-        Note that these names must match those stated in NetsBlox.
+        The keyword arguments are the values to send to the RPC.
+        Note that these names must match those stated in NetsBlox, rather than the snake_case names used by Pylox RPC wrappers.
         From NetsBlox, you can inspect the argument names from an empty call block (arg names shown as hint text),
         or by visiting the official [NetsBlox documentation](https://editor.netsblox.org/docs/services/GoogleMaps/index.html).
 
-        For convenience, any extra keyword arguments to this function will be added to `arguments`.
-        If there are keys in `arguments` and `kwargs` that conflict, `kwargs` take precedence.
+        If an RPC input would not be a valid python identifier (variable name), such as `'city*'`,
+        you can use keyword argument unpacking notation like `**{'city*': vlaue}`.
+        Hovever, you should avoid unpacking notation if possible.
 
         ```
         # the following are equivalent
-        nb.call('GoogleMaps', 'getEarthCoordinates', { 'x': x, 'y': y })
-        nb.call('Googlemaps', 'getEarthCoordinates', x = x, y = y)
+        nb.call('Googlemaps', 'getEarthCoordinates', x = my_x, y = my_y)
+        nb.call('Googlemaps', 'getEarthCoordinates', **{'x': my_x, 'y': my_y})
         ```
         '''
-
-        arguments = arguments.copy()
-        arguments.update(kwargs)
-        arguments = { k: _common.prep_send(v) for k, v in arguments.items() }
+        arguments = { k: _common.prep_send(v) for k, v in kwargs.items() }
 
         state = f'uuid={self._client_id}&projectId={self._project_id}&roleId={self._role_id}&t={round(_time.time() * 1000)}'
         url = f'{self._base_url}/services/{service}/{rpc}?{state}'
@@ -344,12 +342,8 @@ $service_instances
                 return _json.loads(res.text)
             except:
                 return res.text # strings are returned unquoted, so they'll fail to parse as json
-        elif res.status_code == 404:
-            raise _common.NotFoundError(res.text)
-        elif res.status_code == 500:
-            raise _common.ServerError(res.text)
         else:
-            raise Exception(f'Unknown error: {res.status_code}\n{res.text}')
+            raise _common.NetsBloxError(res.text)
 
     def disconnect(self):
         '''

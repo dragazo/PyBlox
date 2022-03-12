@@ -150,7 +150,7 @@ async def generate_service(session, base_url: str, service_name: str, types_meta
             desc = '\n\n'.join(desc)
             desc = indent(f"'''\n{desc}\n'''", 8)
 
-            code = f"self._client.call('{service_name}', '{rpc_name}', {{ {', '.join(payloads)} }})"
+            code = f"self._client.call('{service_name}', '{rpc_name}', **{{ {', '.join(payloads)} }})"
             code = f'res = {code}\nreturn {ret_info[3]}(res)' if ret_info[3] else f'return {code}'
 
             fn_name = clean_fn_name(rpc_name)

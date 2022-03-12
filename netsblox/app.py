@@ -1211,6 +1211,7 @@ class CodeEditor(ScrolledText):
 class GlobalEditor(CodeEditor):
     BASE_PREFIX = '''
 import netsblox
+from netsblox import get_location, get_error, nothrow
 from netsblox.turtle import *
 from netsblox.concurrency import *
 nb = netsblox.Client(proj_name = """$proj_name""", proj_id = $proj_id)
@@ -1226,7 +1227,7 @@ def _yield_(x):
     return x
 
 '''.lstrip()
-    BASE_PREFIX_LINES = 15
+    BASE_PREFIX_LINES = 16
 
     prefix = BASE_PREFIX
     prefix_lines = BASE_PREFIX_LINES

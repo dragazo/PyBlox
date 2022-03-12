@@ -8,7 +8,7 @@ from . import turtle
 from . import snap
 from . import rooms
 
-from .common import get_location
+from .common import get_location, get_error, nothrow
 
 __version__ = '$version'
 __author__ = '$author'
