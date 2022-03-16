@@ -1,5 +1,8 @@
 import threading as _threading
+import inspect as _inspect
 import time as _time
+
+_local = _threading.local()
 
 class Signal:
     '''
@@ -67,9 +70,6 @@ class StepSignal:
             while self._value <= v:
                 self._cv.wait()
 
-# maps thread id to warp counter
-# because we use raii and split on thread id, these are basically thread-local, so no mutex needed
-_warp_counters = {}
 def is_warping() -> bool:
     '''
     Checks if the caller is currently warping.
@@ -80,8 +80,10 @@ def is_warping() -> bool:
         print('should be true:', is_warping())
     ```
     '''
-    tid = _threading.current_thread().ident
-    return _warp_counters.get(tid, 0) > 0
+    return getattr(_local, 'warp_counter', 0) > 0
+
+_warps = {} # map<(file, line), Warp>
+_warps_lock = _threading.Lock()
 
 class Warp:
     '''
@@ -94,16 +96,21 @@ class Warp:
         print('do something during warp')
     ```
     '''
-    def __init__(self):
-        self.tid = _threading.current_thread().ident
+    def __new__(cls):
+        caller = _inspect.stack()[1]
+        key = (caller.filename, caller.lineno)
+        with _warps_lock:
+            if key in _warps: return _warps[key]
+            res = super(Warp, cls).__new__(cls)
+            res._lock = _threading.Lock()
+            _warps[key] = res
+            return res
     def __enter__(self):
-        _warp_counters[self.tid] = _warp_counters.get(self.tid, 0) + 1
+        _local.warp_counter = getattr(_local, 'warp_counter', 0) + 1
+        self._lock.__enter__()
     def __exit__(self, *args):
-        v = _warp_counters[self.tid] - 1
-        if v != 0:
-            _warp_counters[self.tid] = v
-        else:
-            del _warp_counters[self.tid]
+        _local.warp_counter -= 1
+        self._lock.__exit__()
 
 _did_yield_setup = False
 def setup_yielding() -> None:
@@ -120,3 +127,10 @@ def setup_yielding() -> None:
     _time.sleep = new_sleep
 
     _did_yield_setup = True
+
+if __name__ == '__main__':
+    w1 = Warp() ; w2 = Warp()
+    w3 = Warp()
+    w4, w5 = Warp(), Warp()
+    assert w1 is w2 and w4 is w5
+    assert w1 is not w3 and w3 is not w4
