@@ -117,6 +117,138 @@ def _start_signal_wrapped(f):
         return f(*args, **kwargs)
     return wrapped
 
+_KEY_DEBOUNCE_TIME = 0.1 # seconds after key up (with no intervening key down) to register as a true key up event
+
+_KEYSYM_MAPS = { # anything not listed here passes through as-is (lower case)
+    'up arrow': ['up'],
+    'arrow up': ['up'],
+    'right arrow': ['right'],
+    'arrow right': ['right'],
+    'down arrow': ['down'],
+    'arrow down': ['down'],
+    'left arrow': ['left'],
+    'arrow left': ['left'],
+
+    'pageup': ['prior'],
+    'page up': ['prior'],
+    'pagedown': ['next'],
+    'page down': ['next'],
+
+    'return': ['return', 'kp_enter'],
+    'enter': ['return', 'kp_enter'],
+    '\n': ['return', 'kp_enter'],
+    '\t': ['tab'],
+
+    'capslock': ['caps_lock'],
+    'caps lock': ['caps_lock'],
+    'numlock': ['num_lock'],
+    'num lock': ['num_lock'],
+    'scrolllock': ['scroll_lock'],
+    'scroll lock': ['scroll_lock'],
+
+    'alt': ['alt_l', 'alt_r'],
+    'left alt': ['alt_l'],
+    'right alt': ['alt_r'],
+
+    'shift': ['shift_l', 'shift_r'],
+    'left shift': ['shift_l'],
+    'right shift': ['shift_r'],
+
+    'control': ['control_l', 'control_r'],
+    'ctrl': ['control_l', 'control_r'],
+    'left control': ['control_l'],
+    'left ctrl': ['control_l'],
+    'right control': ['control_r'],
+    'right ctrl': ['control_r'],
+
+    'esc': ['escape'],
+    ' ': ['space'],
+
+    'minus': ['minus', 'kp_subtract'],
+    '-': ['minus', 'kp_subtract'],
+    'plus': ['plus', 'kp_add'],
+    '+': ['plus', 'kp_add'],
+
+    '0': ['0', 'kp_0'],
+    '1': ['1', 'kp_1'],
+    '2': ['2', 'kp_2'],
+    '3': ['3', 'kp_3'],
+    '4': ['4', 'kp_4'],
+    '5': ['5', 'kp_5'],
+    '6': ['6', 'kp_6'],
+    '7': ['7', 'kp_7'],
+    '8': ['8', 'kp_8'],
+    '9': ['9', 'kp_9'],
+
+    'any key': ['any'],
+}
+def _map_keys(*keys: str) -> List[str]:
+    mapped = []
+    for key in keys:
+        key = key.lower()
+        mapped.extend(_KEYSYM_MAPS.get(key, [key]))
+    return mapped
+
+class _KeyManager:
+    def __init__(self):
+        self.__lock = _threading.RLock()
+
+        self.__keys_down = {} # map<key str, [release timer]>
+
+        self.__key_down_events = { 'any': [] } # map<key str, _EventWrapper[]>
+        self.__key_hold_events = { 'any': [] } # map<key str, _EventWrapper[]>
+        self.__key_up_events   = { 'any': [] } # map<key str, _EventWrapper[]>
+
+    def add_event(self, keys: List[str], event: Callable, when: List[str]) -> None:
+        wrapped = _events.get_event_wrapper(event)
+        mapped = _map_keys(*keys)
+
+        mode_map = { 'down': self.__key_down_events, 'hold': self.__key_hold_events, 'up': self.__key_up_events }
+        targets = [mode_map[x] for x in set(when)]
+
+        with self.__lock:
+            for target in targets:
+                for key in mapped:
+                    if key not in target:
+                        target[key] = []
+                    target[key].append(wrapped)
+
+    def raw_key_down(self, key: str) -> None:
+        with self.__lock:
+            info = self.__keys_down.get(key)
+            if info is None:
+                target = self.__key_down_events
+                self.__keys_down[key] = [None]
+            else:
+                target = self.__key_hold_events
+                if info[0] is not None:
+                    info[0].cancel()
+                info[0] = None
+            events = target.get(key, []) + target['any']
+        for event in events:
+            event.schedule_no_queueing()
+
+    def raw_key_up(self, key: str) -> None:
+        def trigger():
+            with self.__lock:
+                del self.__keys_down[key]
+                target = self.__key_up_events
+                events = target.get(key, []) + target['any']
+            for event in events:
+                event.schedule_no_queueing()
+        with self.__lock:
+            info = self.__keys_down.get(key)
+            if info is not None:
+                if info[0] is not None:
+                    info[0].cancel()
+                info[0] = _threading.Timer(_KEY_DEBOUNCE_TIME, trigger)
+                info[0].start()
+
+    def is_key_down(self, key: str) -> bool:
+        mapped = _map_keys(key)
+        with self.__lock:
+            return any(x in self.__keys_down for x in mapped)
+
 class _Project:
     def __init__(self, *, logical_size: Tuple[int, int], physical_size: Tuple[int, int]):
         self.__lock = _threading.RLock()
@@ -145,16 +277,14 @@ class _Project:
             return 'break'
         self.__tk_canvas.bind_all('<Configure>', on_canvas_resize)
 
-        self.__key_events = { 'any': [] } # maps key to [raw handler, _EventWrapper[]]
-
-        def on_key(key, src):
+        self.__key_manager = _KeyManager()
+        def raw_on_key(key, src, target):
             if src is not self.__tk_canvas: return
-            with self.__lock:
-                for event in self.__key_events.get(key, []) + self.__key_events['any']:
-                    event.schedule_no_queueing()
+            target(key)
             return 'break'
-        self.__tk_canvas.bind('<Tab>', lambda e: on_key('tab', e.widget))
-        self.__tk_canvas.bind_all('<Key>', lambda e: on_key(e.keysym.lower(), e.widget))
+        self.__tk_canvas.bind('<Tab>', lambda e: raw_on_key('tab', e.widget, self.__key_manager.raw_key_down))
+        self.__tk_canvas.bind_all('<KeyPress>', lambda e: raw_on_key(e.keysym.lower(), e.widget, self.__key_manager.raw_key_down))
+        self.__tk_canvas.bind_all('<KeyRelease>', lambda e: raw_on_key(e.keysym.lower(), e.widget, self.__key_manager.raw_key_up))
 
         self.__last_mouse_pos = (0, 0)
         self.__mouse_down_events = []
@@ -226,6 +356,9 @@ class _Project:
     @property
     def mouse_pos(self) -> Tuple[float, float]:
         return self.__last_mouse_pos
+
+    def is_key_down(self, key: str) -> bool:
+        return self.__key_manager.is_key_down(key)
 
     @property
     def turtles(self) -> List[Any]:
@@ -339,11 +472,9 @@ class _Project:
             self.__drawings_img = Image.new('RGBA', self.__logical_size)
         self.invalidate()
 
-    def add_key_event(self, key: str, event: Callable) -> None:
-        with self.__lock:
-            if key not in self.__key_events:
-                self.__key_events[key] = []
-            self.__key_events[key].append(_events.get_event_wrapper(event))
+    def add_key_event(self, keys_info: Tuple[str,str], event: Callable) -> None:
+        when, keys = keys_info
+        self.__key_manager.add_event(keys, event, when)
 
     def add_mouse_event(self, mode: Tuple[str, bool], event: Callable) -> None:
         when, anywhere = mode
@@ -583,6 +714,19 @@ class StageBase(_Ref):
         ```
         '''
         return self.__proj.mouse_pos
+
+    def is_key_down(self, key: str) -> bool:
+        '''
+        Checks if the specified key is currently pressed down.
+
+        If you instead want to receive an event when a key is pressed, held, or released,
+        consider using the `@onkey` decorator.
+
+        ```
+        is_sneaking = self.is_key_down('shift')
+        ```
+        '''
+        return self.__proj.is_key_down(key)
 
     @property
     def gps_location(self) -> Tuple[float, float]:
@@ -1294,76 +1438,22 @@ def onstart(when: str = 'now'):
         raise ValueError(f'Unknown @onstart() when mode - got "{when}", expected: {", ".join(expected)}')
     return _add_gui_event_wrapper('__run_on_start', lambda _, f: _start_safe_thread(f), [when])
 
-_KEYSYM_MAPS = { # anything not listed here passes through as-is (lower case)
-    'up arrow': ['up'],
-    'arrow up': ['up'],
-    'right arrow': ['right'],
-    'arrow right': ['right'],
-    'down arrow': ['down'],
-    'arrow down': ['down'],
-    'left arrow': ['left'],
-    'arrow left': ['left'],
-
-    'pageup': ['prior'],
-    'page up': ['prior'],
-    'pagedown': ['next'],
-    'page down': ['next'],
-
-    'return': ['return', 'kp_enter'],
-    'enter': ['return', 'kp_enter'],
-    '\n': ['return', 'kp_enter'],
-    '\t': ['tab'],
-
-    'capslock': ['caps_lock'],
-    'caps lock': ['caps_lock'],
-    'numlock': ['num_lock'],
-    'num lock': ['num_lock'],
-    'scrolllock': ['scroll_lock'],
-    'scroll lock': ['scroll_lock'],
-
-    'alt': ['alt_l', 'alt_r'],
-    'left alt': ['alt_l'],
-    'right alt': ['alt_r'],
-
-    'shift': ['shift_l', 'shift_r'],
-    'left shift': ['shift_l'],
-    'right shift': ['shift_r'],
-
-    'control': ['control_l', 'control_r'],
-    'ctrl': ['control_l', 'control_r'],
-    'left control': ['control_l'],
-    'left ctrl': ['control_l'],
-    'right control': ['control_r'],
-    'right ctrl': ['control_r'],
-
-    'esc': ['escape'],
-    ' ': ['space'],
-
-    'minus': ['minus', 'kp_subtract'],
-    '-': ['minus', 'kp_subtract'],
-    'plus': ['plus', 'kp_add'],
-    '+': ['plus', 'kp_add'],
-
-    '0': ['0', 'kp_0'],
-    '1': ['1', 'kp_1'],
-    '2': ['2', 'kp_2'],
-    '3': ['3', 'kp_3'],
-    '4': ['4', 'kp_4'],
-    '5': ['5', 'kp_5'],
-    '6': ['6', 'kp_6'],
-    '7': ['7', 'kp_7'],
-    '8': ['8', 'kp_8'],
-    '9': ['9', 'kp_9'],
-
-    'any key': ['any'],
-}
-def onkey(*keys: str):
+def onkey(*keys: str, when: Union[str, List[str]] = ['down', 'hold']):
     '''
     The `@onkey()` decorator can be applied to a function at global scope
     or a method definition inside a stage or turtle
     to make that function run whenever the user presses a key on the keyboard.
 
     The special `'any'` or `'any key'` values (equivalent) can be used to catch any key press.
+
+    The `when` keyword argument controls when the event should be triggered.
+    The following options are available:
+     - `'down'` (co-default) - trigger when the key is first pressed down
+     - `'hold'` (co-default) - trigger repeatedly when the key is held down
+     - `'up` - trigger when the key is released
+
+    To combine multiple `when` modes, you can specify `when` as a list of modes.
+    For instance, the default is `when = ['down', 'hold']`.
 
     ```
     @onkey('space')
@@ -1375,12 +1465,14 @@ def onkey(*keys: str):
         self.forward(50)
     ```
     '''
-    mapped_keys = []
-    for key in keys:
-        key = key.lower()
-        mapped_keys.extend(_KEYSYM_MAPS.get(key, [key]))
-    proj =  _get_proj_handle()
-    return _add_gui_event_wrapper('__run_on_key', proj.add_key_event, mapped_keys)
+    if isinstance(when, str): when = [when]
+    modes = ['down', 'hold', 'up']
+    for mode in when:
+        if mode not in modes:
+            expected = ", ".join(f"\"{x}\"" for x in modes)
+            raise ValueError(f'Unknown @onkey when mode: "{mode}". Expected {expected}.')
+    proj = _get_proj_handle()
+    return _add_gui_event_wrapper('__run_on_key', proj.add_key_event, [(when, keys)])
 
 def onmouse(when: str, *, anywhere: bool = False):
     '''
