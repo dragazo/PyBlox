@@ -753,8 +753,12 @@ class ContextMenu(tk.Menu):
             # theoretically these two _should be_ redundant, but they are needed in conjunction to work...
             if not self.visible:
                 self.visible = True
-                self.tk_popup(x, y) # witchcraft needed for FocusOut to work on linux
-            self.post(x, y)         # wizardry needed for unpost to work
+
+                # witchcraft needed for FocusOut to work on linux
+                # notably, if we do this on Darwin it'll result in the menu re-showing after close (which can cause a crash bug on tab deletion)
+                if platform.system() == 'Linux':
+                    self.tk_popup(x, y)
+            self.post(x, y) # wizardry needed for unpost to work
         finally:
             self.grab_release()
 
