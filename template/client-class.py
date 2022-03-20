@@ -311,12 +311,12 @@ $service_instances
         rather than the renamed versions used in the Python wrappers here.
 
         The keyword arguments are the values to send to the RPC.
-        Note that these names must match those stated in NetsBlox, rather than the snake_case names used by Pylox RPC wrappers.
+        Note that these names must match those stated in NetsBlox, rather than the snake_case names used by PyBlox RPC wrappers.
         From NetsBlox, you can inspect the argument names from an empty call block (arg names shown as hint text),
         or by visiting the official [NetsBlox documentation](https://editor.netsblox.org/docs/services/GoogleMaps/index.html).
 
         If an RPC input would not be a valid python identifier (variable name), such as `'city*'`,
-        you can use keyword argument unpacking notation like `**{'city*': vlaue}`.
+        you can use keyword argument unpacking notation like `**{'city*': value}`.
         Hovever, you should avoid unpacking notation if possible.
 
         ```

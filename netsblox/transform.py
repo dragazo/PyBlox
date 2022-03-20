@@ -131,7 +131,7 @@ while flag: # some comment
     while not other_flag: # another comment
         foo(i ** 2)
         bar(i, i + 2)
-    bazz(i)
+    baz(i)
 ''')
         self.assertEqual(res, '''
     # another comment
@@ -139,7 +139,7 @@ while _yield_(flag): # some comment
     while _yield_(not other_flag): # another comment
         foo(i ** 2)
         bar(i, i + 2)
-    bazz(i)
+    baz(i)
 ''')
 
     def test_cursed_while_loops(self):

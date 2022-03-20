@@ -417,7 +417,7 @@ class _Project:
         final_scale = min(canvas_size[i] / logical_size[i] for i in range(2))
         final_size = tuple(round(v * final_scale) for v in frame.size)
         final_frame = ImageTk.PhotoImage(frame.resize(final_size, Image.ANTIALIAS))
-        self.__last_cached_frame = final_frame # we have to keep a ref around or it'll disapper
+        self.__last_cached_frame = final_frame # we have to keep a ref around or it'll disappear
 
         self.__tk_canvas.delete('all')
         self.__tk_canvas.create_image(canvas_size[0] / 2, canvas_size[1] / 2, image = final_frame)
@@ -592,7 +592,7 @@ def _qinvoke_wait(fn, *args) -> Any:
     if isinstance(ret_val, Exception): raise ret_val
     return ret_val
 
-_CURSOR_KERNEL = Image.new('RGBA', (3, 3), 'black') # used for cursor click collision detection on sprites - should be roughly circleish
+_CURSOR_KERNEL = Image.new('RGBA', (3, 3), 'black') # used for cursor click collision detection on sprites - should be roughly circle-ish
 
 def _turtle_image(color: Tuple[int, int, int], scale: float) -> Image.Image:
     scale *= 1.25
@@ -735,7 +735,7 @@ class StageBase(_Ref):
         Returns a tuple of `(latitude, longitude)`.
 
         ```
-        lat, long, = self.gps_location
+        lat, long = self.gps_location
         ```
         '''
         return _common.get_location()
@@ -1030,8 +1030,8 @@ class TurtleBase(_Ref):
         The apparent heading of the turtle is unchanged - this is just a way of measuring angles.
 
         ```
-        self.degress = 360         # switch to (normal) degrees mode
-        self.degress = 2 * math.pi # switch to radians mode
+        self.degrees = 360         # switch to (normal) degrees mode
+        self.degrees = 2 * math.pi # switch to radians mode
         ```
         '''
         return self.__degrees

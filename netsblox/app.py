@@ -1710,7 +1710,7 @@ class MainMenu(tk.Menu):
 
             def get_switcher(idx):
                 def do_switch():
-                    if idx == content.project.active_role: return # santy check
+                    if idx == content.project.active_role: return # sanity check
                     self.switch_role(active_role = idx)
                 return do_switch
             submenu.add_command(label = 'Open', command = get_switcher(i), state = tk.DISABLED if is_current else tk.ACTIVE)
