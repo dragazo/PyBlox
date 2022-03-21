@@ -32,7 +32,7 @@ def get_error() -> Optional[str]:
     ```
     nothrow(nb.chart.draw)(my_data)
     if get_error() is not None:
-        print('uhoh, there was an error!')
+        print('uh-oh, there was an error!')
     ```
     '''
     return getattr(_SCRIPT_CONTEXT, 'error', None)

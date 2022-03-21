@@ -314,9 +314,11 @@ class Content(tk.Frame):
         self.pane = tk.PanedWindow(self, orient = tk.HORIZONTAL, **PANED_WINDOW_OPTS)
         self.pane.pack(fill = tk.BOTH, expand = True)
 
+        self.blocks = BlocksList(self.pane)
         self.project = ProjectEditor(self.pane)
         self.display = Display(self.pane)
 
+        self.pane.add(self.blocks, stretch = 'never')
         self.pane.add(self.project, stretch = 'always', width = 5, minsize = 300)
         self.pane.add(self.display, stretch = 'always', width = 3, minsize = 300)
 
@@ -354,7 +356,7 @@ class DndManager:
                 break
 
 class BlocksList(tk.Frame):
-    def __init__(self, parent, blocks, text_target):
+    def __init__(self, parent):
         super().__init__(parent)
 
         self.scrollbar = ttk.Scrollbar(self)
@@ -362,14 +364,20 @@ class BlocksList(tk.Frame):
         self.scrollbar.configure(command = self.text.yview)
 
         self.scrollbar.pack(side = tk.RIGHT, fill = tk.Y)
-        self.text.pack(side = tk.LEFT, fill = tk.Y, expand = True)
+        self.text.pack(side = tk.LEFT, fill = tk.BOTH, expand = True)
 
         # make sure user can't select anything with the mouse (would look weird)
         self.text.bind('<Button-1>', lambda e: 'break')
         self.text.bind('<B1-Motion>', lambda e: 'break')
         self.text.configure(cursor = 'arrow')
 
+        self.imgs = [] # for some reason we need to keep a reference to the images or they disappear
+
+        self.text.configure(state = tk.DISABLED)
+
+    def link(self, blocks, text_target) -> None:
         orig_bcolor = text_target.cget('background')
+
         def make_dnd_manager(widget, code):
             focused = [None]
             def on_start(e):
@@ -397,18 +405,23 @@ class BlocksList(tk.Frame):
 
             return DndManager(widget, [DndTarget(text_target, on_start, on_stop, on_drop)])
 
-        self.imgs = [] # for some reason we need to keep a reference to the images or they disappear
-        for block in blocks:
-            img = common.load_tkimage(block['url'], scale = block['scale'])
-            label = tk.Label(self.text, image = img, bg = COLOR_INFO['text-background-disabled'])
+        try:
+            self.text.config(state = tk.NORMAL)
 
-            self.text.window_create('end', window = label)
-            self.text.insert('end', '\n')
-            self.imgs.append(img)
+            self.text.delete('1.0', 'end')
+            self.imgs.clear()
 
-            make_dnd_manager(label, block['replace'])
+            for block in blocks:
+                img = common.load_tkimage(block['url'], scale = block['scale'])
+                label = tk.Label(self.text, image = img, bg = COLOR_INFO['text-background-disabled'])
 
-        self.text.configure(state = tk.DISABLED)
+                self.text.window_create('end', window = label)
+                self.text.insert('end', '\n')
+                self.imgs.append(img)
+
+                make_dnd_manager(label, block['replace'])
+        finally:
+            self.text.config(state = tk.DISABLED)
 
 class Imports:
     RAW_INFO = json.loads(common.load_text("netsblox://assets/default-imports.json"))
@@ -471,7 +484,6 @@ class ProjectEditor(tk.Frame):
         self.block_sources = []
 
         self.editors: List[CodeEditor] = []
-        self.show_blocks_tkvar = tk.BooleanVar()
 
         def imports_update():
             for editor in self.editors:
@@ -528,18 +540,7 @@ class ProjectEditor(tk.Frame):
 
         editors = [x for x in self.editors if x.name == tab]
         assert len(editors) == 1
-        editors[0].on_content_change()
-
-    @property
-    def show_blocks(self) -> bool:
-        return self.show_blocks_tkvar.get()
-    @show_blocks.setter
-    def show_blocks(self, value: bool) -> None:
-        self.show_blocks_tkvar.set(value)
-        for editor in self.editors:
-            editor.update_pack()
-    def update_show_blocks(self):
-        self.show_blocks = self.show_blocks
+        editors[0].on_content_change(cause = 'tab-change')
 
     def delete_tab(self, idx) -> None:
         editor = self.editors[idx]
@@ -650,8 +651,6 @@ class ProjectEditor(tk.Frame):
 
             role_res['images'] = { name: common.encode_image(img) for name, img in self.imports.images.items() }
 
-        res['show_blocks'] = self.show_blocks
-
         return res
     def load(self, *, super_proj: Optional[dict] = None, active_role: Optional[int] = None) -> None:
         if super_proj is None:
@@ -706,9 +705,6 @@ class ProjectEditor(tk.Frame):
             self.notebook.forget(i)
             self.editors[i].destroy()
         self.editors = []
-
-        if super_proj is not None:
-            self.show_blocks = super_proj['show_blocks']
 
         for info in proj['editors']:
             ty = info['type']
@@ -836,6 +832,7 @@ class ScrolledText(tk.Frame):
         undo_args = { 'undo': True, 'maxundo': -1, 'autoseparators': True }
 
         self.font = tkfont.nametofont('TkFixedFont')
+        self.blocks = blocks
 
         self.scrollbar = ttk.Scrollbar(self)
         self.text = ChangedText(self, font = self.font, yscrollcommand = self.scrollbar.set, wrap = tk.WORD if wrap else tk.NONE, **({} if readonly else undo_args), **kwargs)
@@ -869,7 +866,7 @@ class ScrolledText(tk.Frame):
         self.text.bind('<Shift-Home>', lambda e: on_home(do_select = True))
 
         self.linenumbers = None # default to none - conditionally created
-        self.blocks = None
+        self.blocks = blocks
 
         if readonly:
             # make text readonly be ignoring all (default) keystrokes
@@ -908,33 +905,23 @@ class ScrolledText(tk.Frame):
             self.text.bind('<<Change>>', lambda e: self.on_content_change())
             self.text.bind('<Configure>', lambda e: self.on_content_change())
 
-        if len(blocks) > 0:
-            self.blocks = BlocksList(self, blocks, self.text)
-
         # -----------------------------------------------------
 
-        self.update_pack()
-
-    def update_pack(self):
-        for item in [self.scrollbar, self.hscrollbar, self.blocks, self.linenumbers, self.text]:
-            if item is not None: item.pack_forget()
-
         self.scrollbar.pack(side = tk.RIGHT, fill = tk.Y)
-        if self.blocks is not None and content is not None and content.project.show_blocks:
-            self.blocks.pack(side = tk.LEFT, fill = tk.Y)
         if self.linenumbers is not None:
             self.linenumbers.pack(side = tk.LEFT, fill = tk.Y)
         if self.hscrollbar is not None:
             self.hscrollbar.pack(side = tk.BOTTOM, fill = tk.X)
         self.text.pack(side = tk.RIGHT, fill = tk.BOTH, expand = True)
 
-        self.update() # needed on mac
-
-    def on_content_change(self):
+    def on_content_change(self, *, cause: str = 'unknown'):
         for handler in self.custom_on_change:
             handler()
         if self.linenumbers is not None:
             self.linenumbers.redraw()
+
+        if cause == 'tab-change':
+            content.blocks.link(self.blocks, self.text)
 
     def set_text(self, txt):
         self.text.delete('1.0', 'end')
@@ -1409,12 +1396,6 @@ class MainMenu(tk.Menu):
         root.bind_all(f'<{SYS_INFO["mod"]}-s>', lambda e: self.save())
         root.bind_all(f'<{SYS_INFO["mod"]}-S>', lambda e: self.save_as())
 
-        submenu = tk.Menu(self, **MENU_STYLE)
-        submenu.add_checkbutton(label = 'Blocks', variable = content.project.show_blocks_tkvar, command = content.project.update_show_blocks, accelerator = f'{SYS_INFO["mod-str"]}+B')
-        self.add_cascade(label = 'View', menu = submenu)
-
-        root.bind_all(f'<{SYS_INFO["mod"]}-b>', lambda e: self.toggle_blocks())
-
         self.room_manager = rooms.EditorRoomManager(client = nb)
 
         self.roles_dropdown = tk.Menu(self, **MENU_STYLE)
@@ -1571,9 +1552,6 @@ class MainMenu(tk.Menu):
         msg = 'Would you like to save your project before closing?'
         res = messagebox.askyesnocancel(title, msg)
         return res == False or (res == True and self.save(save_dict))
-
-    def toggle_blocks(self):
-        content.project.show_blocks = not content.project.show_blocks
 
     def import_image(self):
         p = filedialog.askopenfilename(filetypes = IMAGE_FILETYPES)
