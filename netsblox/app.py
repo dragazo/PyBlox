@@ -1279,13 +1279,21 @@ class Display(tk.Frame):
         self.pane = tk.PanedWindow(self, orient = tk.VERTICAL, **PANED_WINDOW_OPTS)
         self.pane.pack(fill = tk.BOTH, expand = True)
 
-        self.docs = ScrolledText(self.pane, readonly = True)
-        self.terminal = TerminalOutput(self.pane)
-
+        self.docs_frame = tk.Frame(self.pane)
+        self.docs_label = tk.Label(self.docs_frame, text = 'Documentation')
+        self.docs = ScrolledText(self.docs_frame, readonly = True)
         self.docs.text.configure(wrap = tk.WORD)
+        self.docs_label.pack(side = tk.TOP)
+        self.docs.pack(fill = tk.BOTH, expand = True)
 
-        self.pane.add(self.docs, stretch = 'always', minsize = 100)
-        self.pane.add(self.terminal, stretch = 'always', minsize = 100)
+        self.terminal_frame = tk.Frame(self.pane)
+        self.terminal_label = tk.Label(self.terminal_frame, text = 'Program Output')
+        self.terminal = TerminalOutput(self.terminal_frame)
+        self.terminal_label.pack(side = tk.TOP)
+        self.terminal.pack(fill = tk.BOTH, expand = True)
+
+        self.pane.add(self.docs_frame, stretch = 'always', minsize = 100)
+        self.pane.add(self.terminal_frame, stretch = 'always', minsize = 100)
 
 class TerminalOutput(tk.Frame):
     def __init__(self, parent):
