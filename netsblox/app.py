@@ -907,12 +907,17 @@ class ScrolledText(tk.Frame):
 
         # -----------------------------------------------------
 
-        self.scrollbar.pack(side = tk.RIGHT, fill = tk.Y)
+        col_off = 0
         if self.linenumbers is not None:
-            self.linenumbers.pack(side = tk.LEFT, fill = tk.Y)
+            self.linenumbers.grid(row = 0, column = 0, sticky = tk.NSEW)
+            col_off = 1
+        self.scrollbar.grid(row = 0, column = col_off + 1, sticky = tk.NSEW)
         if self.hscrollbar is not None:
-            self.hscrollbar.pack(side = tk.BOTTOM, fill = tk.X)
-        self.text.pack(side = tk.RIGHT, fill = tk.BOTH, expand = True)
+            self.hscrollbar.grid(row = 1, column = col_off, sticky = tk.NSEW)
+        self.text.grid(row = 0, column = col_off, sticky = tk.NSEW)
+
+        self.columnconfigure(col_off, weight = 1)
+        self.rowconfigure(0, weight = 1)
 
     def on_content_change(self, *, cause: str = 'unknown'):
         for handler in self.custom_on_change:
