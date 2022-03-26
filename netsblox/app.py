@@ -12,6 +12,7 @@ import traceback
 import platform
 import copy
 import json
+import math
 import sys
 import io
 import re
@@ -40,6 +41,9 @@ PROJECT_FILETYPES = [('PyBlox Project Files', xux('.json')), ('All Files', '.*')
 NB_PROJECT_FILETYPES = [('NetsBlox Project Files', xux('.xml')), ('All Files', '.*')]
 PYTHON_FILETYPES = [('Python Files', xux('.py')), ('All Files', '.*')]
 IMAGE_FILETYPES = [('Images', xux('.png .jpg .jpeg')), ('All Files', '.*')]
+
+MIN_FONT_SIZE = 4
+MAX_FONT_SIZE = 40
 
 color_enabled = False
 try:
@@ -765,9 +769,8 @@ class ContextMenu(tk.Menu):
 
 # source: https://stackoverflow.com/questions/16369470/tkinter-adding-line-number-to-text-widget
 class TextLineNumbers(tk.Canvas):
-    def __init__(self, parent, *, target, width):
-        super().__init__(parent, width = width)
-        self.width = width
+    def __init__(self, parent, *, target):
+        super().__init__(parent)
         self.textwidget = target
         self.line_num_offset = 0
 
@@ -776,16 +779,21 @@ class TextLineNumbers(tk.Canvas):
     def redraw(self):
         self.delete('all')
 
+        line_info = [] # [(y: int, label: str)]
         i = self.textwidget.index('@0,0')
         while True:
             dline = self.textwidget.dlineinfo(i)
-            if dline is None:
-                break
-
-            y = dline[1]
+            if dline is None: break
             linenum = int(str(i).split('.')[0]) + self.line_num_offset
-            self.create_text(self.width - 2, y, anchor = 'ne', text = str(linenum), font = self.font)
+            line_info.append((dline[1], str(linenum)))
             i = self.textwidget.index(f'{i}+1line')
+
+        max_label_len = max(len(x[1]) for x in line_info)
+        w = math.ceil(6 + 0.8 * max_label_len * self.font.cget('size'))
+        self.config(width = w)
+
+        for y, label in line_info:
+            self.create_text(w - 2, y, anchor = 'ne', text = label, font = self.font)
 
 # source: https://stackoverflow.com/questions/16369470/tkinter-adding-line-number-to-text-widget
 class ChangedText(tk.Text):
@@ -901,7 +909,7 @@ class ScrolledText(tk.Frame):
         self.text.bind(f'<{SYS_INFO["mod"]}-Key-C>', on_copy)
 
         if linenumbers:
-            self.linenumbers = TextLineNumbers(self, target = self.text, width = 40)
+            self.linenumbers = TextLineNumbers(self, target = self.text)
             self.text.bind('<<Change>>', lambda e: self.on_content_change())
             self.text.bind('<Configure>', lambda e: self.on_content_change())
 
@@ -1408,6 +1416,22 @@ class MainMenu(tk.Menu):
         root.bind_all(f'<{SYS_INFO["mod"]}-o>', lambda e: self.open_project())
         root.bind_all(f'<{SYS_INFO["mod"]}-s>', lambda e: self.save())
         root.bind_all(f'<{SYS_INFO["mod"]}-S>', lambda e: self.save_as())
+
+        submenu = tk.Menu(self, **MENU_STYLE)
+        global_font = tkfont.nametofont('TkFixedFont')
+        def do_zoom(delta: int) -> None:
+            new_size = max(min(global_font.cget('size') + delta, MAX_FONT_SIZE), MIN_FONT_SIZE)
+            global_font.config(size = new_size)
+            for editor in content.project.editors:
+                editor.on_content_change(cause = 'zoom')
+            return 'break'
+        submenu.add_command(label = 'Zoom In', command = lambda: do_zoom(1), accelerator = f'{SYS_INFO["mod-str"]}++')
+        submenu.add_command(label = 'Zoom Out', command = lambda: do_zoom(-1), accelerator = f'{SYS_INFO["mod-str"]}+-')
+        self.add_cascade(label = 'View', menu = submenu)
+
+        root.bind_all(f'<{SYS_INFO["mod"]}-plus>', lambda e: do_zoom(1))
+        root.bind_all(f'<{SYS_INFO["mod"]}-equal>', lambda e: do_zoom(1)) # plus without needing shift
+        root.bind_all(f'<{SYS_INFO["mod"]}-minus>', lambda e: do_zoom(-1))
 
         self.room_manager = rooms.EditorRoomManager(client = nb)
 
