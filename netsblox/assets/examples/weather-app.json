@@ -1,0 +1,38 @@
+{
+  "roles": [
+    {
+      "name": "untitled", 
+      "stage_size": [
+        1080, 
+        720
+      ], 
+      "block_sources": [
+        "netsblox://assets/default-blocks.json"
+      ], 
+      "blocks": {
+        "global": [], 
+        "stage": [], 
+        "turtle": []
+      }, 
+      "imports": [], 
+      "editors": [
+        {
+          "type": "global", 
+          "name": "global", 
+          "value": ""
+        }, 
+        {
+          "type": "stage", 
+          "name": "stage", 
+          "value": "def update_map(self):\n    self.costume = nb.google_maps.get_map(self.lat, self.long, self.width, self.height, self.zoom)\n    nb.send_message('Map Updated')\n\n@onstart()\ndef my_onstart(self):\n    self.zoom = 9\n    self.lat, self.long = get_location()\n    self.update_map()\n\n@onkey('right arrow')\ndef on_right_arrow(self):\n    self.long = nb.google_maps.get_longitude_from_x(self.width / 2)\n    self.update_map()\n\n@onkey('left arrow')\ndef on_left_arrow(self):\n    self.long = nb.google_maps.get_longitude_from_x(self.width / -2)\n    self.update_map()\n\n@onkey('up arrow')\ndef on_up_arrow(self):\n    self.lat = nb.google_maps.get_latitude_from_y(self.height / 2)\n    self.update_map()\n    \n@onkey('down arrow')\ndef on_down_arrow(self):\n    self.lat = nb.google_maps.get_latitude_from_y(self.height / -2)\n    self.update_map()\n\n@onkey('-')\ndef on_zoom_out(self):\n    if self.zoom > 1:\n        self.zoom -= 1\n        self.update_map()\n\n@onkey('+')\ndef on_zoom_in(self):\n    if self.zoom < 25:\n        self.zoom += 1\n        self.update_map()\n"
+        }, 
+        {
+          "type": "turtle", 
+          "name": "sprite", 
+          "value": "@onmouse('down', anywhere = True)\ndef on_clicked(self, x, y):\n    self.visible = False\n    self.pos = (x, y)\n    \n    sprite_lat = nb.google_maps.get_latitude_from_y(y)\n    sprite_long = nb.google_maps.get_longitude_from_x(x)\n    \n    city = nb.geolocation.city(sprite_lat, sprite_long)\n    temp = round(nb.weather.temperature(sprite_lat, sprite_long))\n    \n    self.say(f'{city}: {temp} F')\n    self.costume = nb.weather.icon(sprite_lat, sprite_long)\n    self.visible= True\n\n@nb.on_message('Map Updated')\ndef on_map_update(self):\n    self.visible = False\n"
+        }
+      ], 
+      "images": {}
+    }
+  ]
+}

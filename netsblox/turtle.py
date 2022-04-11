@@ -1460,7 +1460,7 @@ def onkey(*keys: str, when: Union[str, List[str]] = ['down', 'hold']):
     def space_key_pressed():
         stop_project()
 
-    @onkey('w', 'up')
+    @onkey('w', 'up arrow')
     def w_or_up_arrow_pressed(self):
         self.forward(50)
     ```
