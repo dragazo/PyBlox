@@ -74,7 +74,7 @@ def _intersects(a: Tuple[Image.Image, int, int], b: Tuple[Image.Image, int, int]
 def _render_text(text: str, size: float, color: Tuple[int, int, int]) -> Image.Image:
     font = _get_font().font_variant(size = round(1.5 * size))
 
-    text_mask = font.getmask(text, mode = 'L', features = ['aalt'])
+    text_mask = font.getmask(text, mode = 'L') # L mode here is 256-depth bitmap for antialiasing (not LTR) (see frombytes below)
     text_mask = Image.frombytes('L', text_mask.size, _np.array(text_mask).astype(_np.uint8)) # convert ImagingCore to Image
     text_img = Image.new('RGBA', text_mask.size, color)
     text_img.putalpha(text_mask)
