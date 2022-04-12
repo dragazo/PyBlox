@@ -95,7 +95,7 @@ def parse_type(t, types_meta):
         if type(t) != dict:
             return 'list', ''
         params = t.get('params') or []
-        if len(params) == 0 or len(params) > 1: # non-homogenous is ill-formed - just default to generic list
+        if len(params) == 0 or len(params) > 1: # non-homogeneous is ill-formed - just default to generic list
             return 'list', ''
 
         inner_t, inner_parse = parse_type(params[0].get('type') if type(params[0]) == dict else params[0], types_meta)

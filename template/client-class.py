@@ -317,7 +317,7 @@ $service_instances
 
         If an RPC input would not be a valid python identifier (variable name), such as `'city*'`,
         you can use keyword argument unpacking notation like `**{'city*': value}`.
-        Hovever, you should avoid unpacking notation if possible.
+        However, you should avoid unpacking notation if possible.
 
         ```
         # the following are equivalent

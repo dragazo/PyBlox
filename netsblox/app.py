@@ -478,7 +478,7 @@ class ProjectEditor(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
 
-        # this is randomly generated and is valid while the ide is open accross multiple program runs.
+        # this is randomly generated and is valid while the ide is open across multiple program runs.
         # it is not stored in project files or exports because conflicting ids would break messaging.
         self.project_id = common.generate_proj_id()
 

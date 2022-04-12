@@ -26,7 +26,7 @@ phone_iot.listen_to_sensors(device, { 'accelerometer': 100 })
 class MyTurtle(TurtleBase):
     @onstart
     def start(self):
-        self.degress = 2 * math.pi # math.atan2() returns radians, so switch to radians mode
+        self.degrees = 2 * math.pi # math.atan2() returns radians, so switch to radians mode
         self.drawing = True
 
         self.velx = 0
