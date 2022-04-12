@@ -735,6 +735,14 @@ class ProjectEditor(tk.Frame):
 
         self.imports.batch_update()
 
+        if len(self.editors) > 0:
+            default_tab_idx = len(self.editors) - 1 # default to stage (last tab) if no turtle editors
+            for i, editor in enumerate(self.editors):
+                if isinstance(editor, TurtleEditor):
+                    default_tab_idx = i
+                    break
+            self.notebook.select(default_tab_idx)
+
 class ContextMenu(tk.Menu):
     def __init__(self, parent, *, on_show = None):
         super().__init__(parent, tearoff = False)
