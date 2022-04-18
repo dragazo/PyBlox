@@ -485,6 +485,8 @@ class ProjectEditor(tk.Frame):
         self.roles: List[dict] = None
         self.active_role: int = None
 
+        self.client_type = 'editor' # must be one of: editor, dev
+
         self.block_sources = []
 
         self.editors: List[CodeEditor] = []
@@ -615,9 +617,11 @@ class ProjectEditor(tk.Frame):
     DEFAULT_PROJECT = json.loads(common.load_text('netsblox://assets/default-project.json'))
 
     def get_save_dict(self) -> dict:
-        res = {}
+        res = {
+            'client_type': self.client_type,
+            'roles': [],
+        }
 
-        res['roles'] = []
         for i, role in enumerate(self.roles):
             if i != self.active_role:
                 res['roles'].append(copy.deepcopy(role))
@@ -663,6 +667,10 @@ class ProjectEditor(tk.Frame):
             super_proj = copy.deepcopy(super_proj)
             roles = super_proj.get('roles', [super_proj]) # default is for backward compat
 
+        client_type = super_proj.get('client_type', 'editor')
+        if client_type not in ['editor', 'dev']:
+            client_type = 'editor'
+
         if active_role is None:
             active_role = 0
         elif active_role < 0 or active_role >= len(roles):
@@ -696,6 +704,8 @@ class ProjectEditor(tk.Frame):
             'stage': proj.get('stage_blocks', []),
             'turtle': proj.get('turtle_blocks', []),
         }, source = None)
+
+        self.client_type = client_type
 
         self.roles = roles
         self.active_role = active_role
@@ -1226,7 +1236,7 @@ import netsblox
 from netsblox import get_location, get_error, nothrow
 from netsblox.turtle import *
 from netsblox.concurrency import *
-nb = netsblox.Client(proj_name = """$proj_name""", proj_id = $proj_id)
+nb = $client_type(proj_name = """$proj_name""", proj_id = $proj_id)
 'A connection to NetsBlox, which allows you to use services and RPCs from python.'
 netsblox.turtle._INITIAL_SIZE = $stage_size
 getattr(netsblox.turtle._get_proj_handle(), '_Project__tk').title(f'PyBlox - {nb.public_id}')
@@ -1251,7 +1261,13 @@ def _yield_(x):
         self.set_text(value)
 
     def get_script(self, *, is_export: bool = False):
+        client_type = {
+            'editor': 'netsblox.Client',
+            'dev': 'netsblox.dev.Client',
+        }[content.project.client_type]
+
         pre = GlobalEditor.prefix
+        pre = pre.replace('$client_type', client_type)
         pre = pre.replace('$proj_name', main_menu.project_name)
         pre = pre.replace('$proj_id', 'None' if is_export else f'\'{content.project.project_id}\'')
 
