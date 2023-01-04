@@ -5,6 +5,7 @@ import threading as _threading
 import requests as _requests
 import inspect as _inspect
 import base64 as _base64
+import numpy as _np
 import json as _json
 import sys as _sys
 import io as _io
@@ -123,7 +124,15 @@ def generate_proj_id() -> str:
     return f'py-{_randomname.get_name()}'
 
 def small_json(obj):
-    return _json.dumps(obj, separators=(',', ':'))
+    def prep_value(obj):
+        if type(obj) in [list, tuple]:
+            return [prep_value(x) for x in obj]
+        if type(obj) is dict:
+            return { prep_value(k): prep_value(v) for k,v in obj.items() }
+        if type(obj) is _np.ndarray:
+            return obj.tolist()
+        return obj
+    return _json.dumps(prep_value(obj), separators=(',', ':'))
 
 def prep_send(val):
     if val is None:
