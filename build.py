@@ -128,8 +128,8 @@ def parse_arg(arg_meta, types_meta, override_name: str = None):
     return arg_meta, t, '\n\n'.join(desc), t_parser
 
 # returns either a string containing a class definition for the given service, or None if it should be omitted
-async def generate_service(session, base_url: str, service_name: str, types_meta):
-    async with session.get(f'{base_url}/services/{service_name}', ssl = ssl_context) as res:
+async def generate_service(session, base_url: str, services_url: str, service_name: str, types_meta):
+    async with session.get(f'{services_url}/{service_name}', ssl = ssl_context) as res:
         meta = await res.json(content_type=None) # ignore content type in case response mime type is wrong
         if 'servicePath' not in meta or not meta['servicePath']:
             return None # only generate code for fs services
@@ -167,18 +167,20 @@ async def generate_service(session, base_url: str, service_name: str, types_meta
 
 async def generate_client(base_url, client_name):
     async with aiohttp.ClientSession() as session:
-        async with session.get(f'{base_url}/services', ssl = ssl_context) as res:
+        async with session.get(f'{base_url}/configuration', ssl = ssl_context) as res:
+            services_url = (await res.json(content_type=None))['servicesHosts'][0]['url'] # ignore content type in case response type is wrong
+        async with session.get(services_url, ssl = ssl_context) as res:
             services_meta = await res.json(content_type=None) # ignore content type in case response mime type is wrong
-            async with session.get(f'{base_url}/services/input-types', ssl = ssl_context) as tres:
-                types_meta = await tres.json(content_type=None) # ignore content type in case response mime type is wrong
-                services = await asyncio.gather(*[asyncio.ensure_future(generate_service(session, base_url, x['name'], types_meta)) for x in services_meta])
-                services = sorted([x for x in services if x]) # remove None values (omitted services) and sort to make sure they're in a consistent order
+        async with session.get(f'{services_url}/input-types', ssl = ssl_context) as tres:
+            types_meta = await tres.json(content_type=None) # ignore content type in case response mime type is wrong
+            services = await asyncio.gather(*[asyncio.ensure_future(generate_service(session, base_url, services_url, x['name'], types_meta)) for x in services_meta])
+            services = sorted([x for x in services if x]) # remove None values (omitted services) and sort to make sure they're in a consistent order
 
-                service_classes = '\n'.join([x[1] for x in services])
-                service_instances = '\n'.join([f'        self.{clean_fn_name(x[0])} = {clean_class_name(x[0])}(self)\n{indent(x[2], 8)}\n' for x in services])
+            service_classes = '\n'.join([x[1] for x in services])
+            service_instances = '\n'.join([f'        self.{clean_fn_name(x[0])} = {clean_class_name(x[0])}(self)\n{indent(x[2], 8)}\n' for x in services])
 
-                return CLIENT_CLASS_TEMPLATE.substitute({ 'client_name': client_name, 'base_url': base_url,
-                    'service_classes': service_classes, 'service_instances': service_instances })
+            return CLIENT_CLASS_TEMPLATE.substitute({ 'client_name': client_name, 'base_url': base_url,
+                'service_classes': service_classes, 'service_instances': service_instances })
 
 async def generate_client_save(base_url, client_name, save_path):
     content = await generate_client(base_url, client_name)
@@ -190,10 +192,8 @@ async def main():
         f.write(init_content)
 
     args = [
-        ('https://editor.netsblox.org', 'Client', 'netsblox/editor.py'),
-        ('https://dev.netsblox.org', 'Client', 'netsblox/dev.py'),
-
-        # ('http://localhost:8080', 'LocalHost', 'netsblox/localhost.py'), # for dev purposes only
+        ('https://cloud.netsblox.org', 'Client', 'netsblox/editor.py'),
+        ('https://cloud.dev.netsblox.org', 'Client', 'netsblox/dev.py'),
     ]
     await asyncio.gather(*[asyncio.ensure_future(generate_client_save(*x)) for x in args])
 

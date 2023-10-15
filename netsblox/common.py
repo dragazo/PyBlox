@@ -120,8 +120,8 @@ def load_text(uri: str) -> str:
         _text_cache[uri] = txt
         return txt
 
-def generate_proj_id() -> str:
-    return f'py-{_randomname.get_name()}'
+def generate_project_id() -> str:
+    return f'_py-{_randomname.get_name()}'
 
 def small_json(obj):
     def prep_value(obj):

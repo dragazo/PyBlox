@@ -31,11 +31,11 @@ class $client_name:
     Holds all the information and plumbing required to connect to netsblox, exchange messages, and call RPCs.
     '''
 
-    def __init__(self, *, proj_name: Optional[str] = None, proj_id: Optional[str] = None, run_forever: bool = False):
+    def __init__(self, *, project_name: Optional[str] = None, project_id: Optional[str] = None, run_forever: bool = False):
         '''
         Opens a new client connection to NetsBlox, allowing you to access any of the NetsBlox services from python.
 
-        `proj_name` and `proj_id` control the public name of your project from other programs.
+        `project_name` and `project_id` control the public name of your project from other programs.
         For instance, these are needed for other programs to send a message to your project.
         If you do not provide them, defaults will be generated (which will work),
         but the public id will change every time, which could be annoying if you need to frequently start/stop your project to make changes.
@@ -46,8 +46,13 @@ class $client_name:
         instead, you can explicitly call `wait_till_disconnect()` at the end of your program.
         '''
 
-        self._client_id = proj_id or _common.generate_proj_id()
         self._base_url = '$base_url'
+        self._client_id = project_id or _common.generate_project_id()
+        self._project_name = project_name or 'untitled'
+
+        res = _json.loads(_requests.get(f'{self._base_url}/configuration').text)
+        self._services_url = res['servicesHosts'][0]['url']
+
         self._room_handle = None
 
         # set these up before the websocket since it might send us messages
@@ -59,7 +64,7 @@ class $client_name:
 
         # create a websocket and start it before anything non-essential (has some warmup communication)
         self._ws_lock = _threading.Lock()
-        self._ws = _websocket.WebSocketApp(self._base_url.replace('http', 'ws'),
+        self._ws = _websocket.WebSocketApp(f'{self._base_url.replace("http", "ws")}/network/{self._client_id}/connect',
             on_open=self._ws_open, on_close=self._ws_close, on_error=self._ws_error, on_message=self._ws_message)
         def run_ws():
             opt = {
@@ -76,17 +81,13 @@ class $client_name:
         self._message_thread.setDaemon(True)
         self._message_thread.start()
 
-        res = _json.loads(_requests.post(f'{self._base_url}/api/newProject',
-            _common.small_json({ 'clientId': self._client_id, 'roleName': 'monad' }),
+        res = _json.loads(_requests.post(f'{self._base_url}/projects/',
+            _common.small_json({ 'clientId': self._client_id, 'name': self._project_name }),
             headers = { 'Content-Type': 'application/json' }).text)
-        self._project_id = res['projectId']
-        self._role_id = res['roleId']
-        self._role_name = res['roleName']
-
-        res = _json.loads(_requests.post(f'{self._base_url}/api/setProjectName',
-            _common.small_json({ 'projectId': self._project_id, 'name': proj_name or 'untitled' }),
-            headers = { 'Content-Type': 'application/json' }).text)
-        self._project_name = res['name']
+        self._project_id = res['id']
+        role = next(iter(res['roles'].items()))
+        self._role_id = role[0]
+        self._role_name = role[1]['name']
 
 $service_instances
 
@@ -327,8 +328,8 @@ $service_instances
         '''
         arguments = { k: _common.prep_send(v) for k, v in kwargs.items() }
 
-        state = f'uuid={self._client_id}&projectId={self._project_id}&roleId={self._role_id}&t={round(_time.time() * 1000)}'
-        url = f'{self._base_url}/services/{service}/{rpc}?{state}'
+        time = round(_time.time() * 1000)
+        url = f'{self._services_url}/{service}/{rpc}?clientId={self._client_id}&t={time}'
         res = _requests.post(url,
             _common.small_json(arguments), # if the json has unnecessary white space, request on the server will hang for some reason
             headers = { 'Content-Type': 'application/json' })

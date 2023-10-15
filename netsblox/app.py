@@ -480,7 +480,7 @@ class ProjectEditor(tk.Frame):
 
         # this is randomly generated and is valid while the ide is open across multiple program runs.
         # it is not stored in project files or exports because conflicting ids would break messaging.
-        self.project_id = common.generate_proj_id()
+        self.project_id = common.generate_project_id()
 
         self.roles: List[dict] = None
         self.active_role: int = None
@@ -1236,7 +1236,7 @@ import netsblox
 from netsblox import get_location, get_error, nothrow
 from netsblox.turtle import *
 from netsblox.concurrency import *
-nb = $client_type(proj_name = """$proj_name""", proj_id = $proj_id)
+nb = $client_type(project_name = """$project_name""", project_id = $project_id)
 'A connection to NetsBlox, which allows you to use services and RPCs from python.'
 netsblox.turtle._INITIAL_SIZE = $stage_size
 getattr(netsblox.turtle._get_proj_handle(), '_Project__tk').title(f'PyBlox - {nb.public_id}')
@@ -1268,8 +1268,8 @@ def _yield_(x):
 
         pre = GlobalEditor.prefix
         pre = pre.replace('$client_type', client_type)
-        pre = pre.replace('$proj_name', main_menu.project_name)
-        pre = pre.replace('$proj_id', 'None' if is_export else f'\'{content.project.project_id}\'')
+        pre = pre.replace('$project_name', main_menu.project_name)
+        pre = pre.replace('$project_id', 'None' if is_export else f'\'{content.project.project_id}\'')
 
         role = content.project.roles[content.project.active_role]
         width, height = role['stage_size']
