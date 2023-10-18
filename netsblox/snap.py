@@ -2,6 +2,7 @@ import random
 import math
 import re
 import json
+import csv
 
 from typing import Any, Union, Callable, Sequence
 
@@ -461,6 +462,11 @@ def split(src: Any, by: Any) -> List:
         x, y = str(x), str(y)
         return wrap(x.split(y) if y != '' else list(x))
     return _list_binary_op(wrap(src), wrap(by), splitter)
+def split_csv(src: Any) -> List:
+    def splitter(x):
+        raw = list(csv.reader(str(x).splitlines()))
+        return wrap(raw[0]) if len(raw) == 1 else wrap(raw)
+    return _list_unary_op(wrap(src), splitter)
 def split_words(src: Any) -> List:
     return _list_unary_op(wrap(src), lambda x: wrap(re.split(r'\s+', str(x))))
 def split_json(src: Any) -> List:
@@ -734,6 +740,9 @@ if __name__ == '__main__':
     assert split_json('["this", 12, true, "is a", "test"]') == ['this', 12, True, 'is a', 'test']
     assert split_json('{"a": 12, "b": ["x", "y", "z"]}') == [['a', 12], ['b', ['x', 'y', 'z']]]
     assert split_json('{"a": 12, "b": ["x", "y", "z"]}') != [['a', 12], ['b', ['x', 'y', 'zz']]]
+
+    assert split_csv('"this, is some text",12,true,","') == ['this, is some text', '12', 'true', ',']
+    assert split_csv('"this, is some text",12,true,","\n12\n\ntrue,') == [['this, is some text', '12', 'true', ','], ['12'], [], ['true', '']]
 
     assert wrap('z') == wrap('Z') and wrap('aBc') == 'Abc' and 'abC' == wrap('ABC')
 
