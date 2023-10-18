@@ -1,5 +1,7 @@
 import random
 import math
+import re
+import json
 
 from typing import Any, Union, Callable, Sequence
 
@@ -163,6 +165,7 @@ class Str(str):
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, int) or isinstance(other, float): return float(self) == other
+        if isinstance(other, str): return str(self).lower() == str(other).lower()
         return str(self) == other
     def __ne__(self, other: Any) -> bool:
         return not (self == other)
@@ -453,6 +456,16 @@ def prod(vals: Any) -> Any:
     if type(vals) is List: return _list_fold_op(vals, wrap(1), lambda x, y: x * y)
     else: return vals
 
+def split(src: Any, by: Any) -> List:
+    def splitter(x, y):
+        x, y = str(x), str(y)
+        return wrap(x.split(y) if y != '' else list(x))
+    return _list_binary_op(wrap(src), wrap(by), splitter)
+def split_words(src: Any) -> List:
+    return _list_unary_op(wrap(src), lambda x: wrap(re.split(r'\s+', str(x))))
+def split_json(src: Any) -> List:
+    return _list_unary_op(wrap(src), lambda x: wrap(json.loads(str(x))))
+
 if __name__ == '__main__':
     assert is_wrapped(True)
     v = wrap('hello world') ; assert v is wrap(v) and isinstance(v, Str) and isinstance(v, str)
@@ -706,5 +719,22 @@ if __name__ == '__main__':
     v = +wrap([1, '4', -2, '-1'])
     assert is_wrapped(v) and v == [1, 4, -2, -1]
     assert type(list.__getitem__(v, 0)) is Float and type(list.__getitem__(v, 1)) is Float and type(list.__getitem__(v, 2)) is Float and type(list.__getitem__(v, 3)) is Float
+
+    assert split('hello world', ' ') == ['hello', 'world']
+    assert split('hello  world', ' ') == ['hello', '', 'world']
+    assert split(['hello  world', 'again'], ' ') == [['hello', '', 'world'], ['again']]
+    assert split('hello world', '') == ['h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd']
+    assert split(['hello world', 'more'], '') == [['h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd'], ['m', 'o', 'r', 'e']]
+    assert split('hello\nworld', '\n') == ['hello', 'world']
+
+    assert split_words('hello world') == ['hello', 'world']
+    assert split_words('hello  world') == ['hello', 'world']
+    assert split_words(['hello world', 'hello    \t \n again']) == [['hello', 'world'], ['hello', 'again']]
+
+    assert split_json('["this", 12, true, "is a", "test"]') == ['this', 12, True, 'is a', 'test']
+    assert split_json('{"a": 12, "b": ["x", "y", "z"]}') == [['a', 12], ['b', ['x', 'y', 'z']]]
+    assert split_json('{"a": 12, "b": ["x", "y", "z"]}') != [['a', 12], ['b', ['x', 'y', 'zz']]]
+
+    assert wrap('z') == wrap('Z') and wrap('aBc') == 'Abc' and 'abC' == wrap('ABC')
 
     print('passed all snap wrapper tests')
