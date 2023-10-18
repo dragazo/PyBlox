@@ -23,6 +23,11 @@ def _list_unary_op(a: Any, op: Callable) -> 'List':
     if _is_list(a):
         return List(_list_unary_op(wrap(x), op) for x in a)
     return op(a)
+def _list_fold_op(a: Any, acc: Any, op: Callable) -> 'List':
+    assert is_wrapped(acc) and is_wrapped(a) and _is_list(a)
+    for i in range(len(a)):
+        acc = op(acc, wrap(list.__getitem__(a, i)))
+    return acc
 
 def _scalar_op(a: Any, b: Any, op: Callable) -> 'Float':
     a, b = float(a), float(b)
@@ -30,6 +35,13 @@ def _scalar_op(a: Any, b: Any, op: Callable) -> 'Float':
         return Float(op(a, b))
     except OverflowError:
         return Float(math.inf)
+
+def _single_cmp(a: Any, b: Any) -> int:
+    base = lambda x, y: 1 if x > y else -1 if x < y else 0
+    try:
+        return base(float(a), float(b))
+    except:
+        return base(str(a), str(b))
 
 def _parse_index(idx: Any) -> Union['List', int, str]:
     idx = wrap(idx)
@@ -52,6 +64,17 @@ class Float(float):
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, str): return wrap(float(self) == float(other))
         return wrap(float(self) == other)
+    def __ne__(self, other: Any) -> bool:
+        return not (self == other)
+
+    def __gt__(self, other: Any) -> Any:
+        return _list_binary_op(self, wrap(other), lambda a, b: _single_cmp(a, b) > 0)
+    def __ge__(self, other: Any) -> Any:
+        return _list_binary_op(self, wrap(other), lambda a, b: _single_cmp(a, b) >= 0)
+    def __lt__(self, other: Any) -> Any:
+        return _list_binary_op(self, wrap(other), lambda a, b: _single_cmp(a, b) < 0)
+    def __le__(self, other: Any) -> Any:
+        return _list_binary_op(self, wrap(other), lambda a, b: _single_cmp(a, b) <= 0)
 
     def __str__(self) -> str:
         if math.isnan(self): return 'NaN'
@@ -141,6 +164,17 @@ class Str(str):
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, int) or isinstance(other, float): return float(self) == other
         return str(self) == other
+    def __ne__(self, other: Any) -> bool:
+        return not (self == other)
+
+    def __gt__(self, other: Any) -> Any:
+        return _list_binary_op(self, wrap(other), lambda a, b: _single_cmp(a, b) > 0)
+    def __ge__(self, other: Any) -> Any:
+        return _list_binary_op(self, wrap(other), lambda a, b: _single_cmp(a, b) >= 0)
+    def __lt__(self, other: Any) -> Any:
+        return _list_binary_op(self, wrap(other), lambda a, b: _single_cmp(a, b) < 0)
+    def __le__(self, other: Any) -> Any:
+        return _list_binary_op(self, wrap(other), lambda a, b: _single_cmp(a, b) <= 0)
 
     def __add__(self, other: Any) -> Any:
         return Float(self) + other
@@ -202,6 +236,18 @@ class List(list):
 
     def __bool__(self) -> bool:
         return True
+
+    def __gt__(self, other: Any) -> Any:
+        return _list_binary_op(self, wrap(other), lambda a, b: _single_cmp(a, b) > 0)
+    def __ge__(self, other: Any) -> Any:
+        return _list_binary_op(self, wrap(other), lambda a, b: _single_cmp(a, b) >= 0)
+    def __lt__(self, other: Any) -> Any:
+        return _list_binary_op(self, wrap(other), lambda a, b: _single_cmp(a, b) < 0)
+    def __le__(self, other: Any) -> Any:
+        return _list_binary_op(self, wrap(other), lambda a, b: _single_cmp(a, b) <= 0)
+
+    def __pos__(self) -> 'List':
+        return _list_unary_op(self, lambda x: wrap(+x))
 
     def __delitem__(self, idx: Any) -> None:
         idx = _parse_index(idx)
@@ -362,6 +408,9 @@ def srange(a: Any, b: Any) -> List:
     '''
     return _list_unary_op(sxrange(a, b), List)
 
+def log(value: Any, base: Any) -> Any:
+    return _list_binary_op(wrap(value), wrap(base), lambda x, y: wrap(math.log(+x, +y)))
+
 def sqrt(value: Any) -> Any:
     return _list_unary_op(wrap(value), lambda x: wrap(math.sqrt(+x)))
 def lnot(value: Any) -> Any:
@@ -381,10 +430,16 @@ def acos(value: Any) -> Any:
 def atan(value: Any) -> Any:
     return _list_unary_op(wrap(value), lambda x: wrap(math.atan(+x) * (180 / math.pi)))
 
+def atan2(y: Any, x: Any) -> Any:
+    return _list_binary_op(wrap(y), wrap(x), lambda a, b: wrap(math.atan2(+a, +b) * (180 / math.pi)))
+
 def get_ord(value: Any) -> Any:
     return _list_unary_op(wrap(value), lambda x: wrap(ord(str(x))))
 def get_chr(value: Any) -> Any:
     return _list_unary_op(wrap(value), lambda x: wrap(chr(+x)))
+
+def sign(value: Any) -> Any:
+    return _list_unary_op(wrap(value), lambda x: wrap(_single_cmp(x, wrap(0))))
 
 def identical(a: Any, b: Any) -> Any:
     a, b = wrap(a), wrap(b)
@@ -392,6 +447,11 @@ def identical(a: Any, b: Any) -> Any:
     if la and lb: return a is b
     if la or lb: return False
     return a == b
+
+def prod(vals: Any) -> Any:
+    vals = wrap(vals)
+    if type(vals) is List: return _list_fold_op(vals, wrap(1), lambda x, y: x * y)
+    else: return vals
 
 if __name__ == '__main__':
     assert is_wrapped(True)
@@ -591,5 +651,60 @@ if __name__ == '__main__':
     v = +wrap('Infinity') ; assert v > 0 and math.isinf(v)
     v = +wrap('-Infinity') ; assert v < 0 and math.isinf(v)
     v = +wrap('NaN') ; assert math.isnan(v)
+
+    assert prod([4, 2, 6]) == 48 and is_wrapped(prod([4, 2, 6]))
+    assert prod([4]) == 4 and is_wrapped(prod([4]))
+    assert prod([]) == 1 and is_wrapped(prod([]))
+    assert prod([[4, 2, 6], [2, 7, 3]]) == [8, 14, 18] and is_wrapped(prod([[4, 2, 6], [2, 7, 3]]))
+
+    assert (wrap('7') > 4) == True and (wrap('7') > '4') == True and (wrap('7') >= 4) == True and (wrap('7') >= '4') == True
+    assert (wrap('7') < 12) == True and (wrap('7') < '12') == True and (wrap('7') <= 12) == True and (wrap('7') <= '12') == True
+    assert (wrap('7') == 7) == True and (wrap('7') == '7') == True and (wrap('7') != 12) == True and (wrap('7') != '12') == True
+    assert (wrap('7') < 4) == False and (wrap('7') < '4') == False and (wrap('7') <= 4) == False and (wrap('7') <= '4') == False
+    assert (wrap('7') > 12) == False and (wrap('7') > '12') == False and (wrap('7') >= 12) == False and (wrap('7') >= '12') == False
+    assert (wrap('7') == 12) == False and (wrap('7') == '12') == False and (wrap('7') != 7) == False and (wrap('7') != '7') == False
+
+    assert (wrap(7) > 4) == True and (wrap(7) > '4') == True and (wrap(7) >= 4) == True and (wrap(7) >= '4') == True
+    assert (wrap(7) < 12) == True and (wrap(7) < '12') == True and (wrap(7) <= 12) == True and (wrap(7) <= '12') == True
+    assert (wrap(7) == 7) == True and (wrap(7) == '7') == True and (wrap(7) != 12) == True and (wrap(7) != '12') == True
+    assert (wrap(7) < 4) == False and (wrap(7) < '4') == False and (wrap(7) <= 4) == False and (wrap(7) <= '4') == False
+    assert (wrap(7) > 12) == False and (wrap(7) > '12') == False and (wrap(7) >= 12) == False and (wrap(7) >= '12') == False
+    assert (wrap(7) == 12) == False and (wrap(7) == '12') == False and (wrap(7) != 7) == False and (wrap(7) != '7') == False
+
+    assert (wrap('7') < [1, 5, 7, 9, 10]) == [False, False, False, True, True]
+    assert (wrap('7') <= [1, 5, 7, 9, 10]) == [False, False, True, True, True]
+    assert (wrap('7') > [1, 5, 7, 9, 10]) == [True, True, False, False, False]
+    assert (wrap('7') >= [1, 5, 7, 9, 10]) == [True, True, True, False, False]
+    assert (wrap('7') >= [1, 5, 7, 9, 10]) != [True, True, False, False, False]
+
+    assert (wrap(7) < ['1', 5, 7, 9, 10]) == [False, False, False, True, True]
+    assert (wrap(7) <= [1, '5', 7, 9, 10]) == [False, False, True, True, True]
+    assert (wrap(7) > [1, 5, '7', 9, 10]) == [True, True, False, False, False]
+    assert (wrap(7) >= [1, 5, 7, '9', 10]) == [True, True, True, False, False]
+    assert (wrap(7) >= [1, 5, 7, 9, '10']) != [True, True, False, False, False]
+
+    assert (wrap(['1', 5, 7, 9, 10]) > 7) == [False, False, False, True, True]
+    assert (wrap([1, '5', 7, 9, 10]) >= 7) == [False, False, True, True, True]
+    assert (wrap([1, 5, '7', 9, 10]) < 7) == [True, True, False, False, False]
+    assert (wrap([1, 5, 7, '9', 10]) <= 7) == [True, True, True, False, False]
+    assert (wrap([1, 5, 7, 9, '10']) <= 7) != [True, True, False, False, False]
+
+    assert (wrap(['1', 5, 7, 9, 10]) > '7') == [False, False, False, True, True]
+    assert (wrap([1, '5', 7, 9, 10]) >= '7') == [False, False, True, True, True]
+    assert (wrap([1, 5, '7', 9, 10]) < '7') == [True, True, False, False, False]
+    assert (wrap([1, 5, 7, '9', 10]) <= '7') == [True, True, True, False, False]
+    assert (wrap([1, 5, 7, 9, '10']) <= '7') != [True, True, False, False, False]
+
+    assert sign(6) == 1 and is_wrapped(sign(6))
+    assert sign('-7') == -1 and is_wrapped(sign(-7))
+    assert sign(0) == 0 and is_wrapped(sign(0))
+    assert sign(['5', -2, '0', 3]) == [1, -1, 0, 1] and is_wrapped(sign([5, -2, 0, 3]))
+
+    assert is_wrapped(atan2(1, '2')) and abs(atan2('1', 2) - 26.5650511) < 0.00001
+    assert is_wrapped(log(10, '2')) and abs(log('10', 2) - 3.321928) < 0.000001
+
+    v = +wrap([1, '4', -2, '-1'])
+    assert is_wrapped(v) and v == [1, 4, -2, -1]
+    assert type(list.__getitem__(v, 0)) is Float and type(list.__getitem__(v, 1)) is Float and type(list.__getitem__(v, 2)) is Float and type(list.__getitem__(v, 3)) is Float
 
     print('passed all snap wrapper tests')
