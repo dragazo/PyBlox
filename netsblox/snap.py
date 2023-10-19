@@ -6,6 +6,8 @@ import csv
 
 from typing import Any, Union, Callable, Sequence
 
+import netsblox as _netsblox
+
 def _is_matrix(v: Any) -> bool:
     return isinstance(v, list) and len(v) > 0 and isinstance(list.__getitem__(v, 0), list)
 def _is_list(v: Any) -> bool:
@@ -250,9 +252,6 @@ class List(list):
     def __le__(self, other: Any) -> Any:
         return _list_binary_op(self, wrap(other), lambda a, b: _single_cmp(a, b) <= 0)
 
-    def __pos__(self) -> 'List':
-        return _list_unary_op(self, lambda x: wrap(+x))
-
     def __delitem__(self, idx: Any) -> None:
         idx = _parse_index(idx)
         t = type(idx)
@@ -471,6 +470,22 @@ def split_words(src: Any) -> List:
     return _list_unary_op(wrap(src), lambda x: wrap(re.split(r'\s+', str(x))))
 def split_json(src: Any) -> List:
     return _list_unary_op(wrap(src), lambda x: wrap(json.loads(str(x))))
+
+def is_number(value: Any) -> bool:
+    if isinstance(value, bool): return False
+    try:
+        +wrap(value)
+        return True
+    except:
+        return False
+def is_text(value: Any) -> bool:
+    return not isinstance(value, bool) and (isinstance(value, str) or isinstance(value, int) or isinstance(value, float)) and not is_number(value)
+def is_bool(value: Any) -> bool:
+    return isinstance(value, bool)
+def is_list(value: Any) -> bool:
+    return isinstance(value, list) or isinstance(value, dict)
+def is_sprite(value: Any) -> bool:
+    return isinstance(value, _netsblox.turtle.TurtleBase)
 
 if __name__ == '__main__':
     assert is_wrapped(True)
@@ -722,10 +737,6 @@ if __name__ == '__main__':
     assert is_wrapped(atan2(1, '2')) and abs(atan2('1', 2) - 26.5650511) < 0.00001
     assert is_wrapped(log(10, '2')) and abs(log('10', 2) - 3.321928) < 0.000001
 
-    v = +wrap([1, '4', -2, '-1'])
-    assert is_wrapped(v) and v == [1, 4, -2, -1]
-    assert type(list.__getitem__(v, 0)) is Float and type(list.__getitem__(v, 1)) is Float and type(list.__getitem__(v, 2)) is Float and type(list.__getitem__(v, 3)) is Float
-
     assert split('hello world', ' ') == ['hello', 'world']
     assert split('hello  world', ' ') == ['hello', '', 'world']
     assert split(['hello  world', 'again'], ' ') == [['hello', '', 'world'], ['again']]
@@ -745,5 +756,11 @@ if __name__ == '__main__':
     assert split_csv('"this, is some text",12,true,","\n12\n\ntrue,') == [['this, is some text', '12', 'true', ','], ['12'], [], ['true', '']]
 
     assert wrap('z') == wrap('Z') and wrap('aBc') == 'Abc' and 'abC' == wrap('ABC')
+    assert wrap({}) == [] and wrap({'a': 5}) == [['a', 5]]
+
+    assert is_number('5') and is_number('-5.8') and is_number(wrap('5')) and is_number(5) and is_number(5.6) and is_number(wrap(5)) and not is_number('hello') and not is_number(wrap('hello')) and not is_number(True) and not is_number([]) and not is_number({})
+    assert is_text('hello') and is_text(wrap('hello')) and not is_text(5) and not is_text('5') and not is_text([]) and not is_text(True) and not is_text({})
+    assert is_bool(True) and is_bool(False) and is_bool(wrap(True)) and is_bool(wrap(False)) and not is_bool(12) and not is_bool('56') and not is_bool('hello') and not is_bool([]) and not is_bool({})
+    assert is_list([]) and is_list({}) and is_list(wrap([])) and is_list(wrap({})) and not is_list('hello') and not is_list(wrap('hello')) and not is_list(45) and not is_list(wrap(45)) and not is_list(True) and not is_list(False)
 
     print('passed all snap wrapper tests')
