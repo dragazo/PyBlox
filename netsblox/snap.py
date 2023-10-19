@@ -48,14 +48,14 @@ def _single_cmp(a: Any, b: Any) -> int:
     except:
         return base(str(a), str(b))
 
-def _parse_index(idx: Any) -> Union['List', int, str]:
+def _parse_index(idx: Any) -> Union['List', int, str, slice]:
     idx = wrap(idx)
-    if type(idx) is List: return idx
+    if type(idx) is List or type(idx) is slice: return idx
 
     try:
         idx = +idx
     except:
-        return str(idx)
+        pass
 
     return idx if type(idx) is int else str(idx)
 
@@ -159,11 +159,12 @@ class Str(str):
     def __getitem__(self, idx: Any) -> str:
         idx = _parse_index(idx)
         t = type(idx)
-        if t is List: return _list_unary_op(idx, lambda x: self[+x])
+        if t is slice: return wrap(str.__getitem__(self, idx))
+        elif t is List: return _list_unary_op(idx, lambda x: self[+x])
         elif t is str: return wrap('')
         elif t is int:
             if idx < 0 or idx >= len(self): return wrap('')
-            else: return str.__getitem__(self, idx)
+            else: return wrap(str.__getitem__(self, idx))
         else: assert False
 
     def __eq__(self, other: Any) -> bool:
@@ -255,7 +256,8 @@ class List(list):
     def __delitem__(self, idx: Any) -> None:
         idx = _parse_index(idx)
         t = type(idx)
-        if t is List: pass
+        if t is slice: list.__delitem__(self, idx)
+        elif t is List: pass
         elif t is str: del self.__str_keys[idx]
         elif t is int:
             if idx < 0: del self.__str_keys[str(idx)]
@@ -265,7 +267,8 @@ class List(list):
     def __getitem__(self, idx: Any) -> Any:
         idx = _parse_index(idx)
         t = type(idx)
-        if t is List: return wrap('')
+        if t is slice: return wrap(list.__getitem__(self, idx))
+        elif t is List: return _list_unary_op(wrap(idx), lambda x: self[x])
         elif t is str: return wrap(self.__str_keys.get(idx, ''))
         elif t is int:
             if idx < 0: return wrap(self.__str_keys.get(str(idx), ''))
@@ -276,7 +279,8 @@ class List(list):
         value = wrap(value)
         idx = _parse_index(idx)
         t = type(idx)
-        if t is List: pass
+        if t is slice: list.__setitem__(self, idx, value)
+        elif t is List: pass
         elif t is str: self.__str_keys[idx] = value
         elif t is int:
             if idx < 0: self.__str_keys[str(idx)] = value
@@ -333,20 +337,56 @@ class List(list):
     def __floor__(self) -> 'List':
         return List(math.floor(x) for x in self)
 
-    def random(self) -> Any:
+    def __iadd__(self, other: Any) -> 'List':
+        return self + other
+
+    @property
+    def rand(self) -> Any:
         if len(self) == 0: return wrap('')
         return wrap(random.choice(self))
+    @property
     def last(self) -> Any:
         if len(self) == 0: return wrap('')
         return wrap(list.__getitem__(self, -1))
+    @property
+    def shape(self) -> 'List':
+        res = []
+        def visitor(v, depth = 0):
+            if depth >= len(res):
+                res.append(0)
+            res[depth] = max(res[depth], len(v))
+            for x in v:
+                if _is_list(x):
+                    visitor(x, depth + 1)
+        visitor(self)
+        return wrap(res)
+    @property
+    def flat(self) -> 'List':
+        res = []
+        def visitor(v):
+            for x in v:
+                if _is_list(x):
+                    visitor(x)
+                else:
+                    res.append(x)
+        visitor(self)
+        return wrap(res)
+    @property
+    def T(self) -> 'List':
+        columns = max([0, *[len(x) if _is_list(x) else 1 for x in self]])
+        res = []
+        for column in range(columns):
+            inner = []
+            for row in self:
+                inner.append(row[column] if _is_list(row) else row)
+            res.append(inner)
+        return wrap(res)
+
     def pop(self) -> Any:
         if len(self) == 0: return wrap('')
         res = wrap(list.__getitem__(self, -1))
         list.__delitem__(self, -1)
         return res
-    def all_but_first(self) -> 'List':
-        if len(self) == 0: return List()
-        return wrap(list.__getitem__(self, slice(1, len(self))))
 
     def index(self, *args, **kwargs) -> Float:
         try:
@@ -483,7 +523,7 @@ def is_text(value: Any) -> bool:
 def is_bool(value: Any) -> bool:
     return isinstance(value, bool)
 def is_list(value: Any) -> bool:
-    return isinstance(value, list) or isinstance(value, dict)
+    return isinstance(value, list) or isinstance(value, tuple) or isinstance(value, dict)
 def is_sprite(value: Any) -> bool:
     return isinstance(value, _netsblox.turtle.TurtleBase)
 
@@ -499,7 +539,7 @@ if __name__ == '__main__':
     v = wrap({1,3,2,54}) ; assert v is wrap(v) and isinstance(v, List) and isinstance(v, list)
     v = wrap({1:1,3:4,2:2,54:3}) ; assert v is wrap(v) and isinstance(v, List) and isinstance(v, list)
     assert all(isinstance(x, List) and len(x) == 2 for x in v)
-    assert v[1][0] == 3 and v[1][1] == 4 and v.last()[0] == 54 and v.last().last() == 3
+    assert v[1][0] == 3 and v[1][1] == 4 and v.last[0] == 54 and v.last.last == 3
     v = wrap([]) ; v.append(5) ; assert is_wrapped(v['0'])
     v = wrap([{'foo': 'bar'}]) ; assert isinstance(list.__getitem__(v, 0), List) and isinstance(list.__getitem__(list.__getitem__(v, 0), 0), List)
     assert list.__getitem__(list.__getitem__(v, 0), 0) == ['foo', 'bar'] and is_wrapped(list.__getitem__(list.__getitem__(list.__getitem__(v, 0), 0), 0))
@@ -589,11 +629,11 @@ if __name__ == '__main__':
     assert v[34] == '' and is_wrapped(v[34])
     assert v.index(wrap('4')) == 1 and v.index('4') == 1 and v.index(4.0) == 1 and v.index('2') == 2 and is_wrapped(v.index('2'))
     assert v.index(7) == -1 and is_wrapped(v.index(7))
-    assert wrap([]).random() == '' and is_wrapped(wrap([]).random())
-    assert wrap([]).last() == '' and is_wrapped(wrap([]).last())
-    assert wrap([3]).last() == 3 and is_wrapped(wrap([3]).last())
-    assert wrap([3, 46]).last() == 46 and is_wrapped(wrap([3, 46]).last())
-    assert wrap([3, 101, 46]).last() == 46 and is_wrapped(wrap([3, 101, 46]).last())
+    assert wrap([]).rand == '' and is_wrapped(wrap([]).rand)
+    assert wrap([]).last == '' and is_wrapped(wrap([]).last)
+    assert wrap([3]).last == 3 and is_wrapped(wrap([3]).last)
+    assert wrap([3, 46]).last == 46 and is_wrapped(wrap([3, 46]).last)
+    assert wrap([3, 101, 46]).last == 46 and is_wrapped(wrap([3, 101, 46]).last)
 
     assert identical(wrap('768') + wrap('0'), wrap('768')) and identical(wrap('768') + wrap('0'), wrap(768))
     assert not identical(wrap([1,2,3]), wrap([1,2,3]))
@@ -650,19 +690,19 @@ if __name__ == '__main__':
     vv = v[[[4,2],2,[[3,1]]]] ; assert vv == [['e', 'c'], 'c', [['d', 'b']]] and is_wrapped(vv)
 
     v = wrap([])
-    vv = v.random() ; assert vv == '' and is_wrapped(vv)
-    vv = v.all_but_first() ; assert vv == [] and is_wrapped(vv) and vv is not v and not identical(vv, v)
+    vv = v.rand ; assert vv == '' and is_wrapped(vv)
+    vv = v[1:] ; assert vv == [] and is_wrapped(vv) and vv is not v and not identical(vv, v)
     v = wrap([7])
-    vv = v.random() ; assert vv == 7 and is_wrapped(vv)
-    vv = v.all_but_first() ; assert vv == [] and is_wrapped(vv) and vv is not wrap([]).all_but_first()
+    vv = v.rand ; assert vv == 7 and is_wrapped(vv)
+    vv = v[1:] ; assert vv == [] and is_wrapped(vv) and vv is not wrap([])[1:]
     v = wrap([3, 6, 3, 8, 7])
-    vv = v.all_but_first() ; assert vv == [6, 3, 8, 7] and is_wrapped(vv) and v == [3,6,3,8,7]
-    xx = vv.pop() ; assert xx == 7 and is_wrapped(xx) and vv == [6,3,8] and vv.last() == 8 and vv.last() == 8 and is_wrapped(vv.last())
-    xx = vv.pop() ; assert xx == 8 and is_wrapped(xx) and vv == [6,3] and vv.last() == 3 and vv.last() == 3 and is_wrapped(vv.last())
-    xx = vv.pop() ; assert xx == 3 and is_wrapped(xx) and vv == [6] and vv.last() == 6 and vv.last() == 6 and is_wrapped(vv.last())
-    xx = vv.pop() ; assert xx == 6 and is_wrapped(xx) and vv == [] and vv.last() == '' and vv.last() == '' and is_wrapped(vv.last())
-    xx = vv.pop() ; assert xx == '' and is_wrapped(xx) and vv == [] and vv.last() == '' and vv.last() == '' and is_wrapped(vv.last())
-    xx = vv.pop() ; assert xx == '' and is_wrapped(xx) and vv == [] and vv.last() == '' and vv.last() == '' and is_wrapped(vv.last())
+    vv = v[1:] ; assert vv == [6, 3, 8, 7] and is_wrapped(vv) and v == [3,6,3,8,7]
+    xx = vv.pop() ; assert xx == 7 and is_wrapped(xx) and vv == [6,3,8] and vv.last == 8 and vv.last == 8 and is_wrapped(vv.last)
+    xx = vv.pop() ; assert xx == 8 and is_wrapped(xx) and vv == [6,3] and vv.last == 3 and vv.last == 3 and is_wrapped(vv.last)
+    xx = vv.pop() ; assert xx == 3 and is_wrapped(xx) and vv == [6] and vv.last == 6 and vv.last == 6 and is_wrapped(vv.last)
+    xx = vv.pop() ; assert xx == 6 and is_wrapped(xx) and vv == [] and vv.last == '' and vv.last == '' and is_wrapped(vv.last)
+    xx = vv.pop() ; assert xx == '' and is_wrapped(xx) and vv == [] and vv.last == '' and vv.last == '' and is_wrapped(vv.last)
+    xx = vv.pop() ; assert xx == '' and is_wrapped(xx) and vv == [] and vv.last == '' and vv.last == '' and is_wrapped(vv.last)
     v = wrap([3, 6, 3, 8, 7])
     assert v == [3,6,3,8,7] and len(v) == 5
     v.clear()
@@ -761,6 +801,71 @@ if __name__ == '__main__':
     assert is_number('5') and is_number('-5.8') and is_number(wrap('5')) and is_number(5) and is_number(5.6) and is_number(wrap(5)) and not is_number('hello') and not is_number(wrap('hello')) and not is_number(True) and not is_number([]) and not is_number({})
     assert is_text('hello') and is_text(wrap('hello')) and not is_text(5) and not is_text('5') and not is_text([]) and not is_text(True) and not is_text({})
     assert is_bool(True) and is_bool(False) and is_bool(wrap(True)) and is_bool(wrap(False)) and not is_bool(12) and not is_bool('56') and not is_bool('hello') and not is_bool([]) and not is_bool({})
-    assert is_list([]) and is_list({}) and is_list(wrap([])) and is_list(wrap({})) and not is_list('hello') and not is_list(wrap('hello')) and not is_list(45) and not is_list(wrap(45)) and not is_list(True) and not is_list(False)
+    assert is_list([]) and is_list({}) and is_list(wrap([])) and is_list(wrap({})) and not is_list('hello') and not is_list(wrap('hello')) and not is_list(45) and not is_list(wrap(45)) and not is_list(True) and not is_list(False) and is_list(())
+
+    v = wrap([1, 5, 3, 8, 6, 4])
+    assert v[3] == 8 and v[[2, 4]] == [3, 6] and v[2,[4],2,[[1]]] == [3, [6], 3, [[5]]]
+
+    v = wrap([1, 4, 3])
+    vv = wrap([*v])
+    assert v == vv and v is not vv
+    v = v + 1
+    assert v == [2, 5, 4] and vv == [1, 4, 3]
+    v += 1
+    assert v == [3, 6, 5] and vv == [1, 4, 3]
+    v *= 2
+    assert v == [6, 12, 10] and vv == [1, 4, 3]
+    v /= 2
+    assert v == [3, 6, 5] and vv == [1, 4, 3]
+    v -= vv
+    assert v == [2, 2, 2] and vv == [1, 4, 3]
+    v = wrap([1, 2, 3])
+    v **= 2
+    assert v == [1, 4, 9]
+
+    v = wrap('12')
+    v += 5
+    assert v == 17
+    v += '2'
+    assert v == 19
+
+    v = wrap(12)
+    v += 5
+    assert v == 17
+    v += '2'
+    assert v == 19
+
+    v = wrap('45')
+    v += '12'
+    assert v == 57
+
+    v = wrap([1, 3, 4, 2])
+    assert v[1:] == [3, 4, 2] and is_wrapped(v[1:])
+    assert v.last == 2
+    assert wrap([3, 3, 3]).rand == 3
+    assert v.index(3) == 1
+    assert 3 in v and wrap(3) in v and 5 not in v and wrap(5) not in v
+    assert len(v) == 4
+    assert v[::-1] == [2, 4, 3, 1] and is_wrapped(v[::-1])
+    assert v.shape == [4] and is_wrapped(v.shape)
+    assert wrap([4, 3, [], 4]).shape == [4, 0]
+    assert wrap([4, 3, [], 4, [6]]).shape == [5, 1]
+    assert wrap([4, 3, [[]], 4, [6], [[[]]]]).shape == [6, 1, 1, 0]
+    assert wrap([]).shape == [0]
+    assert wrap([[]]).shape == [1, 0]
+
+    assert wrap([]).flat == [] and is_wrapped(wrap([]).flat)
+    assert wrap([4, 3, 2]).flat == [4, 3, 2] and is_wrapped(wrap([4, 3, 2]).flat)
+    assert wrap([4, [[5]], [], [6, [4], 3, 1], 0]).flat == [4, 5, 6, 4, 3, 1, 0]
+
+    assert wrap([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).T == [[1, 4, 7], [2, 5, 8], [3, 6, 9]]
+    assert wrap([[1, 2], [4, 5, 6], [7, 8]]).T == [[1, 4, 7], [2, 5, 8], ['', 6, '']]
+    assert wrap([[1, 2, 3], [4, 5], [7, 8, 9]]).T == [[1, 4, 7], [2, 5, 8], [3, '', 9]]
+    assert wrap([[1, 2], [4, 5], [7, 8, 9]]).T == [[1, 4, 7], [2, 5, 8], ['', '', 9]]
+    assert wrap([[1, 2, 3], [4, 5], [7, 8]]).T == [[1, 4, 7], [2, 5, 8], [3, '', '']]
+    assert wrap([]).T == [] and wrap([[]]).T == [] and wrap([[]]).shape == [1, 0] and wrap([[]]).T.shape == [0]
+    assert wrap([1, 2, 3, 4, 5]).T == [[1, 2, 3, 4, 5]]
+    assert wrap([[1,2,3],[4,5],[6]]).T == [[1,4,6],[2,5,''],[3,'','']]
+    assert wrap([[1,2,3],[4,5],[6]]).T != [[1,4,6],[2,5],[3]]
 
     print('passed all snap wrapper tests')
