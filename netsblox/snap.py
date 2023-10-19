@@ -1,6 +1,7 @@
 import random
 import math
 import re
+import io
 import json
 import csv
 
@@ -340,14 +341,31 @@ class List(list):
     def __iadd__(self, other: Any) -> 'List':
         return self + other
 
+    def append(self, value) -> None:
+        list.append(self, wrap(value))
+    def insert(self, idx, value) -> None:
+        list.insert(self, idx, wrap(value))
+    def insert_rand(self, value) -> None:
+        list.insert(self, random.randrange(len(self)) if len(self) != 0 else 0, wrap(value))
+
     @property
     def rand(self) -> Any:
         if len(self) == 0: return wrap('')
-        return wrap(random.choice(self))
+        return self[random.randrange(len(self))]
+    @rand.setter
+    def rand(self, value):
+        if len(self) == 0: return
+        self[random.randrange(len(self))] = wrap(value)
+
     @property
     def last(self) -> Any:
         if len(self) == 0: return wrap('')
         return wrap(list.__getitem__(self, -1))
+    @last.setter
+    def last(self, value):
+        if len(self) == 0: return
+        list.__setitem__(self, -1, wrap(value))
+
     @property
     def shape(self) -> 'List':
         res = []
@@ -381,6 +399,18 @@ class List(list):
                 inner.append(row[column] if _is_list(row) else row)
             res.append(inner)
         return wrap(res)
+
+    @property
+    def csv(self):
+        res = io.StringIO()
+        writer = csv.writer(res, lineterminator = '')
+        if any(_is_list(x) for x in self):
+            for i, row in enumerate(self):
+                if i != 0: res.write('\n')
+                writer.writerow(row)
+        else:
+            writer.writerow(self)
+        return wrap(res.getvalue())
 
     def pop(self) -> Any:
         if len(self) == 0: return wrap('')
@@ -867,5 +897,57 @@ if __name__ == '__main__':
     assert wrap([1, 2, 3, 4, 5]).T == [[1, 2, 3, 4, 5]]
     assert wrap([[1,2,3],[4,5],[6]]).T == [[1,4,6],[2,5,''],[3,'','']]
     assert wrap([[1,2,3],[4,5],[6]]).T != [[1,4,6],[2,5],[3]]
+
+    assert wrap([1, 2, 3]).csv == '1,2,3'
+    assert wrap([[' ', 2, ' ']]).csv == ' ,2, '
+    assert wrap([['some text', 2, 3],[5, 4, 6]]).csv == 'some text,2,3\n5,4,6'
+    assert wrap([[1, 2, 3],[5, ',', 6]]).csv == '1,2,3\n5,",",6'
+
+    assert wrap([1, 2, 3])[::-1] == [3, 2, 1] and wrap([4])[::-1] == [4] and wrap([])[::-1] == []
+
+    assert '\n'.join(str(x) for x in [12, 4, 'hello', 'more', 43]) == '12\n4\nhello\nmore\n43'
+
+    v = wrap([])
+    v.append(12)
+    assert is_wrapped(list.__getitem__(v, 0))
+    assert is_wrapped(v[0] is list.__getitem__(v, 0))
+    v[0] = 3
+    assert is_wrapped(list.__getitem__(v, 0))
+    assert is_wrapped(v[0] is list.__getitem__(v, 0))
+    v.append('test')
+    assert v == [3, 'test']
+    v.pop()
+    assert v == [3]
+
+    v = wrap([11, 34, 54, 21])
+    del v[2]
+    assert v == [11, 34, 21]
+    vv = v
+    assert v is vv
+    v.clear()
+    assert v is vv and v == [] and vv == []
+    v.insert(0, 'test')
+    assert v == ['test']
+    assert is_wrapped(list.__getitem__(v, 0)) and list.__getitem__(v, 0) is v[0] and v[0] == 'test'
+    v.insert(0, 'again')
+    assert v == ['again', 'test']
+    assert is_wrapped(list.__getitem__(v, 0)) and list.__getitem__(v, 0) is v[0] and v[0] == 'again'
+
+    v = wrap([1, 1, 1])
+    v.insert_rand(1)
+    assert v == [1, 1, 1, 1] and all(is_wrapped(x) for x in list.__iter__(v))
+    v.clear()
+    v.insert_rand(12)
+    assert v == [12] and all(is_wrapped(x) for x in list.__iter__(v))
+    v.rand = 5
+    assert v == [5] and all(is_wrapped(x) for x in list.__iter__(v))
+    v.rand *= 3
+    assert v == [15] and all(is_wrapped(x) for x in list.__iter__(v))
+    v = wrap([1, 4, 3])
+    assert v.last == 3 and is_wrapped(v.last)
+    v.last = 7
+    assert v == [1, 4, 7] and v.last == 7 and all(is_wrapped(x) for x in list.__iter__(v))
+    v.last += 43
+    assert v == [1, 4, 50] and v.last == 50 and all(is_wrapped(x) for x in list.__iter__(v))
 
     print('passed all snap wrapper tests')
