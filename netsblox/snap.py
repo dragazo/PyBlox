@@ -366,6 +366,36 @@ class List(list):
         if len(self) == 0: return
         list.__setitem__(self, -1, wrap(value))
 
+    def reshaped(self, dims) -> Any:
+        dims = wrap(dims)
+        if not _is_list(dims):
+            dims = wrap([dims])
+
+        raw = []
+        for i in range(len(dims)):
+            x = +dims[i]
+            y = int(x)
+            if x != y: raise ValueError(f'reshape dims must be int, got {x}')
+            if y < 0: raise ValueError(f'reshape dims cannot be negative, got {y}')
+            if y == 0: return wrap([])
+            raw.append(y)
+
+        src = self.flat
+        if len(src) == 0:
+            src = wrap([''])
+
+        i = [0]
+        def create(d):
+            if len(d) == 0:
+                r = src[i[0]]
+                i[0] += 1
+                if i[0] >= len(src):
+                    i[0] = 0
+                return r
+            else:
+                return [create(d[1:]) for _ in range(d[0])]
+        return wrap(create(raw))
+
     @property
     def shape(self) -> 'List':
         res = []
@@ -949,5 +979,20 @@ if __name__ == '__main__':
     assert v == [1, 4, 7] and v.last == 7 and all(is_wrapped(x) for x in list.__iter__(v))
     v.last += 43
     assert v == [1, 4, 50] and v.last == 50 and all(is_wrapped(x) for x in list.__iter__(v))
+
+    assert wrap([1, 4, 3, 6]).reshaped(2) == [1, 4] and is_wrapped(wrap([1, 4, 3, 6]).reshaped(2))
+    assert wrap([1, 4, 5, 2]).reshaped(10) == [1, 4, 5, 2, 1, 4, 5, 2, 1, 4] and is_wrapped(wrap([1, 4, 5, 2]).reshaped(10))
+    assert wrap([1, 5]).reshaped([7]) == [1, 5, 1, 5, 1, 5, 1] and is_wrapped(wrap([1, 5]).reshaped([7]))
+    assert wrap([1, 7, 2]).reshaped([7, 2]) == [[1, 7], [2, 1], [7, 2], [1, 7], [2, 1], [7, 2], [1, 7]] and is_wrapped(wrap([1, 7, 2]).reshaped([7, 2]))
+    assert wrap([1, 7]).reshaped([]) == 1 and is_wrapped(wrap([1, 7]).reshaped([]))
+    assert wrap([]).reshaped([3, 2]) == [['', ''], ['', ''], ['', '']] and is_wrapped(wrap([]).reshaped([3, 2]))
+    assert wrap([1, 7, 2]).reshaped([1, 1, 7, 2]) == [[[[1, 7], [2, 1], [7, 2], [1, 7], [2, 1], [7, 2], [1, 7]]]] and is_wrapped(wrap([1, 7, 2]).reshaped([1, 1, 7, 2]))
+    assert wrap([1, 7, 4]).reshaped([1, 6, 3, 0, 2, 4]) == [] and is_wrapped(wrap([1, 7, 4]).reshaped([1, 6, 3, 0, 2, 4]))
+    assert wrap([]).reshaped([2, 2]) == [['', ''], ['', '']] and is_wrapped(wrap([]).reshaped([2, 2]))
+    assert wrap([5, 6]).reshaped([]) == 5 and is_wrapped(wrap([5, 6]).reshaped([]))
+    assert wrap([5, 6]).reshaped([2, 2, 0, 2]) == []
+
+    v = wrap([[['test']]])
+    assert is_wrapped(list.__getitem__(v, 0)) and is_wrapped(list.__getitem__(list.__getitem__(v, 0), 0)) and is_wrapped(list.__getitem__(list.__getitem__(list.__getitem__(v, 0), 0), 0))
 
     print('passed all snap wrapper tests')
