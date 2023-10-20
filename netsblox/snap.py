@@ -236,6 +236,13 @@ class Str(str):
     def __floor__(self) -> 'Float':
         return math.floor(Float(self))
 
+    @property
+    def last(self) -> 'Str':
+        return wrap(str.__getitem__(self, -1) if len(self) != 0 else '')
+    @property
+    def rand(self) -> 'Str':
+        return wrap(str.__getitem__(self, random.randrange(len(self))) if len(self) != 0 else '')
+
 class List(list):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1011,5 +1018,19 @@ if __name__ == '__main__':
     assert combinations([1, 2]) == [[1], [2]] and is_wrapped(combinations([1, 2]))
     assert combinations([1, 2], [3, 4]) == [[1, 3], [1, 4], [2, 3], [2, 4]] and is_wrapped(combinations([1, 2], [3, 4]))
     assert combinations([1, 2], [], [3, 4]) == [] and is_wrapped(combinations([1, 2], [3, 4]))
+
+    v = wrap('hello world')
+    assert v[0] == 'h' and is_wrapped(v[0]) and v['0'] == 'h' and is_wrapped(v['0'])
+    assert v[4] == 'o' and is_wrapped(v[4]) and v['4'] == 'o' and is_wrapped(v['4'])
+
+    assert wrap('').last == '' and is_wrapped(wrap('').last)
+    assert wrap('begin').last == 'n' and is_wrapped(wrap('begin').last)
+    assert wrap('also').last == 'o' and is_wrapped(wrap('also').last)
+
+    assert wrap('').rand == '' and is_wrapped(wrap('').rand)
+    assert wrap('tttt').rand == 't' and is_wrapped(wrap('tttt').rand)
+
+    assert wrap([]).last == '' and is_wrapped(wrap([]).last)
+    assert wrap([]).rand == '' and is_wrapped(wrap([]).rand)
 
     print('passed all snap wrapper tests')
