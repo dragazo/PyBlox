@@ -4,6 +4,7 @@ import re
 import io
 import json
 import csv
+import itertools
 
 from typing import Any, Union, Callable, Sequence
 
@@ -511,6 +512,17 @@ def srange(a: Any, b: Any) -> List:
     '''
     return _list_unary_op(sxrange(a, b), List)
 
+def combinations(*sources: Any) -> Sequence[Any]:
+    '''
+    Returns a list of combinations of items in the source lists.
+    With one list, this returns `[x]` for each `x` in in the list.
+    With two lists, this returns `[x, y]` for each `x` and `y` the first and second lists, respectively.
+    And so on.
+    '''
+    sources = wrap(sources)
+    if len(sources) == 0: return wrap([])
+    return wrap(list(itertools.product(*sources)))
+
 def log(value: Any, base: Any) -> Any:
     return _list_binary_op(wrap(value), wrap(base), lambda x, y: wrap(math.log(+x, +y)))
 
@@ -994,5 +1006,10 @@ if __name__ == '__main__':
 
     v = wrap([[['test']]])
     assert is_wrapped(list.__getitem__(v, 0)) and is_wrapped(list.__getitem__(list.__getitem__(v, 0), 0)) and is_wrapped(list.__getitem__(list.__getitem__(list.__getitem__(v, 0), 0), 0))
+
+    assert combinations() == [] and is_wrapped(combinations())
+    assert combinations([1, 2]) == [[1], [2]] and is_wrapped(combinations([1, 2]))
+    assert combinations([1, 2], [3, 4]) == [[1, 3], [1, 4], [2, 3], [2, 4]] and is_wrapped(combinations([1, 2], [3, 4]))
+    assert combinations([1, 2], [], [3, 4]) == [] and is_wrapped(combinations([1, 2], [3, 4]))
 
     print('passed all snap wrapper tests')
