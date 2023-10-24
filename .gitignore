@@ -1,7 +1,8 @@
 __pycache__
 dist/
-*.egg-info/
 build/
+*.egg-info/
+*.secret
 
 # mac stuff
 .DS_Store
