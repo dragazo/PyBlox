@@ -66,10 +66,16 @@ def nothrow(f):
             return msg
     return wrapped
 
+def get_antialias_mode():
+    # for god knows why, the pillow devs decided to break everything that used Image.ANTIALIAS when they added different resampling modes
+    # so we need this wrapper to get whichever one works on the installed version of the package at runtime... eww...
+    res = getattr(_Image, 'ANTIALIAS', None)
+    return res if res is not None else _Image.Resampling.BICUBIC
+
 def scale_image(img: _Image.Image, scale: float = 1) -> _Image.Image:
     if scale == 1: return img
     new_size = tuple(round(v * scale) for v in img.size)
-    return img.resize(new_size, resample = _Image.ANTIALIAS)
+    return img.resize(new_size, resample = get_antialias_mode())
 
 _img_lock = _threading.Lock()
 _img_cache = {}
@@ -200,9 +206,10 @@ def paginate_str(text: str, max_len: int) -> List[str]:
         word = text[pos:end]
         pos = end
 
+        # if len(res[-1]) == 0: res[-1] = word
         if len(res[-1]) + len(word) <= max_len: res[-1] += word
         else: res.append(word)
-    return res
+    return [x.strip() for x in res]
 
 class PointerSet:
     def __init__(self):
@@ -239,11 +246,13 @@ if __name__ == '__main__':
     assert_eq(paginate_str('hello world', 20), ['hello world'])
     assert_eq(paginate_str('hello\nworld', 20), ['hello', 'world'])
     assert_eq(paginate_str('hello\nworld\n', 20), ['hello', 'world', ''])
-    assert_eq(paginate_str('hello world', 10), ['hello ', 'world'])
-    assert_eq(paginate_str('hello world this is a long message', 15), ['hello world ', 'this is a long ', 'message'])
-    assert_eq(paginate_str('hello world this is a long message', 16), ['hello world this', ' is a long ', 'message'])
-    assert_eq(paginate_str('hello world this is a long message', 17), ['hello world this ', 'is a long message'])
-    assert_eq(paginate_str('empty                     space', 10), ['empty     ', '          ', '      ', 'space'])
+    assert_eq(paginate_str('hello world', 10), ['hello', 'world'])
+    assert_eq(paginate_str('hello world this is a long message', 15), ['hello world', 'this is a long', 'message'])
+    assert_eq(paginate_str('hello world this is a long message', 16), ['hello world this', 'is a long', 'message'])
+    assert_eq(paginate_str('hello world this is a long message', 17), ['hello world this', 'is a long message'])
+    assert_eq(paginate_str('empty                     space', 10), ['empty', '', '', 'space'])
+    assert_eq(paginate_str('hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh', 10), ['hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh'])
+    assert_eq(paginate_str('h hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh', 10), ['h', 'hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh'])
 
     ps = PointerSet()
     assert_eq(len(ps), 0)

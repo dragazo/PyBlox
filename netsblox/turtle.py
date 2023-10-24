@@ -72,6 +72,9 @@ def _intersects(a: Tuple[Image.Image, int, int], b: Tuple[Image.Image, int, int]
     return _np.bitwise_and(_np.array(base) >= _VIS_THRESH, _np.array(other_trans) >= _VIS_THRESH).any()
 
 def _render_text(text: str, size: float, color: Tuple[int, int, int]) -> Image.Image:
+    if len(text) == 0:
+        return Image.new('RGBA', (1, round(size)))
+
     font = _get_font().font_variant(size = round(1.5 * size))
 
     text_mask = font.getmask(text, mode = 'L') # L mode here is 256-depth bitmap for antialiasing (not LTR) (see frombytes below)
@@ -390,7 +393,7 @@ class _Project:
 
                 scale = min(logical_size[i] / stage_img.size[i] for i in range(2))
                 new_size = tuple(round(v * scale) for v in stage_img.size)
-                resized = stage_img.resize(new_size, Image.ANTIALIAS)
+                resized = stage_img.resize(new_size, _common.get_antialias_mode())
                 center_offset = tuple(round((frame.size[i] - new_size[i]) / 2) for i in range(2))
                 frame.paste(resized, center_offset, resized)
 
@@ -416,7 +419,7 @@ class _Project:
         canvas_size = (self.__tk_canvas.winfo_width(), self.__tk_canvas.winfo_height())
         final_scale = min(canvas_size[i] / logical_size[i] for i in range(2))
         final_size = tuple(round(v * final_scale) for v in frame.size)
-        final_frame = ImageTk.PhotoImage(frame.resize(final_size, Image.ANTIALIAS))
+        final_frame = ImageTk.PhotoImage(frame.resize(final_size, _common.get_antialias_mode()))
         self.__last_cached_frame = final_frame # we have to keep a ref around or it'll disappear
 
         self.__tk_canvas.delete('all')

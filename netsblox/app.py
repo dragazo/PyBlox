@@ -1508,7 +1508,7 @@ class MainMenu(tk.Menu):
 
     @property
     def public_id(self):
-        return f'{self._project_name}@{content.project.project_id}'
+        return f'{self._project_name}@{content.project.project_id}#py'
     @property
     def project_path(self):
         return self._project_path

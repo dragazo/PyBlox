@@ -89,6 +89,10 @@ class $client_name:
         self._role_id = role[0]
         self._role_name = role[1]['name']
 
+        _requests.post(f'{self._base_url}/network/{self._client_id}/state',
+            _common.small_json({ 'state': { 'external': { 'address': self._project_name, 'appId': 'py' } } }),
+            headers = { 'Content-Type': 'application/json' })
+
 $service_instances
 
     def _ws_open(self, ws):
@@ -132,7 +136,7 @@ $service_instances
         '''
         Gets the public id, which can be used as a target for `send_message()` to directly send a message to you.
         '''
-        return f'{self._project_name}@{self._client_id}'
+        return f'{self._project_name}@{self._client_id}#py'
     def send_message(self, msg_type: str, target: Union[str, List[str]] = 'local', **values):
         '''
         Sends a message of the given type to the target(s), which is either the public id of a single target
