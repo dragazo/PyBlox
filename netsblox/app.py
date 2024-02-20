@@ -699,6 +699,7 @@ class ProjectEditor(tk.Frame):
 
     def get_save_dict(self) -> dict:
         res = {
+            'install_id': install_id(), # not used anywhere, just used to cross-ref with logging output after the fact
             'client_type': self.client_type,
             'roles': [],
         }
