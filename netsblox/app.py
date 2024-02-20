@@ -371,11 +371,13 @@ class Content(tk.Frame):
         self.pane.add(self.display, stretch = 'always', width = 3, minsize = 300)
 
 class DndTarget:
-    def __init__(self, widget, on_start, on_stop, on_drop):
+    def __init__(self, widget, on_start, on_stop, on_drop, on_drag, on_undrag):
         self.widget = widget
         self.on_start = on_start
         self.on_stop = on_stop
         self.on_drop = on_drop
+        self.on_drag = on_drag
+        self.on_undrag = on_undrag
 
 class DndManager:
     def __init__(self, widget, targets: List[DndTarget]):
@@ -390,14 +392,28 @@ class DndManager:
             target.on_start(e)
 
     def on_drag(self, e):
-        pass
+        try:
+            x, y = e.widget.winfo_pointerxy()
+            dest_widget = e.widget.winfo_containing(x, y)
+        except:
+            return # fail silently, but don't hide later errors if we get past this point
+
+        for target in self.targets:
+            if dest_widget is target.widget:
+                target.on_drag(e)
+            else:
+                target.on_undrag(e)
 
     def on_drop(self, e):
         for target in self.targets:
             target.on_stop(e)
 
-        x, y = e.widget.winfo_pointerxy()
-        dest_widget = e.widget.winfo_containing(x, y)
+        try:
+            x, y = e.widget.winfo_pointerxy()
+            dest_widget = e.widget.winfo_containing(x, y)
+        except:
+            return # fail silently, but don't hide later errors if we get past this point
+
         for target in self.targets:
             if dest_widget is target.widget:
                 target.on_drop(e)
@@ -427,13 +443,19 @@ class BlocksList(tk.Frame):
         orig_bcolor = text_target.cget('background')
 
         def make_dnd_manager(widget, code):
+            def get_pos(e):
+                x, y = text_target.winfo_pointerxy()
+                x -= text_target.winfo_rootx()
+                y -= text_target.winfo_rooty()
+                return text_target.index(f'@{x},{y}')
+
             focused = [None]
             def on_start(e):
                 # store focused widget and steal focus so that the colored outline will always show
                 focused[0] = root.focus_get()
                 widget.focus()
 
-                text_target.configure(highlightbackground = '#156fe6')
+                text_target.configure(highlightbackground = '#006eff')
             def on_stop(e):
                 # restore saved focus
                 if focused[0] is not None:
@@ -441,17 +463,18 @@ class BlocksList(tk.Frame):
 
                 text_target.configure(highlightbackground = orig_bcolor)
             def on_drop(e):
-                x, y = text_target.winfo_pointerxy()
-                x -= text_target.winfo_rootx()
-                y -= text_target.winfo_rooty()
-
-                pos = text_target.index(f'@{x},{y}')
+                pos = get_pos(e)
                 text_target.insert(f'{pos} linestart', f'{code}\n')
                 text_target.edit_separator() # so multiple drag and drops aren't undone as one
-
                 return 'break'
+            def on_drag(e):
+                pos = get_pos(e)
+                text_target.mark_set('insert', f'{pos}')
+                text_target.focus() # give focus so we can see the cursor pos
+            def on_undrag(e):
+                widget.focus() # give focus back to the widget so the text highlight shows again
 
-            return DndManager(widget, [DndTarget(text_target, on_start, on_stop, on_drop)])
+            return DndManager(widget, [DndTarget(text_target, on_start, on_stop, on_drop, on_drag, on_undrag)])
 
         try:
             self.text.config(state = tk.NORMAL)
@@ -1866,6 +1889,7 @@ class Logger:
                     while len(self.queue) == 0:
                         self.queue_cv.wait()
                     payload = self.queue.popleft()
+
                 try:
                     res = requests.post(f'{self.target}/log', common.small_json(payload), headers = { 'Content-Type': 'application/json' })
                     if res.status_code < 200 or res.status_code >= 300:
