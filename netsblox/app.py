@@ -456,16 +456,23 @@ class BlocksList(tk.Frame):
                 widget.focus()
 
                 text_target.configure(highlightbackground = '#006eff')
+
+                log({ 'type': 'drag-n-drop::start', 'content': code })
             def on_stop(e):
                 # restore saved focus
                 if focused[0] is not None:
                     focused[0].focus()
 
                 text_target.configure(highlightbackground = orig_bcolor)
+
+                log({ 'type': 'drag-n-drop::stop', 'content': code })
             def on_drop(e):
                 pos = get_pos(e)
                 text_target.insert(f'{pos} linestart', f'{code}\n')
                 text_target.edit_separator() # so multiple drag and drops aren't undone as one
+
+                log({ 'type': 'drag-n-drop::commit', 'content': code })
+
                 return 'break'
             def on_drag(e):
                 pos = get_pos(e)
@@ -1917,6 +1924,7 @@ def main():
     global nb, root, main_menu, content, _logger_instance
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('project', type = str, nargs = '?', default = None)
     parser.add_argument('--log-to', type = str, required = False)
     args = parser.parse_args()
 
@@ -1938,16 +1946,13 @@ def main():
     content = Content(root)
     main_menu = MainMenu(root)
 
-    if len(sys.argv) <= 1:
+    if args.project is None:
         main_menu.open_project(super_proj = ProjectEditor.DEFAULT_PROJECT)
-    elif len(sys.argv) == 2:
-        with open(sys.argv[1], 'r') as f:
+    else:
+        with open(args.project, 'r') as f:
             save_dict = json.load(f)
         main_menu.open_project(super_proj = save_dict)
-        main_menu.project_path = os.path.abspath(sys.argv[1])
-    else:
-        print(f'usage: {sys.argv[0]} (project)', file = sys.stderr)
-        sys.exit(1)
+        main_menu.project_path = os.path.abspath(args.project)
 
     root.configure(menu = main_menu)
     content.display.terminal.wrap_stdio(tee = True)
