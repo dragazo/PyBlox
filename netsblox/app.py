@@ -1541,7 +1541,13 @@ class MainMenu(tk.Menu):
         imp_packages = list(imp.packages.items())
         for pkg, item in imp_packages:
             label = pkg if pkg == item['ident'] else f'{pkg} ({item["ident"]})'
-            submenu.add_checkbutton(label = label, variable = item['tkvar'], command = imp.batch_update)
+            def make_on_toggle(label, pkg, item):
+                def on_toggle(*args, **kwargs):
+                    log({ 'type': 'toggle-import', 'label': label, 'value': item['tkvar'].get() })
+
+                    return imp.batch_update(*args, **kwargs)
+                return on_toggle
+            submenu.add_checkbutton(label = label, variable = item['tkvar'], command = make_on_toggle(label, pkg, item))
         self.add_cascade(label = 'Imports', menu = submenu)
 
         def get_info_shower(submenu):
