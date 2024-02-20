@@ -13,6 +13,7 @@ import traceback
 import platform
 import argparse
 import requests
+import random
 import copy
 import json
 import math
@@ -316,27 +317,42 @@ _package_dir = netsblox.__path__[0]
 def module_path(path: str) -> str:
     return f'{_package_dir}/{path}'
 
-_cached_installation_id = None
-_cached_installation_id_mutex = threading.Lock()
-def installation_id() -> str:
-    global _cached_installation_id
+_cached_install_id = None
+_cached_install_id_mutex = threading.Lock()
+def install_id() -> str:
+    global _cached_install_id
 
-    if _cached_installation_id is not None:
-        return _cached_installation_id
+    if _cached_install_id is not None:
+        return _cached_install_id
 
-    with _cached_installation_id_mutex:
-        if _cached_installation_id is not None:
-            return _cached_installation_id
+    with _cached_install_id_mutex:
+        if _cached_install_id is not None:
+            return _cached_install_id
 
         p = module_path('uuid.txt')
         if os.path.exists(p):
             with open(p, 'r') as f:
-                _cached_installation_id = f.read().strip()
+                _cached_install_id = f.read().strip()
         else:
-            _cached_installation_id = str(uuid.uuid4())
+            _cached_install_id = str(uuid.uuid4())
             with open(p, 'w') as f:
-                f.write(_cached_installation_id)
-        return _cached_installation_id
+                f.write(_cached_install_id)
+        return _cached_install_id
+
+_cached_session_id = None
+_cached_session_id_mutex = threading.Lock()
+def session_id() -> str:
+    global _cached_session_id
+
+    if _cached_session_id is not None:
+        return _cached_session_id
+
+    with _cached_session_id_mutex:
+        if _cached_session_id is not None:
+            return _cached_session_id
+
+        _cached_session_id = f'{random.randrange(0, 1 << 32):08x}'
+        return _cached_session_id
 
 class Content(tk.Frame):
     def __init__(self, parent):
@@ -1841,6 +1857,7 @@ class Logger:
     def __init__(self, *, target):
         self.target = target
         self.queue = deque()
+        self.queue_seq = 0
         self.queue_cv = threading.Condition(threading.Lock())
         def handle_queue():
             while True:
@@ -1852,18 +1869,19 @@ class Logger:
                 try:
                     res = requests.post(f'{self.target}/log', common.small_json(payload), headers = { 'Content-Type': 'application/json' })
                     if res.status_code < 200 or res.status_code >= 300:
-                        raise RuntimeError(f'{res.status_code} {res.content}')
+                        raise RuntimeError(f'[response code {res.status_code}] > {res.content}')
                 except Exception as e:
-                    print(f'failed to contact logging server', e, file = sys.stderr)
+                    print(f'failed to contact remote logging server', e, file = sys.stderr)
                 except:
-                    print(f'failed to contact logging server (unknown exception)', file = sys.stderr)
+                    print(f'failed to contact remote logging server (unknown exception)', file = sys.stderr)
 
         self.queue_thread = threading.Thread(target = handle_queue)
         self.queue_thread.setDaemon(True)
         self.queue_thread.start()
     def log(self, msg):
-        payload = { 'install_id': installation_id(), 'time': time.asctime(), 'msg': msg }
         with self.queue_cv:
+            payload = { 'install_id': install_id(), 'session_id': session_id(), 'seq': self.queue_seq, 'time': time.asctime(), 'msg': msg }
+            self.queue_seq += 1
             self.queue.append(payload)
             self.queue_cv.notify()
 _logger_instance = None
