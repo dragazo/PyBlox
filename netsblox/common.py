@@ -292,7 +292,7 @@ if __name__ == '__main__':
         sys.exit(1)
     print(f'passed all {total[0]} tests')
 
-def unified_diff(*, before: str, after: str) -> str:
+def unified_diff(before: str, after: str, *, n: int = 3) -> str:
     before = [f'{x}\n' for x in before.splitlines()]
     after = [f'{x}\n' for x in after.splitlines()]
-    return ''.join(_difflib.unified_diff(before, after))
+    return ''.join(_difflib.unified_diff(before, after, n = n))

@@ -79,6 +79,9 @@ if platform.system() == 'Darwin':
     SYS_INFO = {
         'mod-str': 'Cmd',
         'mod': 'Command',
+        'undo-binds': [
+            '<Command-Key-z>',
+        ],
         'redo-binds': [
             '<Command-Key-Z>',
         ],
@@ -88,6 +91,10 @@ else:
     SYS_INFO = {
         'mod-str': 'Ctrl',
         'mod': 'Control',
+        'undo-binds': [
+            '<Control-Key-z>',
+            '<Control-Key-Z>',
+        ],
         'redo-binds': [
             '<Control-Key-y>',
             '<Control-Key-Y>',
@@ -972,13 +979,31 @@ class ScrolledText(tk.Frame):
             # make text readonly be ignoring all (default) keystrokes
             self.text.bind('<Key>', lambda e: 'break')
         else:
+            def do_undo(e):
+                before = self.text.get('1.0', 'end-1c')
+                self.text.edit_undo()
+                after = self.text.get('1.0', 'end-1c')
+
+                log({ 'type': 'history::undo', 'diff': common.unified_diff(before, after) })
+
+                return 'break'
+            for bind in SYS_INFO['undo-binds']:
+                self.text.bind(bind, do_undo)
+
+            # --------------------------------------------------
+
             def do_redo(e):
+                before = self.text.get('1.0', 'end-1c')
                 self.text.edit_redo()
-                print('here')
+                after = self.text.get('1.0', 'end-1c')
+
+                log({ 'type': 'history::redo', 'diff': common.unified_diff(before, after) })
 
                 return 'break'
             for bind in SYS_INFO['redo-binds']:
                 self.text.bind(bind, do_redo)
+
+            # --------------------------------------------------
 
             # default paste behavior doesn't delete selection first
             def do_paste(e):
