@@ -5,14 +5,19 @@ import tkinter.simpledialog as simpledialog
 import tkinter.filedialog as filedialog
 import tkinter.messagebox as messagebox
 import multiprocessing as mproc
+from collections import deque
 import subprocess
 import darkdetect
 import threading
 import traceback
 import platform
+import argparse
+import requests
 import copy
 import json
 import math
+import uuid
+import time
 import sys
 import io
 import re
@@ -28,6 +33,7 @@ import netsblox
 from netsblox import transform
 from netsblox import common
 from netsblox import rooms
+from netsblox import common
 
 NETSBLOX_PY_PATH = os.path.dirname(netsblox.__file__)
 
@@ -309,6 +315,28 @@ def play_button():
 _package_dir = netsblox.__path__[0]
 def module_path(path: str) -> str:
     return f'{_package_dir}/{path}'
+
+_cached_installation_id = None
+_cached_installation_id_mutex = threading.Lock()
+def installation_id() -> str:
+    global _cached_installation_id
+
+    if _cached_installation_id is not None:
+        return _cached_installation_id
+
+    with _cached_installation_id_mutex:
+        if _cached_installation_id is not None:
+            return _cached_installation_id
+
+        p = module_path('uuid.txt')
+        if os.path.exists(p):
+            with open(p, 'r') as f:
+                _cached_installation_id = f.read().strip()
+        else:
+            _cached_installation_id = str(uuid.uuid4())
+            with open(p, 'w') as f:
+                f.write(_cached_installation_id)
+        return _cached_installation_id
 
 class Content(tk.Frame):
     def __init__(self, parent):
@@ -1809,8 +1837,49 @@ class MainMenu(tk.Menu):
 
             self.roles_dropdown.add_cascade(label = f'{role["name"]} (active)' if is_current else role['name'], menu = submenu)
 
+class Logger:
+    def __init__(self, *, target):
+        self.target = target
+        self.queue = deque()
+        self.queue_cv = threading.Condition(threading.Lock())
+        def handle_queue():
+            while True:
+                payload = None
+                with self.queue_cv:
+                    while len(self.queue) == 0:
+                        self.queue_cv.wait()
+                    payload = self.queue.popleft()
+                try:
+                    res = requests.post(f'{self.target}/log', common.small_json(payload), headers = { 'Content-Type': 'application/json' })
+                    if res.status_code < 200 or res.status_code >= 300:
+                        raise RuntimeError(f'{res.status_code} {res.content}')
+                except Exception as e:
+                    print(f'failed to contact logging server', e, file = sys.stderr)
+                except:
+                    print(f'failed to contact logging server (unknown exception)', file = sys.stderr)
+
+        self.queue_thread = threading.Thread(target = handle_queue)
+        self.queue_thread.setDaemon(True)
+        self.queue_thread.start()
+    def log(self, msg):
+        payload = { 'install_id': installation_id(), 'time': time.asctime(), 'msg': msg }
+        with self.queue_cv:
+            self.queue.append(payload)
+            self.queue_cv.notify()
+_logger_instance = None
+def log(msg: str) -> None:
+    if _logger_instance is not None:
+        _logger_instance.log(msg)
+
 def main():
-    global nb, root, main_menu, content
+    global nb, root, main_menu, content, _logger_instance
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--log-to', type = str, required = False)
+    args = parser.parse_args()
+
+    if args.log_to is not None:
+        _logger_instance = Logger(target = args.log_to)
 
     nb = netsblox.Client()
 
