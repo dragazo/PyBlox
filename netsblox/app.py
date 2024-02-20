@@ -972,22 +972,24 @@ class ScrolledText(tk.Frame):
             # make text readonly be ignoring all (default) keystrokes
             self.text.bind('<Key>', lambda e: 'break')
         else:
-            def on_redo(e):
+            def do_redo(e):
                 self.text.edit_redo()
+                print('here')
+
                 return 'break'
             for bind in SYS_INFO['redo-binds']:
-                self.text.bind(bind, on_redo)
+                self.text.bind(bind, do_redo)
 
             # default paste behavior doesn't delete selection first
-            def on_paste(e):
+            def do_paste(e):
                 if self.text.tag_ranges(tk.SEL):
                     self.text.delete(tk.SEL_FIRST, tk.SEL_LAST)
 
                 # some versions of tcl/tk on mac are broken and crash here, so impl manually
                 self.text.insert(tk.INSERT, self.clipboard_get())
                 return 'break'
-            self.text.bind(f'<{SYS_INFO["mod"]}-Key-v>', on_paste)
-            self.text.bind(f'<{SYS_INFO["mod"]}-Key-V>', on_paste)
+            self.text.bind(f'<{SYS_INFO["mod"]}-Key-v>', do_paste)
+            self.text.bind(f'<{SYS_INFO["mod"]}-Key-V>', do_paste)
 
         # custom copy behavior - (also in readonly case above, catching all keys means we can't copy without override anyway)
         def on_copy(e):

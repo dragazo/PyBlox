@@ -3,6 +3,7 @@ import netsblox as _netsblox
 import randomname as _randomname
 import threading as _threading
 import requests as _requests
+import difflib as _difflib
 import inspect as _inspect
 import base64 as _base64
 import numpy as _np
@@ -10,7 +11,6 @@ import json as _json
 import sys as _sys
 import io as _io
 import os as _os
-
 from PIL import Image as _Image, ImageTk as _ImageTk
 
 from typing import Tuple, List, Any, Optional
@@ -291,3 +291,8 @@ if __name__ == '__main__':
         print(f'FAILED TESTS: {failures[0]}', file = sys.stderr)
         sys.exit(1)
     print(f'passed all {total[0]} tests')
+
+def unified_diff(*, before: str, after: str) -> str:
+    before = [f'{x}\n' for x in before.splitlines()]
+    after = [f'{x}\n' for x in after.splitlines()]
+    return ''.join(_difflib.unified_diff(before, after))
