@@ -472,13 +472,15 @@ class BlocksList(tk.Frame):
 
                 text_target.configure(highlightbackground = orig_bcolor)
 
-                log({ 'type': 'drag-n-drop::stop', 'content': code })
+                log({ 'type': 'drag-n-drop::stop' })
             def on_drop(e):
                 pos = get_pos(e)
+                before = text_target.get('1.0', 'end-1c')
                 text_target.insert(f'{pos} linestart', f'{code}\n')
+                after = text_target.get('1.0', 'end-1c')
                 text_target.edit_separator() # so multiple drag and drops aren't undone as one
 
-                log({ 'type': 'drag-n-drop::commit', 'content': code })
+                log({ 'type': 'drag-n-drop::commit', 'diff': common.unified_diff(before, after) })
 
                 return 'break'
             def on_drag(e):
