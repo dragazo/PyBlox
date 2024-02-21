@@ -1309,7 +1309,12 @@ class CodeEditor(ScrolledText):
         # if we're still showing help, complete with the up-to-date value
         if self.help_popup is not None:
             completion = self.help_completions[self.help_popup.get(tk.ACTIVE)]
+            before = self.text.get('1.0', 'end-1c')
             self.text.insert(tk.INSERT, completion)
+            after = self.text.get('1.0', 'end-1c')
+
+            log({ 'type': 'text::completion', 'diff': common.unified_diff(before, after) })
+
         self.text.focus_set()
 
     def hide_suggestion(self):
