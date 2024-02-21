@@ -1681,6 +1681,9 @@ class MainMenu(tk.Menu):
         def copy_pub_id():
             root.clipboard_clear()
             root.clipboard_append(self.public_id)
+
+            log({ 'type': 'ide::copy-pub-id', 'value': self.public_id })
+
         add_run_menu_command('run-project', label = 'Run Project', command = play_button, accelerator = 'F5')
         add_run_menu_command('stop-project', label = 'Stop Project', command = play_button, state = tk.DISABLED)
         add_run_menu_sep()
