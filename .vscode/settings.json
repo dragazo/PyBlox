@@ -83,5 +83,10 @@
         "yoff",
         "yscrollcommand",
         "yview"
+    ],
+    "cSpell.words": [
+        "autocomment",
+        "autoindent",
+        "lineend"
     ]
 }

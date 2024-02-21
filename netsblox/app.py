@@ -653,6 +653,8 @@ class ProjectEditor(tk.Frame):
         assert len(editors) == 1
         editors[0].on_content_change(cause = 'tab-change')
 
+        log({ 'type': 'ide::switch-tab', 'name': tab })
+
     def delete_tab(self, idx) -> None:
         editor = self.editors[idx]
         if not isinstance(editor, TurtleEditor):
@@ -1384,7 +1386,12 @@ class CodeEditor(ScrolledText):
         return 'break' # we always override default (we don't want tabs ever)
 
     def do_autocomment(self):
+        before = self.text.get('1.0', 'end-1c')
         self._do_batch_edit(smart_comment_uncomment)
+        after = self.text.get('1.0', 'end-1c')
+
+        log({ 'type': 'text::comment::shortcut', 'diff': common.unified_diff(before, after) })
+
         return 'break'
 
 class GlobalEditor(CodeEditor):
