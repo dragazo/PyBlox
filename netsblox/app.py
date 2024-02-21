@@ -306,11 +306,33 @@ def play_button():
 
     content.display.terminal.text.set_text('')
 
+    TRACEBACK_PATTERNS = ['Traceback (most recent call last):', 'File "<stdin>", line']
     def file_piper(src, dst):
         src = io.TextIOWrapper(src)
+        current_line = []
+        traceback_lines = []
+        in_traceback = False
         for c in iter(lambda: src.read(1), ''):
             dst.write(c)
             dst.flush()
+
+            if c == '\n':
+                got = ''.join(current_line)
+                current_line.clear()
+
+                if in_traceback:
+                    traceback_lines.append(got)
+                    if not got.startswith(' '):
+                        in_traceback = False
+                        traceback = '\n'.join(traceback_lines)
+                        traceback_lines.clear()
+
+                        log({ 'type': 'exception::user', 'traceback': traceback })
+                elif any(x in got for x in TRACEBACK_PATTERNS):
+                    in_traceback = True
+                    traceback_lines.append(got)
+            else:
+                current_line.append(c)
 
     code = transform.add_yields(content.project.get_full_script())
     _exec_process = subprocess.Popen([sys.executable, '-u'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
