@@ -1605,6 +1605,9 @@ class MainMenu(tk.Menu):
             global_font.config(size = new_size)
             for editor in content.project.editors:
                 editor.on_content_change(cause = 'zoom')
+
+            log({ 'type': 'zoom', 'delta': delta, 'value': new_size })
+
             return 'break'
         submenu.add_command(label = 'Zoom In', command = lambda: do_zoom(1), accelerator = f'{SYS_INFO["mod-str"]}++')
         submenu.add_command(label = 'Zoom Out', command = lambda: do_zoom(-1), accelerator = f'{SYS_INFO["mod-str"]}+-')
