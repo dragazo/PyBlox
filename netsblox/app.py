@@ -1008,27 +1008,53 @@ class ScrolledText(tk.Frame):
 
             # --------------------------------------------------
 
-            # default paste behavior doesn't delete selection first
+            # default cut has a crashing exception if no text is selected, so override - we also need to add our logging anyway
+            def do_cut(e):
+                before = self.text.get('1.0', 'end-1c')
+                self.clipboard_clear()
+                if self.text.tag_ranges(tk.SEL):
+                    self.clipboard_append(self.text.get(tk.SEL_FIRST, tk.SEL_LAST))
+                    self.text.delete(tk.SEL_FIRST, tk.SEL_LAST)
+                else: # if no selection, cut the current line
+                    self.clipboard_append(self.text.get('insert linestart', 'insert lineend'))
+                    self.text.delete('insert linestart', 'insert lineend')
+                after = self.text.get('1.0', 'end-1c')
+
+                log({ 'type': 'text::cut', 'diff': common.unified_diff(before, after) })
+
+                return 'break'
+            self.text.bind(f'<{SYS_INFO["mod"]}-Key-x>', do_cut)
+            self.text.bind(f'<{SYS_INFO["mod"]}-Key-X>', do_cut)
+
+            # --------------------------------------------------
+
+            # default paste behavior doesn't delete selection first - also some versions of tcl/tk on mac are broken and crash here, so impl manually by overriding the default behavior
             def do_paste(e):
+                before = self.text.get('1.0', 'end-1c')
                 if self.text.tag_ranges(tk.SEL):
                     self.text.delete(tk.SEL_FIRST, tk.SEL_LAST)
-
-                # some versions of tcl/tk on mac are broken and crash here, so impl manually
                 self.text.insert(tk.INSERT, self.clipboard_get())
+                after = self.text.get('1.0', 'end-1c')
+
+                log({ 'type': 'text::paste', 'diff': common.unified_diff(before, after) })
+
                 return 'break'
             self.text.bind(f'<{SYS_INFO["mod"]}-Key-v>', do_paste)
             self.text.bind(f'<{SYS_INFO["mod"]}-Key-V>', do_paste)
 
         # custom copy behavior - (also in readonly case above, catching all keys means we can't copy without override anyway)
-        def on_copy(e):
+        def do_copy(e):
             self.clipboard_clear()
             if self.text.tag_ranges(tk.SEL):
                 self.clipboard_append(self.text.get(tk.SEL_FIRST, tk.SEL_LAST))
             else: # if no selection, copy the current line
                 self.clipboard_append(self.text.get('insert linestart', 'insert lineend'))
+
+            log({ 'type': 'text::copy', 'content': self.clipboard_get() })
+
             return 'break'
-        self.text.bind(f'<{SYS_INFO["mod"]}-Key-c>', on_copy)
-        self.text.bind(f'<{SYS_INFO["mod"]}-Key-C>', on_copy)
+        self.text.bind(f'<{SYS_INFO["mod"]}-Key-c>', do_copy)
+        self.text.bind(f'<{SYS_INFO["mod"]}-Key-C>', do_copy)
 
         if linenumbers:
             self.linenumbers = TextLineNumbers(self, target = self.text)
