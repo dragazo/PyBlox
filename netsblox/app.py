@@ -1371,17 +1371,27 @@ class CodeEditor(ScrolledText):
                 self.text.delete(pos, 'insert')
                 return 'break' # override default behavior
     def do_untab(self):
-        if self.text.tag_ranges(tk.SEL):
-            self._do_batch_edit(undent_info)
+        before = self.text.get('1.0', 'end-1c')
+        self._do_batch_edit(undent_info)
+        after = self.text.get('1.0', 'end-1c')
+
+        log({ 'type': 'text::indent::decrease', 'diff': common.unified_diff(before, after) })
 
         return 'break'
     def do_tab(self):
-        if self.text.tag_ranges(tk.SEL):
-            self._do_batch_edit(indent_info)
-        elif self.help_popup is not None:
+        if self.help_popup is not None:
             self.do_completion()
-        else:
+            return 'break' # this check is unrelated to the rest (completion logging is separate)
+
+        if not self.text.tag_ranges(tk.SEL):
             self.text.insert(tk.INSERT, '    ')
+            return 'break' # this check is unrelated to the rest (this logging is part of the keylogger)
+
+        before = self.text.get('1.0', 'end-1c')
+        self._do_batch_edit(indent_info)
+        after = self.text.get('1.0', 'end-1c')
+
+        log({ 'type': 'text::indent::increase', 'diff': common.unified_diff(before, after) })
 
         return 'break' # we always override default (we don't want tabs ever)
 
