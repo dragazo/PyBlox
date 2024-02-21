@@ -383,6 +383,39 @@ def session_id() -> str:
         _cached_session_id = f'{random.randrange(0, 1 << 32):08x}'
         return _cached_session_id
 
+class KeyLogger:
+    def __init__(self):
+        self.widget = None
+        self.prev_value = None
+
+    def flush(self):
+        if self.widget is None or self.prev_value is None:
+            return
+
+        widget = self.widget
+        prev_value = self.prev_value
+
+        self.widget = None
+        self.prev_value = None
+
+        new_value = widget.get('1.0', 'end-1c')
+
+        if prev_value != new_value:
+            log({ 'type': 'text::edit', 'diff': common.unified_diff(prev_value, new_value) })
+
+        self.widget = widget
+        self.prev_value = new_value
+
+    def watch(self, widget):
+        if self.widget is widget:
+            return
+
+        self.flush()
+
+        self.widget = widget
+        self.prev_value = widget.get('1.0', 'end-1c') if widget is not None else None
+key_logger = KeyLogger()
+
 class Content(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
@@ -1065,6 +1098,11 @@ class ScrolledText(tk.Frame):
                 return 'break'
             self.text.bind(f'<{SYS_INFO["mod"]}-Key-v>', do_paste)
             self.text.bind(f'<{SYS_INFO["mod"]}-Key-V>', do_paste)
+
+            # --------------------------------------------------
+
+            self.text.bind('<FocusIn>', lambda e: key_logger.watch(self.text))
+            self.text.bind('<FocusOut>', lambda e: key_logger.watch(None))
 
         # custom copy behavior - (also in readonly case above, catching all keys means we can't copy without override anyway)
         def do_copy(e):
@@ -2030,6 +2068,7 @@ class Logger:
 _logger_instance = None
 def log(msg: str) -> None:
     if _logger_instance is not None:
+        key_logger.flush() # flush any normal edits before we log the current event
         _logger_instance.log(msg)
 
 def main():
