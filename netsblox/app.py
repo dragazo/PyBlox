@@ -1387,12 +1387,16 @@ class CodeEditor(ScrolledText):
         self.text.mark_set(tk.INSERT, new_ins)
 
     def do_newline(self):
+        key_logger.watch(self.text) # just to make sure we're watching this text editor - should always be no-op
+        key_logger.flush()
+
         line = self.text.get('insert linestart', 'insert')
         white, _ = get_white_nonwhite(line)
         if line.endswith(':'):
             white += '    '
         self.text.insert('insert', '\n' + white)
         self.text.see('insert')
+
         return 'break'
 
     def do_backspace(self):
