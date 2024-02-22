@@ -1223,6 +1223,13 @@ class CodeEditor(ScrolledText):
         self.text.bind('<Delete>', lambda e: self.do_delete())
         self.text.bind('<Return>', lambda e: self.do_newline())
 
+        self.text.bind('<Shift-Up>', lambda e: self.do_arrowing(0))
+        self.text.bind('<Shift-Down>', lambda e: self.do_arrowing(0))
+        self.text.bind('<Up>', lambda e: self.do_arrowing(-1))
+        self.text.bind('<Down>', lambda e: self.do_arrowing(1))
+        self.text.bind('<Left>', lambda e: self.do_arrowing(0))
+        self.text.bind('<Right>', lambda e: self.do_arrowing(0))
+
         if color_enabled:
             # source: https://stackoverflow.com/questions/38594978/tkinter-syntax-highlighting-for-text-widget
             cdg = colorizer.ColorDelegator()
@@ -1362,6 +1369,7 @@ class CodeEditor(ScrolledText):
         if should_show:
             if self.help_popup is not None:
                 self.help_popup.destroy()
+                self.help_popup = None
 
             try:
                 x, y, w, h = self.text.bbox(tk.INSERT)
@@ -1374,14 +1382,32 @@ class CodeEditor(ScrolledText):
             xoff = self.text.winfo_rootx() - root.winfo_rootx()
             yoff = self.text.winfo_rooty() - root.winfo_rooty()
             self.help_popup.place(x = x + xoff, y = y + yoff + h)
-            for item in completions:
+            for i, item in enumerate(completions):
                 if not item.name.startswith('_'): # hide private stuff - would only confuse beginners and they shouldn't touch it anyway
                     self.help_popup.insert(tk.END, item.name)
-                    self.help_completions[item.name] = item.complete
+                    self.help_completions[item.name] = (i, item.complete)
+            self.help_popup.selection_set(0)
+            self.help_popup.activate(0)
 
             self.help_popup.bind('<Double-Button-1>', lambda e: self.do_completion())
         else:
             self.hide_suggestion()
+
+    def do_arrowing(self, completion_delta: int):
+        # if completions are shown, use this as the up/down selector
+        if completion_delta != 0 and self.help_popup is not None and len(self.help_completions) != 0:
+            active = self.help_completions[self.help_popup.get(tk.ACTIVE)][0]
+            new_active = (active + completion_delta) % len(self.help_completions)
+
+            self.help_popup.see(new_active)
+            self.help_popup.selection_clear(0, tk.END)
+            self.help_popup.selection_set(new_active)
+            self.help_popup.activate(new_active)
+
+            return 'break'
+
+        # otherwise use default behavior
+        pass
 
     def do_completion(self):
         # complete any pending update actions
@@ -1392,7 +1418,7 @@ class CodeEditor(ScrolledText):
 
         # if we're still showing help, complete with the up-to-date value
         if self.help_popup is not None:
-            completion = self.help_completions[self.help_popup.get(tk.ACTIVE)]
+            completion = self.help_completions[self.help_popup.get(tk.ACTIVE)][1]
             if completion != '':
                 key_logger.watch(self) # just to be sure
                 key_logger.flush()
