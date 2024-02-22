@@ -1266,7 +1266,7 @@ class CodeEditor(ScrolledText):
                 self.update_timer = self.after(SUGGESTION_UPDATE_INTERVAL, trigger)
             self.custom_on_change.append(delayed_show_full_help)
 
-            # this one really should be ctrl+space on all platforms
+            # this one really should be ctrl+space on all platforms (not mod+space)
             self.text.bind('<Control-Key-space>', lambda e: self.show_suggestion())
 
     def line_count(self):
@@ -1285,9 +1285,12 @@ class CodeEditor(ScrolledText):
         script = jedi.Script(content.project.get_full_script())
         self.update_highlighting(script)
 
-        should_show = \
-            self.text.get('insert - 1 chars', 'insert').startswith('.') or \
-            self.text.get('insert - 1 chars wordstart - 1 chars', 'insert').startswith('.')
+        should_show = (
+            self.text.get('insert -1c', 'insert') == '.' or
+            self.text.get('insert -1c wordstart -1c', 'insert').startswith('.')
+        ) and (
+            self.text.get('insert', 'insert +1c').isspace()
+        )
 
         self.show_docs(script)
 
