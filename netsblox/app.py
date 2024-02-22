@@ -1001,9 +1001,11 @@ class ChangedText(tk.Text):
         return result # return what the actual widget returned
 
 class ScrolledText(tk.Frame):
-    def __init__(self, parent, *, wrap = True, readonly = False, linenumbers = False, blocks = [], **kwargs):
+    def __init__(self, parent, *, name: str, wrap = True, readonly = False, linenumbers = False, blocks = [], **kwargs):
         super().__init__(parent)
         undo_args = { 'undo': True, 'maxundo': -1, 'autoseparators': True }
+
+        self.name = name
 
         self.font = tkfont.nametofont('TkFixedFont')
         self.blocks = blocks
@@ -1186,8 +1188,8 @@ class ScrolledText(tk.Frame):
         self.text.insert('1.0', txt)
 
 class CodeEditor(ScrolledText):
-    def __init__(self, parent, *, wrap = False, column_offset = 0, **kwargs):
-        super().__init__(parent, linenumbers = True, wrap = wrap, **kwargs)
+    def __init__(self, parent, *, name: str, wrap = False, column_offset = 0, **kwargs):
+        super().__init__(parent, name = name, linenumbers = True, wrap = wrap, **kwargs)
         self.__line_count = None
         self.column_offset = column_offset
         self.help_popup = None
@@ -1546,10 +1548,9 @@ def _yield_(x):
     prefix = BASE_PREFIX
     prefix_lines = BASE_PREFIX_LINES
     blocks = []
-    name = 'global'
 
     def __init__(self, parent, *, value: str):
-        super().__init__(parent, blocks = GlobalEditor.blocks)
+        super().__init__(parent, name = 'global', blocks = GlobalEditor.blocks)
         self.set_text(value)
 
     def get_script(self, *, is_export: bool = False):
@@ -1580,8 +1581,7 @@ class StageEditor(CodeEditor):
     blocks = []
 
     def __init__(self, parent, *, name: str, value: str):
-        super().__init__(parent, blocks = StageEditor.blocks, column_offset = 4) # we autoindent the content, so 4 offset for error messages
-        self.name = name
+        super().__init__(parent, name = name, blocks = StageEditor.blocks, column_offset = 4) # we autoindent the content, so 4 offset for error messages
         self.set_text(value)
 
     def get_script(self, *, is_export: bool = False):
@@ -1593,8 +1593,7 @@ class TurtleEditor(CodeEditor):
     blocks = []
 
     def __init__(self, parent, *, name: str, value: str):
-        super().__init__(parent, blocks = TurtleEditor.blocks, column_offset = 4) # we autoindent the content, so 4 offset for error messages
-        self.name = name
+        super().__init__(parent, name = name, blocks = TurtleEditor.blocks, column_offset = 4) # we autoindent the content, so 4 offset for error messages
         self.set_text(value)
 
     def get_script(self, *, is_export: bool = False):
@@ -1610,14 +1609,14 @@ class Display(tk.Frame):
 
         self.docs_frame = tk.Frame(self.pane)
         self.docs_label = tk.Label(self.docs_frame, text = 'Documentation')
-        self.docs = ScrolledText(self.docs_frame, readonly = True)
+        self.docs = ScrolledText(self.docs_frame, name = 'ide::docs', readonly = True)
         self.docs.text.configure(wrap = tk.WORD)
         self.docs_label.pack(side = tk.TOP)
         self.docs.pack(fill = tk.BOTH, expand = True)
 
         self.terminal_frame = tk.Frame(self.pane)
         self.terminal_label = tk.Label(self.terminal_frame, text = 'Program Output')
-        self.terminal = TerminalOutput(self.terminal_frame)
+        self.terminal = TerminalOutput(self.terminal_frame, name = 'ide::term')
         self.terminal_label.pack(side = tk.TOP)
         self.terminal.pack(fill = tk.BOTH, expand = True)
 
@@ -1625,11 +1624,11 @@ class Display(tk.Frame):
         self.pane.add(self.terminal_frame, stretch = 'always', minsize = 100)
 
 class TerminalOutput(tk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, *, name: str):
         super().__init__(parent)
         self.__last_line_len = 0
 
-        self.text = ScrolledText(self, readonly = True)
+        self.text = ScrolledText(self, name = name, readonly = True)
         self.text.pack(side = tk.TOP, fill = tk.BOTH, expand = True)
         self.text.text.config(bg = '#1a1a1a', fg = '#bdbdbd', insertbackground = '#bdbdbd')
 
