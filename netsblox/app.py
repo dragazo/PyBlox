@@ -410,10 +410,10 @@ class KeyLogger:
         self.prev_value = self.widget.text.get('1.0', 'end-1c') if self.widget is not None else None
 
     def watch(self, widget):
+        assert isinstance(widget, ScrolledText)
+
         if self.widget is widget:
             return
-
-        assert widget is None or isinstance(widget, ScrolledText)
 
         self.flush()
         self.widget = widget
@@ -1141,8 +1141,12 @@ class ScrolledText(tk.Frame):
 
             # --------------------------------------------------
 
-            self.text.bind('<FocusIn>', lambda e: key_logger.watch(self))
-            self.text.bind('<FocusOut>', lambda e: key_logger.watch(None))
+            def do_keylogger_flush(e):
+                key_logger.watch(self)
+                key_logger.flush() # because this is a cursor movement operation
+            self.text.bind('<FocusIn>', do_keylogger_flush)
+            self.text.bind('<FocusOut>', do_keylogger_flush)
+            self.text.bind('<Button-1>', do_keylogger_flush)
 
         # custom copy behavior - (also in readonly case above, catching all keys means we can't copy without override anyway)
         def do_copy(e):
@@ -1406,8 +1410,9 @@ class CodeEditor(ScrolledText):
 
             return 'break'
 
-        # otherwise use default behavior
-        pass
+        # otherwise use default behavior, but flush any edits since this is a cursor movement event
+        key_logger.watch(self) # just to be sure
+        key_logger.flush()
 
     def do_completion(self):
         # complete any pending update actions
