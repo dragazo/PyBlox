@@ -406,14 +406,16 @@ class KeyLogger:
         self.widget = widget
         self.prev_value = new_value
 
+    def clear(self):
+        self.prev_value = self.widget.get('1.0', 'end-1c') if self.widget is not None else None
+
     def watch(self, widget):
         if self.widget is widget:
             return
 
         self.flush()
-
         self.widget = widget
-        self.prev_value = widget.get('1.0', 'end-1c') if widget is not None else None
+        self.clear()
 key_logger = KeyLogger()
 
 class Content(tk.Frame):
@@ -529,11 +531,16 @@ class BlocksList(tk.Frame):
 
                 log({ 'type': 'drag-n-drop::stop' })
             def on_drop(e):
+                key_logger.watch(text_target)
+                key_logger.flush()
+
                 pos = get_pos(e)
                 before = text_target.get('1.0', 'end-1c')
                 text_target.insert(f'{pos} linestart', f'{code}\n')
                 after = text_target.get('1.0', 'end-1c')
                 text_target.edit_separator() # so multiple drag and drops aren't undone as one
+
+                key_logger.clear()
 
                 log({ 'type': 'drag-n-drop::commit', 'diff': common.unified_diff(before, after) })
 
@@ -1040,9 +1047,14 @@ class ScrolledText(tk.Frame):
             self.text.bind('<Key>', lambda e: 'break')
         else:
             def do_undo(e):
+                key_logger.watch(self.text) # just to be sure
+                key_logger.flush()
+
                 before = self.text.get('1.0', 'end-1c')
                 self.text.edit_undo()
                 after = self.text.get('1.0', 'end-1c')
+
+                key_logger.clear()
 
                 log({ 'type': 'history::undo', 'diff': common.unified_diff(before, after) })
 
@@ -1053,9 +1065,14 @@ class ScrolledText(tk.Frame):
             # --------------------------------------------------
 
             def do_redo(e):
+                key_logger.watch(self.text) # just to be sure
+                key_logger.flush()
+
                 before = self.text.get('1.0', 'end-1c')
                 self.text.edit_redo()
                 after = self.text.get('1.0', 'end-1c')
+
+                key_logger.clear()
 
                 log({ 'type': 'history::redo', 'diff': common.unified_diff(before, after) })
 
@@ -1067,6 +1084,9 @@ class ScrolledText(tk.Frame):
 
             # default cut has a crashing exception if no text is selected, so override - we also need to add our logging anyway
             def do_cut(e):
+                key_logger.watch(self.text) # just to be sure
+                key_logger.flush()
+
                 before = self.text.get('1.0', 'end-1c')
                 self.clipboard_clear()
                 if self.text.tag_ranges(tk.SEL):
@@ -1076,6 +1096,8 @@ class ScrolledText(tk.Frame):
                     self.clipboard_append(self.text.get('insert linestart', 'insert lineend'))
                     self.text.delete('insert linestart', 'insert lineend')
                 after = self.text.get('1.0', 'end-1c')
+
+                key_logger.clear()
 
                 log({ 'type': 'text::cut', 'diff': common.unified_diff(before, after) })
 
@@ -1087,11 +1109,24 @@ class ScrolledText(tk.Frame):
 
             # default paste behavior doesn't delete selection first - also some versions of tcl/tk on mac are broken and crash here, so impl manually by overriding the default behavior
             def do_paste(e):
+                content = ''
+                try:
+                    content = self.clipboard_get()
+                except:
+                    pass
+                if content == '':
+                    return 'break'
+
+                key_logger.watch(self.text) # just to be sure
+                key_logger.flush()
+
                 before = self.text.get('1.0', 'end-1c')
                 if self.text.tag_ranges(tk.SEL):
                     self.text.delete(tk.SEL_FIRST, tk.SEL_LAST)
-                self.text.insert(tk.INSERT, self.clipboard_get())
+                self.text.insert(tk.INSERT, content)
                 after = self.text.get('1.0', 'end-1c')
+
+                key_logger.clear()
 
                 log({ 'type': 'text::paste', 'diff': common.unified_diff(before, after) })
 
@@ -1180,6 +1215,7 @@ class CodeEditor(ScrolledText):
 
         self.text.bind('<Tab>', lambda e: self.do_tab())
         self.text.bind('<BackSpace>', lambda e: self.do_backspace())
+        self.text.bind('<Delete>', lambda e: self.do_delete())
         self.text.bind('<Return>', lambda e: self.do_newline())
 
         if color_enabled:
@@ -1349,11 +1385,17 @@ class CodeEditor(ScrolledText):
         # if we're still showing help, complete with the up-to-date value
         if self.help_popup is not None:
             completion = self.help_completions[self.help_popup.get(tk.ACTIVE)]
-            before = self.text.get('1.0', 'end-1c')
-            self.text.insert(tk.INSERT, completion)
-            after = self.text.get('1.0', 'end-1c')
+            if completion != '':
+                key_logger.watch(self.text) # just to be sure
+                key_logger.flush()
 
-            log({ 'type': 'text::completion', 'diff': common.unified_diff(before, after) })
+                before = self.text.get('1.0', 'end-1c')
+                self.text.insert(tk.INSERT, completion)
+                after = self.text.get('1.0', 'end-1c')
+
+                key_logger.clear()
+
+                log({ 'type': 'text::completion', 'diff': common.unified_diff(before, after) })
 
         self.text.focus_set()
 
@@ -1387,7 +1429,7 @@ class CodeEditor(ScrolledText):
         self.text.mark_set(tk.INSERT, new_ins)
 
     def do_newline(self):
-        key_logger.watch(self.text) # just to make sure we're watching this text editor - should always be no-op
+        key_logger.watch(self.text) # just to be sure
         key_logger.flush()
 
         line = self.text.get('insert linestart', 'insert')
@@ -1400,9 +1442,21 @@ class CodeEditor(ScrolledText):
         return 'break'
 
     def do_backspace(self):
-        # if there's a selection, use default behavior
+        key_logger.watch(self.text) # just to be sure
+
+        # if there's a selection, do batch delete
         if self.text.tag_ranges(tk.SEL):
-            return
+            key_logger.flush()
+
+            before = self.text.get('1.0', 'end-1c')
+            self.text.delete(tk.SEL_FIRST, tk.SEL_LAST)
+            after = self.text.get('1.0', 'end-1c')
+
+            key_logger.clear()
+
+            log({ 'type': 'text::delete', 'diff': common.unified_diff(before, after) })
+
+            return 'break' # override default behavior
 
         # otherwise try deleting back to a tab stop
         col = int(self.text.index(tk.INSERT).split('.')[1])
@@ -1412,15 +1466,28 @@ class CodeEditor(ScrolledText):
             if self.text.get(pos, 'insert').isspace():
                 self.text.delete(pos, 'insert')
                 return 'break' # override default behavior
+
+    def do_delete(self):
+        # if there's a selection, this is equivalent to backspace, otherwise use default behavior
+        if self.text.tag_ranges(tk.SEL):
+            return self.do_backspace()
+
     def do_untab(self):
+        key_logger.watch(self.text) # just to be sure
+        key_logger.flush()
+
         before = self.text.get('1.0', 'end-1c')
         self._do_batch_edit(undent_info)
         after = self.text.get('1.0', 'end-1c')
+
+        key_logger.clear()
 
         log({ 'type': 'text::indent::decrease', 'diff': common.unified_diff(before, after) })
 
         return 'break'
     def do_tab(self):
+        key_logger.watch(self.text) # just to be sure
+
         if self.help_popup is not None:
             self.do_completion()
             return 'break' # this check is unrelated to the rest (completion logging is separate)
@@ -1429,20 +1496,29 @@ class CodeEditor(ScrolledText):
             self.text.insert(tk.INSERT, '    ')
             return 'break' # this check is unrelated to the rest (this logging is part of the keylogger)
 
+        key_logger.flush()
+
         before = self.text.get('1.0', 'end-1c')
         self._do_batch_edit(indent_info)
         after = self.text.get('1.0', 'end-1c')
+
+        key_logger.clear()
 
         log({ 'type': 'text::indent::increase', 'diff': common.unified_diff(before, after) })
 
         return 'break' # we always override default (we don't want tabs ever)
 
     def do_autocomment(self):
+        key_logger.watch(self.text)
+        key_logger.flush()
+
         before = self.text.get('1.0', 'end-1c')
         self._do_batch_edit(smart_comment_uncomment)
         after = self.text.get('1.0', 'end-1c')
 
-        log({ 'type': 'text::comment::shortcut', 'diff': common.unified_diff(before, after) })
+        key_logger.clear()
+
+        log({ 'type': 'text::toggle-comment', 'diff': common.unified_diff(before, after) })
 
         return 'break'
 
