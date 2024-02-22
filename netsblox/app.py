@@ -301,6 +301,8 @@ def play_button():
         main_menu.run_menu.entryconfig(stop_entry, state = tk.DISABLED)
         return
 
+    log({ 'type': 'exec::start' })
+
     main_menu.run_menu.entryconfig(run_entry, state = tk.DISABLED)
     main_menu.run_menu.entryconfig(stop_entry, state = tk.ACTIVE)
 
@@ -308,10 +310,11 @@ def play_button():
 
     TRACEBACK_PATTERNS = ['Traceback (most recent call last):', 'File "<stdin>", line']
     def file_piper(src, dst):
-        src = io.TextIOWrapper(src)
         current_line = []
         traceback_lines = []
         in_traceback = False
+
+        src = io.TextIOWrapper(src)
         for c in iter(lambda: src.read(1), ''):
             dst.write(c)
             dst.flush()
@@ -333,6 +336,8 @@ def play_button():
                     traceback_lines.append(got)
             else:
                 current_line.append(c)
+
+        log({ 'type': 'exec::stop' })
 
     code = transform.add_yields(content.project.get_full_script())
     _exec_process = subprocess.Popen([sys.executable, '-u'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
