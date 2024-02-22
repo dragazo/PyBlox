@@ -398,20 +398,22 @@ class KeyLogger:
         self.widget = None
         self.prev_value = None
 
-        new_value = widget.get('1.0', 'end-1c')
+        new_value = widget.text.get('1.0', 'end-1c')
 
         if prev_value != new_value:
-            log({ 'type': 'text::edit', 'diff': common.unified_diff(prev_value, new_value) })
+            log({ 'type': 'text::edit', 'editor': widget.name, 'diff': common.unified_diff(prev_value, new_value) })
 
         self.widget = widget
         self.prev_value = new_value
 
     def clear(self):
-        self.prev_value = self.widget.get('1.0', 'end-1c') if self.widget is not None else None
+        self.prev_value = self.widget.text.get('1.0', 'end-1c') if self.widget is not None else None
 
     def watch(self, widget):
         if self.widget is widget:
             return
+
+        assert widget is None or isinstance(widget, ScrolledText)
 
         self.flush()
         self.widget = widget
@@ -503,15 +505,16 @@ class BlocksList(tk.Frame):
 
         self.text.configure(state = tk.DISABLED)
 
-    def link(self, blocks, text_target) -> None:
-        orig_bcolor = text_target.cget('background')
+    def link(self, blocks, target: 'ScrolledText') -> None:
+        assert isinstance(target, ScrolledText)
+        orig_bcolor = target.text.cget('background')
 
         def make_dnd_manager(widget, code):
             def get_pos(e):
-                x, y = text_target.winfo_pointerxy()
-                x -= text_target.winfo_rootx()
-                y -= text_target.winfo_rooty()
-                return text_target.index(f'@{x},{y}')
+                x, y = target.text.winfo_pointerxy()
+                x -= target.text.winfo_rootx()
+                y -= target.text.winfo_rooty()
+                return target.text.index(f'@{x},{y}')
 
             focused = [None]
             def on_start(e):
@@ -519,40 +522,40 @@ class BlocksList(tk.Frame):
                 focused[0] = root.focus_get()
                 widget.focus()
 
-                text_target.configure(highlightbackground = '#006eff')
+                target.text.configure(highlightbackground = '#006eff')
 
-                log({ 'type': 'drag-n-drop::start', 'content': code })
+                log({ 'type': 'drag-n-drop::start', 'editor': target.name, 'content': code })
             def on_stop(e):
                 # restore saved focus
                 if focused[0] is not None:
                     focused[0].focus()
 
-                text_target.configure(highlightbackground = orig_bcolor)
+                target.text.configure(highlightbackground = orig_bcolor)
 
-                log({ 'type': 'drag-n-drop::stop' })
+                log({ 'type': 'drag-n-drop::stop', 'editor': target.name })
             def on_drop(e):
-                key_logger.watch(text_target)
+                key_logger.watch(target)
                 key_logger.flush()
 
                 pos = get_pos(e)
-                before = text_target.get('1.0', 'end-1c')
-                text_target.insert(f'{pos} linestart', f'{code}\n')
-                after = text_target.get('1.0', 'end-1c')
-                text_target.edit_separator() # so multiple drag and drops aren't undone as one
+                before = target.text.get('1.0', 'end-1c')
+                target.text.insert(f'{pos} linestart', f'{code}\n')
+                after = target.text.get('1.0', 'end-1c')
+                target.text.edit_separator() # so multiple drag and drops aren't undone as one
 
                 key_logger.clear()
 
-                log({ 'type': 'drag-n-drop::commit', 'diff': common.unified_diff(before, after) })
+                log({ 'type': 'drag-n-drop::commit', 'editor': target.name, 'diff': common.unified_diff(before, after) })
 
                 return 'break'
             def on_drag(e):
                 pos = get_pos(e)
-                text_target.mark_set('insert', f'{pos}')
-                text_target.focus() # give focus so we can see the cursor pos
+                target.text.mark_set('insert', f'{pos}')
+                target.text.focus() # give focus so we can see the cursor pos
             def on_undrag(e):
                 widget.focus() # give focus back to the widget so the text highlight shows again
 
-            return DndManager(widget, [DndTarget(text_target, on_start, on_stop, on_drop, on_drag, on_undrag)])
+            return DndManager(widget, [DndTarget(target.text, on_start, on_stop, on_drop, on_drag, on_undrag)])
 
         try:
             self.text.config(state = tk.NORMAL)
@@ -1049,7 +1052,7 @@ class ScrolledText(tk.Frame):
             self.text.bind('<Key>', lambda e: 'break')
         else:
             def do_undo(e):
-                key_logger.watch(self.text) # just to be sure
+                key_logger.watch(self) # just to be sure
                 key_logger.flush()
 
                 before = self.text.get('1.0', 'end-1c')
@@ -1058,7 +1061,7 @@ class ScrolledText(tk.Frame):
 
                 key_logger.clear()
 
-                log({ 'type': 'history::undo', 'diff': common.unified_diff(before, after) })
+                log({ 'type': 'history::undo', 'editor': self.name, 'diff': common.unified_diff(before, after) })
 
                 return 'break'
             for bind in SYS_INFO['undo-binds']:
@@ -1067,7 +1070,7 @@ class ScrolledText(tk.Frame):
             # --------------------------------------------------
 
             def do_redo(e):
-                key_logger.watch(self.text) # just to be sure
+                key_logger.watch(self) # just to be sure
                 key_logger.flush()
 
                 before = self.text.get('1.0', 'end-1c')
@@ -1076,7 +1079,7 @@ class ScrolledText(tk.Frame):
 
                 key_logger.clear()
 
-                log({ 'type': 'history::redo', 'diff': common.unified_diff(before, after) })
+                log({ 'type': 'history::redo', 'editor': self.name, 'diff': common.unified_diff(before, after) })
 
                 return 'break'
             for bind in SYS_INFO['redo-binds']:
@@ -1086,7 +1089,7 @@ class ScrolledText(tk.Frame):
 
             # default cut has a crashing exception if no text is selected, so override - we also need to add our logging anyway
             def do_cut(e):
-                key_logger.watch(self.text) # just to be sure
+                key_logger.watch(self) # just to be sure
                 key_logger.flush()
 
                 before = self.text.get('1.0', 'end-1c')
@@ -1101,7 +1104,7 @@ class ScrolledText(tk.Frame):
 
                 key_logger.clear()
 
-                log({ 'type': 'text::cut', 'diff': common.unified_diff(before, after) })
+                log({ 'type': 'text::cut', 'editor': self.name, 'diff': common.unified_diff(before, after) })
 
                 return 'break'
             self.text.bind(f'<{SYS_INFO["mod"]}-Key-x>', do_cut)
@@ -1119,7 +1122,7 @@ class ScrolledText(tk.Frame):
                 if content == '':
                     return 'break'
 
-                key_logger.watch(self.text) # just to be sure
+                key_logger.watch(self) # just to be sure
                 key_logger.flush()
 
                 before = self.text.get('1.0', 'end-1c')
@@ -1130,7 +1133,7 @@ class ScrolledText(tk.Frame):
 
                 key_logger.clear()
 
-                log({ 'type': 'text::paste', 'diff': common.unified_diff(before, after) })
+                log({ 'type': 'text::paste', 'editor': self.name, 'diff': common.unified_diff(before, after) })
 
                 return 'break'
             self.text.bind(f'<{SYS_INFO["mod"]}-Key-v>', do_paste)
@@ -1138,7 +1141,7 @@ class ScrolledText(tk.Frame):
 
             # --------------------------------------------------
 
-            self.text.bind('<FocusIn>', lambda e: key_logger.watch(self.text))
+            self.text.bind('<FocusIn>', lambda e: key_logger.watch(self))
             self.text.bind('<FocusOut>', lambda e: key_logger.watch(None))
 
         # custom copy behavior - (also in readonly case above, catching all keys means we can't copy without override anyway)
@@ -1149,7 +1152,7 @@ class ScrolledText(tk.Frame):
             else: # if no selection, copy the current line
                 self.clipboard_append(self.text.get('insert linestart', 'insert lineend'))
 
-            log({ 'type': 'text::copy', 'content': self.clipboard_get() })
+            log({ 'type': 'text::copy', 'editor': self.name, 'content': self.clipboard_get() })
 
             return 'break'
         self.text.bind(f'<{SYS_INFO["mod"]}-Key-c>', do_copy)
@@ -1181,7 +1184,7 @@ class ScrolledText(tk.Frame):
             self.linenumbers.redraw()
 
         if cause == 'tab-change':
-            content.blocks.link(self.blocks, self.text)
+            content.blocks.link(self.blocks, self)
 
     def set_text(self, txt):
         self.text.delete('1.0', 'end')
@@ -1388,7 +1391,7 @@ class CodeEditor(ScrolledText):
         if self.help_popup is not None:
             completion = self.help_completions[self.help_popup.get(tk.ACTIVE)]
             if completion != '':
-                key_logger.watch(self.text) # just to be sure
+                key_logger.watch(self) # just to be sure
                 key_logger.flush()
 
                 before = self.text.get('1.0', 'end-1c')
@@ -1397,7 +1400,7 @@ class CodeEditor(ScrolledText):
 
                 key_logger.clear()
 
-                log({ 'type': 'text::completion', 'diff': common.unified_diff(before, after) })
+                log({ 'type': 'text::completion', 'editor': self.name, 'diff': common.unified_diff(before, after) })
 
         self.text.focus_set()
 
@@ -1431,7 +1434,7 @@ class CodeEditor(ScrolledText):
         self.text.mark_set(tk.INSERT, new_ins)
 
     def do_newline(self):
-        key_logger.watch(self.text) # just to be sure
+        key_logger.watch(self) # just to be sure
         key_logger.flush()
 
         line = self.text.get('insert linestart', 'insert')
@@ -1444,7 +1447,7 @@ class CodeEditor(ScrolledText):
         return 'break'
 
     def do_backspace(self):
-        key_logger.watch(self.text) # just to be sure
+        key_logger.watch(self) # just to be sure
 
         # if there's a selection, do batch delete
         if self.text.tag_ranges(tk.SEL):
@@ -1456,7 +1459,7 @@ class CodeEditor(ScrolledText):
 
             key_logger.clear()
 
-            log({ 'type': 'text::delete', 'diff': common.unified_diff(before, after) })
+            log({ 'type': 'text::delete', 'editor': self.name, 'diff': common.unified_diff(before, after) })
 
             return 'break' # override default behavior
 
@@ -1475,7 +1478,7 @@ class CodeEditor(ScrolledText):
             return self.do_backspace()
 
     def do_untab(self):
-        key_logger.watch(self.text) # just to be sure
+        key_logger.watch(self) # just to be sure
         key_logger.flush()
 
         before = self.text.get('1.0', 'end-1c')
@@ -1484,11 +1487,11 @@ class CodeEditor(ScrolledText):
 
         key_logger.clear()
 
-        log({ 'type': 'text::indent::decrease', 'diff': common.unified_diff(before, after) })
+        log({ 'type': 'text::indent::decrease', 'editor': self.name, 'diff': common.unified_diff(before, after) })
 
         return 'break'
     def do_tab(self):
-        key_logger.watch(self.text) # just to be sure
+        key_logger.watch(self) # just to be sure
 
         if self.help_popup is not None:
             self.do_completion()
@@ -1506,12 +1509,12 @@ class CodeEditor(ScrolledText):
 
         key_logger.clear()
 
-        log({ 'type': 'text::indent::increase', 'diff': common.unified_diff(before, after) })
+        log({ 'type': 'text::indent::increase', 'editor': self.name, 'diff': common.unified_diff(before, after) })
 
         return 'break' # we always override default (we don't want tabs ever)
 
     def do_autocomment(self):
-        key_logger.watch(self.text)
+        key_logger.watch(self)
         key_logger.flush()
 
         before = self.text.get('1.0', 'end-1c')
@@ -1520,7 +1523,7 @@ class CodeEditor(ScrolledText):
 
         key_logger.clear()
 
-        log({ 'type': 'text::toggle-comment', 'diff': common.unified_diff(before, after) })
+        log({ 'type': 'text::toggle-comment', 'editor': self.name, 'diff': common.unified_diff(before, after) })
 
         return 'break'
 
