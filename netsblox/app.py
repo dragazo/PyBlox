@@ -909,7 +909,7 @@ class ProjectEditor(tk.Frame):
                     break
             self.notebook.select(default_tab_idx)
 
-        log({ 'type': 'ide::open-proj', 'project': super_proj, 'role': active_role, 'source': source })
+        log({ 'type': 'ide::open', 'project': super_proj, 'role': active_role, 'source': source })
 
 class ContextMenu(tk.Menu):
     def __init__(self, parent, *, on_show = None):
@@ -1877,6 +1877,9 @@ class MainMenu(tk.Menu):
                     json.dump(save_dict, f, separators = (', ', ': '), indent = 2)
                 self.saved_project_dict = save_dict
                 content.project.roles = save_dict['roles'] # sync the in-memory role content
+
+                log({ 'type': 'ide::save' })
+
                 return True
             except Exception as e:
                 messagebox.showerror('Failed to save project', str(e))
@@ -1897,6 +1900,8 @@ class MainMenu(tk.Menu):
                 res = transform.add_yields(content.project.get_full_script(is_export = True))
                 with open(p, 'w') as f:
                     f.write(res)
+
+                log({ 'type': 'ide::export' })
             except Exception as e:
                 messagebox.showerror('Failed to save exported project', str(e))
 
