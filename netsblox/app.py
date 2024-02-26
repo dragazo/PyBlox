@@ -289,6 +289,8 @@ def play_button():
     global _exec_process
     start_exec_monitor()
 
+    key_logger.flush()
+
     run_entry = main_menu.run_menu_entries['run-project']
     stop_entry = main_menu.run_menu_entries['stop-project']
 
@@ -1779,6 +1781,8 @@ class MainMenu(tk.Menu):
         submenu = tk.Menu(self, **MENU_STYLE)
         global_font = tkfont.nametofont('TkFixedFont')
         def do_zoom(delta: int) -> None:
+            key_logger.flush()
+
             new_size = max(min(global_font.cget('size') + delta, MAX_FONT_SIZE), MIN_FONT_SIZE)
             global_font.config(size = new_size)
             for editor in content.project.editors:
@@ -1869,6 +1873,8 @@ class MainMenu(tk.Menu):
         return self._project_name
 
     def save(self, save_dict = None) -> bool:
+        key_logger.flush()
+
         if self.project_path is not None:
             try:
                 if save_dict is None:
@@ -1887,6 +1893,8 @@ class MainMenu(tk.Menu):
         else:
             return self.save_as(save_dict)
     def save_as(self, save_dict = None) -> bool:
+        key_logger.flush()
+
         p = filedialog.asksaveasfilename(filetypes = PROJECT_FILETYPES, defaultextension = '.json')
         if type(p) is str and p: # despite the type hints, above returns empty tuple on cancel
             self.project_path = p
@@ -1894,6 +1902,8 @@ class MainMenu(tk.Menu):
         return False
 
     def export_as(self) -> None:
+        key_logger.flush()
+
         p = filedialog.asksaveasfilename(filetypes = PYTHON_FILETYPES, defaultextension = '.py')
         if type(p) is str and p: # despite the type hints, above returns empty tuple on cancel
             try:
@@ -1906,6 +1916,7 @@ class MainMenu(tk.Menu):
                 messagebox.showerror('Failed to save exported project', str(e))
 
     def open_project(self, *, super_proj: Optional[dict] = None, active_role: Optional[int] = None, source: str):
+        key_logger.flush()
         content.project.on_tab_change()
         if not self.try_close_project(): return
 
