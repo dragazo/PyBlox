@@ -419,12 +419,18 @@ class KeyLogger:
     def watch(self, widget):
         assert isinstance(widget, ScrolledText)
 
-        if self.widget is widget:
-            return
+        if self.widget is not widget:
+            self.flush()
+            self.widget = widget
+            self.clear()
 
-        self.flush()
-        self.widget = widget
-        self.clear()
+    def kill(self, widget):
+        assert isinstance(widget, ScrolledText)
+
+        if self.widget is widget:
+            self.flush()
+            self.widget = None
+            self.clear()
 key_logger = KeyLogger()
 
 class Content(tk.Frame):
@@ -689,6 +695,8 @@ class ProjectEditor(tk.Frame):
         self.notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
 
     def on_tab_change(self, e = None):
+        key_logger.flush()
+
         for editor in self.editors:
             editor.hide_suggestion()
         if e is None: return
@@ -703,9 +711,11 @@ class ProjectEditor(tk.Frame):
         assert len(editors) == 1
         editors[0].on_content_change(cause = 'tab-change')
 
-        log({ 'type': 'ide::switch-tab', 'name': tab })
+        log({ 'type': 'ide::switch-editor', 'editor': tab })
 
     def delete_tab(self, idx) -> None:
+        key_logger.flush()
+
         editor = self.editors[idx]
         if not isinstance(editor, TurtleEditor):
             return # only turtle editors can be deleted
@@ -713,14 +723,20 @@ class ProjectEditor(tk.Frame):
         title = f'Delete {editor.name}'
         msg = f'Are you sure you would like to delete {editor.name}? This operation cannot be undone.'
         if messagebox.askyesno(title, msg, icon = 'warning', default = 'no'):
+            key_logger.kill(editor) # kill the editor in the keylogger since the widget is about to die
+
             del self.editors[idx]
             self.notebook.forget(idx)
             editor.destroy()
+
+            log({ 'type': 'ide::delete-editor', 'editor': editor.name })
 
     def is_unique_name(self, name: str) -> bool:
         return not any(x.name == name for x in self.editors)
 
     def dupe_turtle(self, idx) -> Any:
+        key_logger.flush()
+
         editor = self.editors[idx]
         if not isinstance(editor, TurtleEditor):
             return # only turtle editors can be duped
@@ -728,6 +744,8 @@ class ProjectEditor(tk.Frame):
         return self.newturtle(base_name = f'{editor.name}_copy', value = editor.text.get('1.0', 'end-1c'))
 
     def rename_turtle(self, idx) -> None:
+        key_logger.flush()
+
         editor = self.editors[idx]
         if not isinstance(editor, TurtleEditor):
             return # only turtle editors can be renamed
@@ -751,6 +769,8 @@ class ProjectEditor(tk.Frame):
         self.notebook.tab(idx, text = name)
 
     def newturtle(self, *, base_name = 'sprite', value = None) -> Any:
+        key_logger.flush()
+
         name_counter = 0
         name = base_name
         while not self.is_unique_name(name):
