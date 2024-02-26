@@ -816,7 +816,7 @@ class ProjectEditor(tk.Frame):
             role_res['images'] = { name: common.encode_image(img) for name, img in self.imports.images.items() }
 
         return res
-    def load(self, *, super_proj: Optional[dict] = None, active_role: Optional[int] = None) -> None:
+    def load(self, *, super_proj: Optional[dict] = None, active_role: Optional[int] = None, source: str) -> None:
         if super_proj is None:
             roles = self.roles
         else:
@@ -908,6 +908,8 @@ class ProjectEditor(tk.Frame):
                     default_tab_idx = i
                     break
             self.notebook.select(default_tab_idx)
+
+        log({ 'type': 'ide::open-proj', 'project': super_proj, 'role': active_role, 'source': source })
 
 class ContextMenu(tk.Menu):
     def __init__(self, parent, *, on_show = None):
@@ -1745,8 +1747,8 @@ class MainMenu(tk.Menu):
         root.protocol('WM_DELETE_WINDOW', kill)
 
         submenu = tk.Menu(self, **MENU_STYLE)
-        submenu.add_command(label = 'New', command = lambda: self.open_project(super_proj = ProjectEditor.DEFAULT_PROJECT), accelerator = f'{SYS_INFO["mod-str"]}+N')
-        submenu.add_command(label = 'Open', command = self.open_project, accelerator = f'{SYS_INFO["mod-str"]}+O')
+        submenu.add_command(label = 'New', command = lambda: self.open_project(super_proj = ProjectEditor.DEFAULT_PROJECT, source = 'new'), accelerator = f'{SYS_INFO["mod-str"]}+N')
+        submenu.add_command(label = 'Open', command = lambda: self.open_project(source = 'existing'), accelerator = f'{SYS_INFO["mod-str"]}+O')
         submenu.add_command(label = 'Import NetsBlox project', command = self.open_trans_xml)
 
         subsubmenu = tk.Menu(submenu, **MENU_STYLE)
@@ -1755,7 +1757,7 @@ class MainMenu(tk.Menu):
                 def opener():
                     with open(f'{common._NETSBLOX_PY_PATH}/assets/examples/{file}') as f:
                         content = json.load(f) # don't cache projects (could be large)
-                    self.open_project(super_proj = content)
+                    self.open_project(super_proj = content, source = f'example::{file}')
                 return opener
             subsubmenu.add_command(label = file[:-5], command = make_opener(file))
 
@@ -1769,8 +1771,8 @@ class MainMenu(tk.Menu):
         submenu.add_command(label = 'Exit', command = kill)
         self.add_cascade(label = 'File', menu = submenu)
 
-        root.bind_all(f'<{SYS_INFO["mod"]}-n>', lambda e: self.open_project(super_proj = ProjectEditor.DEFAULT_PROJECT))
-        root.bind_all(f'<{SYS_INFO["mod"]}-o>', lambda e: self.open_project())
+        root.bind_all(f'<{SYS_INFO["mod"]}-n>', lambda e: self.open_project(super_proj = ProjectEditor.DEFAULT_PROJECT, source = 'new'))
+        root.bind_all(f'<{SYS_INFO["mod"]}-o>', lambda e: self.open_project(source = 'existing'))
         root.bind_all(f'<{SYS_INFO["mod"]}-s>', lambda e: self.save())
         root.bind_all(f'<{SYS_INFO["mod"]}-S>', lambda e: self.save_as())
 
@@ -1898,7 +1900,7 @@ class MainMenu(tk.Menu):
             except Exception as e:
                 messagebox.showerror('Failed to save exported project', str(e))
 
-    def open_project(self, *, super_proj: Optional[dict] = None, active_role: Optional[int] = None):
+    def open_project(self, *, super_proj: Optional[dict] = None, active_role: Optional[int] = None, source: str):
         content.project.on_tab_change()
         if not self.try_close_project(): return
 
@@ -1915,14 +1917,14 @@ class MainMenu(tk.Menu):
             if content.project.roles is not None:
                 rstor = content.project.get_save_dict() # in case load fails
 
-            content.project.load(super_proj = super_proj, active_role = active_role)
+            content.project.load(super_proj = super_proj, active_role = active_role, source = source)
             self.saved_project_dict = super_proj
             self.project_path = p
             self.update_roles()
         except Exception as e:
             messagebox.showerror('Failed to load project', str(e))
             if rstor is not None:
-                content.project.load(rstor)
+                content.project.load(super_proj = rstor, source = 'revert')
 
     def open_trans_xml(self):
         content.project.on_tab_change()
@@ -1935,7 +1937,7 @@ class MainMenu(tk.Menu):
             with open(p, 'r') as f:
                 xml = f.read()
             proj = json.loads(nb2pb.translate(xml)[1])
-            self.open_project(super_proj = proj)
+            self.open_project(super_proj = proj, source = 'trans')
         except Exception as e:
             messagebox.showerror('Failed to import project', str(e))
 
@@ -1943,7 +1945,7 @@ class MainMenu(tk.Menu):
         content.project.on_tab_change()
         if not self.try_close_project(): return
 
-        content.project.load(active_role = active_role)
+        content.project.load(active_role = active_role, source = 'switch-role')
         self.update_roles()
 
     def try_close_project(self) -> bool: # true if user accepted close
@@ -2219,11 +2221,11 @@ def main():
     main_menu = MainMenu(root)
 
     if args.project is None:
-        main_menu.open_project(super_proj = ProjectEditor.DEFAULT_PROJECT)
+        main_menu.open_project(super_proj = ProjectEditor.DEFAULT_PROJECT, source = 'new')
     else:
         with open(args.project, 'r') as f:
             save_dict = json.load(f)
-        main_menu.open_project(super_proj = save_dict)
+        main_menu.open_project(super_proj = save_dict, source = 'existing')
         main_menu.project_path = os.path.abspath(args.project)
 
     root.configure(menu = main_menu)
