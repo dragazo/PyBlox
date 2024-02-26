@@ -687,8 +687,8 @@ class ProjectEditor(tk.Frame):
             idx = len(self.ctx_menu_entries)
             self.ctx_menu_entries[id] = idx
 
-        add_command('new-turtle', label = 'New Sprite', command = lambda: self.newturtle())
-        add_command('dupe', label = 'Clone Sprite', command = lambda: self.dupe_turtle(self.ctx_tab_idx))
+        add_command('new-turtle', label = 'New Sprite', command = lambda: self.newturtle(source = 'new'))
+        add_command('dupe', label = 'Copy Sprite', command = lambda: self.dupe_turtle(self.ctx_tab_idx))
         add_command('rename', label = 'Rename', command = lambda: self.rename_turtle(self.ctx_tab_idx))
         add_command('delete', label = 'Delete', command = lambda: self.delete_tab(self.ctx_tab_idx))
 
@@ -741,7 +741,7 @@ class ProjectEditor(tk.Frame):
         if not isinstance(editor, TurtleEditor):
             return # only turtle editors can be duped
 
-        return self.newturtle(base_name = f'{editor.name}_copy', value = editor.text.get('1.0', 'end-1c'))
+        return self.newturtle(base_name = f'{editor.name}_copy', value = editor.text.get('1.0', 'end-1c'), source = f'dupe::{editor.name}')
 
     def rename_turtle(self, idx) -> None:
         key_logger.flush()
@@ -765,10 +765,12 @@ class ProjectEditor(tk.Frame):
                 continue
             break
 
+        log({ 'type': 'ide::rename-editor', 'from': editor.name, 'to': name })
+
         editor.name = name
         self.notebook.tab(idx, text = name)
 
-    def newturtle(self, *, base_name = 'sprite', value = None) -> Any:
+    def newturtle(self, *, base_name = 'sprite', value = None, source: str) -> Any:
         key_logger.flush()
 
         name_counter = 0
@@ -778,9 +780,13 @@ class ProjectEditor(tk.Frame):
             name = f'{base_name}{name_counter}'
 
         assert self.is_unique_name(name) and is_valid_ident(name) # sanity check
-        editor = TurtleEditor(self.notebook, name = name, value = value or ProjectEditor.DEFAULT_PROJECT['editors'][2]['value'])
+        value = value or ProjectEditor.DEFAULT_PROJECT['roles'][0]['editors'][2]['value']
+        editor = TurtleEditor(self.notebook, name = name, value = value)
         self.notebook.add(editor, text = name)
         self.editors.append(editor)
+
+        log({ 'type': 'ide::new-editor', 'editor': editor.name, 'content': value, 'source': source })
+
         return editor
 
     def get_full_script(self, *, is_export: bool = False) -> str:
