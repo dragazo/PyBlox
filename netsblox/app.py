@@ -2173,9 +2173,9 @@ class Logger:
                     if res.status_code < 200 or res.status_code >= 300:
                         raise RuntimeError(f'[response code {res.status_code}] > {res.content}')
                 except Exception as e:
-                    print(f'failed to contact remote logging server', e, file = sys.stderr)
+                    print(f'\nfailed to contact remote logging server', e, file = sys.stderr)
                 except:
-                    print(f'failed to contact remote logging server (unknown exception)', file = sys.stderr)
+                    print(f'\nfailed to contact remote logging server (unknown exception)', file = sys.stderr)
 
         self.queue_thread = threading.Thread(target = handle_queue)
         self.queue_thread.setDaemon(True)
