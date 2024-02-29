@@ -343,7 +343,7 @@ $service_instances
                 if 'Content-Type' in res.headers:
                     ty = res.headers['Content-Type']
                     if ty.startswith('image/'):
-                        return Image.open(_io.BytesIO(res.content))
+                        return Image.open(_io.BytesIO(res.content)).convert('RGBA')
                 return _json.loads(res.text)
             except:
                 return res.text # strings are returned unquoted, so they'll fail to parse as json

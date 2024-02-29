@@ -616,7 +616,7 @@ class Imports:
             image_lines.append('import gelidum as _gelidum')
             image_lines.append('class images:')
         for name, img in self.images.items():
-            image_lines.append(f'    {name} = netsblox.common.decode_image(\'{"<<<OMITTED>>>" if omit_media else common.encode_image(img)}\')')
+            image_lines.append(f'    {name} = netsblox.common.decode_image(\'{"<<<OMITTED>>>" if omit_media else common.encode_image(img)}\').convert(\'RGBA\')')
         if len(self.images) != 0:
             image_lines.append('images = images()')
             image_lines.append('_gelidum.freeze(images, on_freeze = \'inplace\')')

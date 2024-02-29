@@ -20,7 +20,7 @@ import netsblox.events as _events
 import netsblox.colors as _colors
 import netsblox.concurrency as _concurrency
 
-from typing import Any, Union, Tuple, Optional, List, Callable, Sequence
+from typing import Any, Union, Tuple, Optional, List, Callable, Sequence, Dict
 
 from PIL import Image, ImageTk, ImageDraw, ImageFont
 
@@ -613,8 +613,8 @@ def _apply_transforms(img: Optional[Image.Image], scale: float, rot: float) -> I
 
 class CostumeSet:
     def __init__(self):
-        self.__ordered = []
-        self.__unordered = {}
+        self.__ordered: List[str] = []
+        self.__unordered: Dict[str, Image.Image] = {}
 
     def clear(self):
         '''
@@ -638,14 +638,22 @@ class CostumeSet:
         self.__unordered[name] = value
         self.__ordered.append(name)
 
-    def lookup(self, value: Union[str, Image.Image, None]) -> Optional[Image.Image]:
+    def lookup(self, value: Union[int, str, Image.Image, None]) -> Optional[Image.Image]:
         '''
         Attempts to look up a costume from the collection of costumes.
-        The provided value should either be an image or the name of a costume that has previously been added to the collection.
+        The value can be specified as any of the following:
+
+         - The name of a previously-added costume (or empty string for no costume)
+         - The index of a previously-added costume
+         - An image, which is returned directly (i.e., no lookup needed)
+         - None, which is returned directly (i.e., no lookup needed) and represents no costume
         '''
 
         if value is None:
             return None
+
+        if isinstance(value, int):
+            return self.__unordered[self.__ordered[value]]
 
         if isinstance(value, str):
             if value == '':
@@ -657,7 +665,21 @@ class CostumeSet:
         if isinstance(value, Image.Image):
             return value
 
-        raise RuntimeError(f'costumes must be either an image or the name of a costume, got \'{type(value)}\'')
+        raise RuntimeError(f'costumes must be either a string, int, or image - instead got \'{type(value)}\'')
+
+    def index(self, value: Union[int, str, Image.Image, None], default: Optional[int] = None) -> Optional[int]:
+        '''
+        Attempts to get the index of provided costume (after lookup).
+        If the costume is not found, the default value is returned (or None if not specified).
+        '''
+        value = self.lookup(value)
+        for i, v in enumerate(self.__ordered):
+            if self.__unordered[v] is value:
+                return i
+        return default
+
+    def __len__(self) -> int:
+        return len(self.__ordered)
 
     def __iter__(self) -> Sequence[Image.Image]:
         return (self.__unordered[x] for x in self.__ordered)
@@ -699,20 +721,26 @@ class StageBase(_Ref):
     def costume(self) -> Union[None, Image.Image]:
         '''
         Get or set the current stage costume (background).
-        When setting the costume, the value should be either None, an image, or the name of a costume added to self.costumes.
+        The value can be specified as any of the following:
+
+         - The name of a previously-added costume (or empty string for no costume)
+         - The index of a previously-added costume
+         - An image, which is returned directly (i.e., no lookup needed)
+         - None, which is returned directly (i.e., no lookup needed) and represents no costume
 
         ```
         self.costume = None
         self.costume = img
-        self.costume = 'dog pic' # assuming this costume was already added
+        self.costume = 2         # assuming at least 3 costumes were already added
+        self.costume = 'dog pic' # assuming a costume with this name was already added
         ```
         '''
         return self.__costume
     @costume.setter
-    def costume(self, new_costume: Union[None, Image.Image, str]) -> None:
+    def costume(self, new_costume: Union[None, Image.Image, str, int]) -> None:
         new_costume = self.__costume_set.lookup(new_costume)
         if new_costume is not None:
-            new_costume = new_costume.convert('RGBA')
+            assert new_costume.mode == 'RGBA', f'unsupported image encoding: {new_costume.mode}'
 
         self.__costume = new_costume
         self.__proj.invalidate()
@@ -964,20 +992,26 @@ class TurtleBase(_Ref):
     def costume(self) -> Any:
         '''
         Get or set the sprite's costume (image).
-        When setting the costume, the value should be either None, an image, or the name of a costume added to self.costumes.
+        The value can be specified as any of the following:
+
+         - The name of a previously-added costume (or empty string for no costume)
+         - The index of a previously-added costume
+         - An image, which is returned directly (i.e., no lookup needed)
+         - None, which is returned directly (i.e., no lookup needed) and represents no costume
 
         ```
         self.costume = None
         self.costume = img
-        self.costume = 'dog pic' # assuming this costume was already added
+        self.costume = 2         # assuming at least 3 costumes were already added
+        self.costume = 'dog pic' # assuming a costume with this name was already added
         ```
         '''
         return self.__costume
     @costume.setter
-    def costume(self, new_costume: Image.Image) -> None:
+    def costume(self, new_costume: Union[None, Image.Image, str, int]) -> None:
         new_costume = self.__costume_set.lookup(new_costume)
         if new_costume is not None:
-            new_costume = new_costume.convert('RGBA')
+            assert new_costume.mode == 'RGBA', f'unsupported image encoding: {new_costume.mode}'
 
         self.__costume = new_costume
         self.__update_costume() # invalidates project internally
