@@ -341,7 +341,7 @@ def play_button():
 
         log({ 'type': 'exec::stop' })
 
-    code = transform.add_yields(content.project.get_full_script())
+    code = transform.add_yields(content.project.get_full_script(is_export = False, omit_media = False))
     _exec_process = subprocess.Popen([sys.executable, '-u'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
     _exec_process.stdin.write(code.encode('utf-8'))
     _exec_process.stdin.close()
@@ -605,7 +605,7 @@ class Imports:
 
         self.on_update = on_update
 
-    def batch_update(self) -> None:
+    def get_preamble_lines(self, *, is_export: bool, omit_media: bool) -> List[str]:
         import_lines = []
         for item in self.packages.values():
             if item['tkvar'].get():
@@ -616,21 +616,18 @@ class Imports:
             image_lines.append('import gelidum as _gelidum')
             image_lines.append('class images:')
         for name, img in self.images.items():
-            image_lines.append(f'    {name} = netsblox.common.decode_image(\'{common.encode_image(img)}\')')
+            image_lines.append(f'    {name} = netsblox.common.decode_image(\'{"<<<OMITTED>>>" if omit_media else common.encode_image(img)}\')')
         if len(self.images) != 0:
             image_lines.append('images = images()')
             image_lines.append('_gelidum.freeze(images, on_freeze = \'inplace\')')
 
         needs_sep = len(import_lines) != 0 and len(image_lines) != 0
-        lines = [*import_lines, *([''] if needs_sep else []), *image_lines]
+        return [*import_lines, *([''] if needs_sep else []), *image_lines]
 
-        if len(lines) == 0:
-            GlobalEditor.prefix = GlobalEditor.BASE_PREFIX
-            GlobalEditor.prefix_lines = GlobalEditor.BASE_PREFIX_LINES
-        else:
-            import_str = '\n'.join(lines)
-            GlobalEditor.prefix = f'{GlobalEditor.BASE_PREFIX}{import_str}\n\n'
-            GlobalEditor.prefix_lines = GlobalEditor.BASE_PREFIX_LINES + len(lines) + 1
+    def batch_update(self) -> None:
+        lines = self.get_preamble_lines(is_export = False, omit_media = True)
+
+        GlobalEditor.prefix_lines = GlobalEditor.BASE_PREFIX_LINES if len(lines) == 0 else GlobalEditor.BASE_PREFIX_LINES + len(lines) + 1
 
         if self.on_update is not None:
             self.on_update()
@@ -789,10 +786,10 @@ class ProjectEditor(tk.Frame):
 
         return editor
 
-    def get_full_script(self, *, is_export: bool = False) -> str:
+    def get_full_script(self, *, is_export: bool, omit_media: bool) -> str:
         scripts = []
         for editor in self.editors:
-            scripts.append(editor.get_script(is_export = is_export))
+            scripts.append(editor.get_script(is_export = is_export, omit_media = omit_media))
             scripts.append('\n\n')
         scripts.append('start_project()')
         return ''.join(scripts)
@@ -1318,8 +1315,8 @@ class CodeEditor(ScrolledText):
     def line_count(self):
         if self.__line_count:
             return self.__line_count
-        content = self.get_script() # defined by base classes
-        self.__line_count = content.count('\n') + 1
+        code = self.get_script(is_export = False, omit_media = True) # defined by base classes
+        self.__line_count = code.count('\n') + 1
         return self.__line_count
 
     def show_full_help(self):
@@ -1328,7 +1325,8 @@ class CodeEditor(ScrolledText):
         if self.text.compare('end-1c', '==', '1.0'):
             return # if our text is empty, don't do anything
 
-        script = jedi.Script(content.project.get_full_script())
+        code = content.project.get_full_script(is_export = False, omit_media = True)
+        script = jedi.Script(code)
         self.update_highlighting(script)
 
         should_show = (
@@ -1399,7 +1397,8 @@ class CodeEditor(ScrolledText):
         if not force_enabled or content is None or content.project is None:
             return
         if script is None:
-            script = jedi.Script(content.project.get_full_script())
+            code = content.project.get_full_script(is_export = False, omit_media = True)
+            script = jedi.Script(code)
 
         edit_line, edit_col = self.total_pos()
         completions = script.complete(edit_line, edit_col)
@@ -1617,7 +1616,6 @@ def _yield_(x):
 '''.lstrip()
     BASE_PREFIX_LINES = 16
 
-    prefix = BASE_PREFIX
     prefix_lines = BASE_PREFIX_LINES
     blocks = []
 
@@ -1625,13 +1623,16 @@ def _yield_(x):
         super().__init__(parent, name = 'global', blocks = GlobalEditor.blocks)
         self.set_text(value)
 
-    def get_script(self, *, is_export: bool = False):
+    def get_script(self, *, is_export: bool, omit_media: bool):
         client_type = {
             'editor': 'netsblox.Client',
             'dev': 'netsblox.dev.Client',
         }[content.project.client_type]
 
-        pre = GlobalEditor.prefix
+        import_lines = content.project.imports.get_preamble_lines(is_export = is_export, omit_media = omit_media)
+        import_lines_str = '\n'.join(import_lines)
+
+        pre = GlobalEditor.BASE_PREFIX if len(import_lines) == 0 else f'{GlobalEditor.BASE_PREFIX}{import_lines_str}\n\n'
         pre = pre.replace('$client_type', client_type)
         pre = pre.replace('$project_name', main_menu.project_name)
         pre = pre.replace('$project_id', 'None' if is_export else f'\'{content.project.project_id}\'')
@@ -1656,7 +1657,7 @@ class StageEditor(CodeEditor):
         super().__init__(parent, name = name, blocks = StageEditor.blocks, column_offset = 4) # we autoindent the content, so 4 offset for error messages
         self.set_text(value)
 
-    def get_script(self, *, is_export: bool = False):
+    def get_script(self, *, is_export: bool, omit_media: bool):
         raw = self.text.get('1.0', 'end-1c')
         return f'@netsblox.turtle.stage\nclass {self.name}(netsblox.turtle.StageBase):\n    pass\n{indent(raw)}\n{self.name} = {self.name}()'
 
@@ -1668,7 +1669,7 @@ class TurtleEditor(CodeEditor):
         super().__init__(parent, name = name, blocks = TurtleEditor.blocks, column_offset = 4) # we autoindent the content, so 4 offset for error messages
         self.set_text(value)
 
-    def get_script(self, *, is_export: bool = False):
+    def get_script(self, *, is_export: bool, omit_media: bool):
         raw = self.text.get('1.0', 'end-1c')
         return f'@netsblox.turtle.turtle\nclass {self.name}(netsblox.turtle.TurtleBase):\n    pass\n{indent(raw)}\n{self.name} = {self.name}()'
 
@@ -1933,7 +1934,7 @@ class MainMenu(tk.Menu):
         p = filedialog.asksaveasfilename(filetypes = PYTHON_FILETYPES, defaultextension = '.py')
         if type(p) is str and p: # despite the type hints, above returns empty tuple on cancel
             try:
-                res = transform.add_yields(content.project.get_full_script(is_export = True))
+                res = transform.add_yields(content.project.get_full_script(is_export = True, omit_media = False))
                 with open(p, 'w') as f:
                     f.write(res)
 
@@ -2010,8 +2011,16 @@ class MainMenu(tk.Menu):
 
         img = None
         try:
+            # make sure we can load the image
+            img = Image.open(p)
+
+            # make sure it's not enormous - otherwise shrink it down to a reasonable size
+            scale = math.sqrt((720 * 480) / (img.width * img.height))
+            if scale < 1:
+                img = img.resize((round(img.width * scale), round(img.height * scale)), common.get_antialias_mode())
+
             # make sure it can round-trip to b64 (also, this ensures any import format is converted to png)
-            img = common.decode_image(common.encode_image(Image.open(p)))
+            img = common.decode_image(common.encode_image(img))
         except Exception as e:
             messagebox.showerror(title = 'Failed to load image', message = str(e))
             return
@@ -2047,8 +2056,8 @@ class MainMenu(tk.Menu):
 
             def get_deleter(name):
                 def deleter():
-                    title = f'Delete sprite {name}'
-                    msg = f'Are you sure you would like to delete sprite {name}? This operation cannot be undone.'
+                    title = f'Delete image {name}'
+                    msg = f'Are you sure you would like to delete image {name}? This operation cannot be undone.'
                     if messagebox.askyesno(title, msg, icon = 'warning', default = 'no'):
                         del content.project.imports.images[name]
                         content.project.imports.batch_update()

@@ -20,7 +20,7 @@ import netsblox.events as _events
 import netsblox.colors as _colors
 import netsblox.concurrency as _concurrency
 
-from typing import Any, Union, Tuple, Optional, List, Callable
+from typing import Any, Union, Tuple, Optional, List, Callable, Sequence
 
 from PIL import Image, ImageTk, ImageDraw, ImageFont
 
@@ -611,6 +611,57 @@ def _apply_transforms(img: Optional[Image.Image], scale: float, rot: float) -> I
     img = img.resize((round(w * scale), round(h * scale)))
     return img.rotate((0.25 - rot) * 360, expand = True, resample = Image.BICUBIC)
 
+class CostumeSet:
+    def __init__(self):
+        self.__ordered = []
+        self.__unordered = {}
+
+    def clear(self):
+        '''
+        Removes any defined costumes, effectively starting from scratch.
+        '''
+        self.__ordered.clear()
+        self.__unordered.clear()
+
+    def add(self, name: str, value: Image.Image):
+        '''
+        Adds a single new costume to the collection of costumes.
+        '''
+
+        if not isinstance(name, str):
+            raise RuntimeError(f'costume name must be a string, got {type(name)}')
+        if not isinstance(value, Image.Image):
+            raise RuntimeError(f'costume value must be an image, got {type(value)}')
+        if name in self.__unordered:
+            raise RuntimeError(f'a costume with name \'{name}\' already exists')
+
+        self.__unordered[name] = value
+        self.__ordered.append(name)
+
+    def lookup(self, value: Union[str, Image.Image, None]) -> Optional[Image.Image]:
+        '''
+        Attempts to look up a costume from the collection of costumes.
+        The provided value should either be an image or the name of a costume that has previously been added to the collection.
+        '''
+
+        if value is None:
+            return None
+
+        if isinstance(value, str):
+            if value == '':
+                return None
+            if value in self.__unordered:
+                return self.__unordered[value]
+            raise RuntimeError(f'unknown costume \'{value}\'')
+
+        if isinstance(value, Image.Image):
+            return value
+
+        raise RuntimeError(f'costumes must be either an image or the name of a costume, got \'{type(value)}\'')
+
+    def __iter__(self) -> Sequence[Image.Image]:
+        return (self.__unordered[x] for x in self.__ordered)
+
 class _Ref:
     def __copy__(self):
         return self
@@ -638,6 +689,7 @@ class StageBase(_Ref):
         except:
             self.__initialized = True
 
+        self.__costume_set = CostumeSet()
         self.__costume = None
 
         self.__proj = _get_proj_handle()
@@ -647,21 +699,30 @@ class StageBase(_Ref):
     def costume(self) -> Union[None, Image.Image]:
         '''
         Get or set the current stage costume (background).
+        When setting the costume, the value should be either None, an image, or the name of a costume added to self.costumes.
 
         ```
+        self.costume = None
         self.costume = img
+        self.costume = 'dog pic' # assuming this costume was already added
         ```
         '''
         return self.__costume
     @costume.setter
-    def costume(self, new_costume: Union[None, Image.Image]) -> None:
+    def costume(self, new_costume: Union[None, Image.Image, str]) -> None:
+        new_costume = self.__costume_set.lookup(new_costume)
         if new_costume is not None:
-            if not isinstance(new_costume, Image.Image):
-                raise TypeError(f'attempt to set costume to a non-image type: {type(new_costume)}')
             new_costume = new_costume.convert('RGBA')
 
         self.__costume = new_costume
         self.__proj.invalidate()
+
+    @property
+    def costumes(self) -> CostumeSet:
+        '''
+        The collection of costumes associated with the stage.
+        '''
+        return self.__costume_set
 
     @property
     def size(self) -> Tuple[int, int]:
@@ -830,6 +891,7 @@ class TurtleBase(_Ref):
         self.__degrees = 360.0
         self.__pen_size = 1.0
         self.__pen_color = (0, 0, 0) # [0,255] rgb (defaults to black)
+        self.__costume_set = CostumeSet()
         self.__costume = None
         self.__display_image = None # managed by costume transforms logic
         self.__say_img = None
@@ -901,22 +963,31 @@ class TurtleBase(_Ref):
     @property
     def costume(self) -> Any:
         '''
-        Get or set the current turtle costume.
+        Get or set the sprite's costume (image).
+        When setting the costume, the value should be either None, an image, or the name of a costume added to self.costumes.
 
         ```
+        self.costume = None
         self.costume = img
+        self.costume = 'dog pic' # assuming this costume was already added
         ```
         '''
         return self.__costume
     @costume.setter
     def costume(self, new_costume: Image.Image) -> None:
+        new_costume = self.__costume_set.lookup(new_costume)
         if new_costume is not None:
-            if not isinstance(new_costume, Image.Image):
-                raise TypeError(f'attempt to set costume to a non-image type: {type(new_costume)}')
             new_costume = new_costume.convert('RGBA')
 
         self.__costume = new_costume
         self.__update_costume() # invalidates project internally
+
+    @property
+    def costumes(self) -> CostumeSet:
+        '''
+        The collection of costumes associated with this sprite.
+        '''
+        return self.__costume_set
 
     @property
     def scale(self) -> float:
