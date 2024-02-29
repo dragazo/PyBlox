@@ -1225,6 +1225,7 @@ class ScrolledText(tk.Frame):
     def set_text(self, txt):
         self.text.delete('1.0', 'end')
         self.text.insert('1.0', txt)
+        self.text.edit_reset() # wipe undo history
 
 class CodeEditor(ScrolledText):
     def __init__(self, parent, *, name: str, wrap = False, column_offset = 0, **kwargs):
