@@ -260,6 +260,14 @@ def clean_docstring(content: str) -> str:
     res = re.sub(INLINE_CODE_REGEX, r'\1', res)
     return res
 
+def clean_logging_snapshot(super_proj):
+    super_proj = copy.deepcopy(super_proj)
+
+    for role in super_proj.get('roles', [super_proj]):
+        del role['images']
+
+    return super_proj
+
 _exec_monitor_running = False
 def start_exec_monitor():
     global _exec_monitor_running, _exec_process
@@ -842,13 +850,11 @@ class ProjectEditor(tk.Frame):
 
         return res
     def load(self, *, super_proj: Optional[dict] = None, active_role: Optional[int] = None, source: str) -> None:
-        if super_proj is None:
-            roles = self.roles
-        else:
-            super_proj = copy.deepcopy(super_proj)
-            roles = super_proj.get('roles', [super_proj]) # default is for backward compat
+        super_proj = copy.deepcopy(super_proj)
 
-        client_type = super_proj.get('client_type', 'editor')
+        roles = self.roles if super_proj is None else super_proj.get('roles', [super_proj])
+
+        client_type = super_proj.get('client_type', None) if super_proj is not None else None
         if client_type not in ['editor', 'dev']:
             client_type = 'editor'
 
@@ -934,7 +940,11 @@ class ProjectEditor(tk.Frame):
                     break
             self.notebook.select(default_tab_idx)
 
-        log({ 'type': 'ide::open', 'project': super_proj, 'role': active_role, 'source': source })
+        if super_proj is not None:
+            snapshot = clean_logging_snapshot(super_proj)
+            log({ 'type': 'ide::open', 'project': snapshot, 'role': roles[active_role]['name'], 'source': source })
+        else:
+            log({ 'type': 'ide::reopen', 'role': roles[active_role]['name'], 'source': source })
 
 class ContextMenu(tk.Menu):
     def __init__(self, parent, *, on_show = None):
