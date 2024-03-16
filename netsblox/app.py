@@ -526,7 +526,8 @@ class BlocksList(tk.Frame):
 
         self.text.configure(state = tk.DISABLED)
 
-    def link(self, blocks, target: 'ScrolledText') -> None:
+    def link(self, blocks_type: str, target: 'ScrolledText') -> None:
+        assert isinstance(blocks_type, str)
         assert isinstance(target, ScrolledText)
         orig_bcolor = target.text.cget('background')
 
@@ -584,7 +585,11 @@ class BlocksList(tk.Frame):
             self.text.delete('1.0', 'end')
             self.imgs.clear()
 
-            for block in blocks:
+            for block in content.project.blocks:
+                replace = block[blocks_type]
+                if not replace:
+                    continue
+
                 img = common.load_tkimage(block['url'], scale = block['scale'])
                 label = tk.Label(self.text, image = img, bg = COLOR_INFO['text-background-disabled'])
 
@@ -592,7 +597,7 @@ class BlocksList(tk.Frame):
                 self.text.insert('end', '\n')
                 self.imgs.append(img)
 
-                make_dnd_manager(label, block['replace'])
+                make_dnd_manager(label, replace)
         finally:
             self.text.config(state = tk.DISABLED)
 
@@ -653,6 +658,7 @@ class ProjectEditor(tk.Frame):
 
         self.client_type = 'editor' # must be one of: editor, dev
 
+        self.blocks = []
         self.block_sources = []
 
         self.editors: List[CodeEditor] = []
@@ -822,11 +828,15 @@ class ProjectEditor(tk.Frame):
             role_res['name'] = role['name']
             role_res['stage_size'] = role['stage_size']
             role_res['block_sources'] = self.block_sources[:]
-            role_res['blocks'] = {
-                'global': [x.copy() for x in GlobalEditor.blocks if x['source'] == None],
-                'stage':  [x.copy() for x in  StageEditor.blocks if x['source'] == None],
-                'turtle': [x.copy() for x in TurtleEditor.blocks if x['source'] == None],
-            }
+            role_res['blocks'] = [
+                {
+                    'url': block['url'],
+                    'scale': block['scale'],
+                    'global': block['global'],
+                    'stage': block['stage'],
+                    'turtle': block['turtle'],
+                } for block in self.blocks if block['source'] == None and (block['global'] or block['stage'] or block['turtle'])
+            ]
 
             role_res['imports'] = []
             for pkg, item in self.imports.packages.items():
@@ -872,20 +882,41 @@ class ProjectEditor(tk.Frame):
             if 'stage_size' not in role:
                 role['stage_size'] = (1080, 720)
 
-        new_blocks = { 'global': [], 'stage': [], 'turtle': [] }
+        new_blocks = []
         new_sources = proj.get('block_sources', [])
 
         def add_blocks(blocks, *, source):
-            for k, v in blocks.items():
-                target = new_blocks[k]
-                for block in v:
-                    x = block.copy()
-                    x['source'] = source
-                    target.append(x)
+            if isinstance(blocks, dict): # legacy support
+                for k, v in blocks.items():
+                    for block in v:
+                        new_blocks.append({
+                            'uuid': str(uuid.uuid4()),
+                            'source': source,
+
+                            'url': block['url'],
+                            'scale': block['scale'],
+                            'global': block['replace'] if k == 'global' else '',
+                            'stage': block['replace'] if k == 'stage' else '',
+                            'turtle': block['replace'] if k == 'turtle' else '',
+                        })
+            elif isinstance(blocks, list):
+                for block in blocks:
+                    new_blocks.append({
+                        'uuid': str(uuid.uuid4()),
+                        'source': source,
+
+                        'url': block['url'],
+                        'scale': block.get('scale', 1),
+                        'global': block.get('global', ''),
+                        'stage': block.get('stage', ''),
+                        'turtle': block.get('turtle', ''),
+                    })
+            else:
+                raise RuntimeError(f'unknown blocks type: {type(blocks)}')
 
         for src in new_sources:
             add_blocks(json.loads(common.load_text(src)), source = src)
-        add_blocks(proj.get('blocks', {}), source = None)
+        add_blocks(proj.get('blocks', []), source = None)
         add_blocks({ # legacy support
             'global': proj.get('global_blocks', []),
             'stage': proj.get('stage_blocks', []),
@@ -897,9 +928,7 @@ class ProjectEditor(tk.Frame):
         self.roles = roles
         self.active_role = active_role
 
-        GlobalEditor.blocks = new_blocks['global']
-        StageEditor.blocks = new_blocks['stage']
-        TurtleEditor.blocks = new_blocks['turtle']
+        self.blocks = new_blocks
         self.block_sources = new_sources
 
         for i in range(len(self.editors) - 1, -1, -1):
@@ -1046,14 +1075,14 @@ class ChangedText(tk.Text):
         return result # return what the actual widget returned
 
 class ScrolledText(tk.Frame):
-    def __init__(self, parent, *, name: str, wrap = True, readonly = False, linenumbers = False, blocks = [], **kwargs):
+    def __init__(self, parent, *, name: str, wrap = True, readonly = False, linenumbers = False, blocks_type = None, **kwargs):
         super().__init__(parent)
         undo_args = { 'undo': True, 'maxundo': -1, 'autoseparators': True }
 
         self.name = name
+        self.blocks_type = blocks_type
 
         self.font = tkfont.nametofont('TkFixedFont')
-        self.blocks = blocks
 
         self.scrollbar = ttk.Scrollbar(self)
         self.text = ChangedText(self, font = self.font, yscrollcommand = self.scrollbar.set, wrap = tk.WORD if wrap else tk.NONE, **({} if readonly else undo_args), **kwargs)
@@ -1087,7 +1116,6 @@ class ScrolledText(tk.Frame):
         self.text.bind('<Shift-Home>', lambda e: on_home(do_select = True))
 
         self.linenumbers = None # default to none - conditionally created
-        self.blocks = blocks
 
         if readonly:
             # make text readonly be ignoring all (default) keystrokes
@@ -1230,7 +1258,7 @@ class ScrolledText(tk.Frame):
             self.linenumbers.redraw()
 
         if cause == 'tab-change':
-            content.blocks.link(self.blocks, self)
+            content.blocks.link(self.blocks_type, self)
 
     def set_text(self, txt):
         self.text.delete('1.0', 'end')
@@ -1628,10 +1656,9 @@ def _yield_(x):
     BASE_PREFIX_LINES = 16
 
     prefix_lines = BASE_PREFIX_LINES
-    blocks = []
 
     def __init__(self, parent, *, value: str):
-        super().__init__(parent, name = 'global', blocks = GlobalEditor.blocks)
+        super().__init__(parent, name = 'global', blocks_type = 'global')
         self.set_text(value)
 
     def get_script(self, *, is_export: bool, omit_media: bool):
@@ -1662,10 +1689,9 @@ def _yield_(x):
 
 class StageEditor(CodeEditor):
     prefix_lines = 3
-    blocks = []
 
     def __init__(self, parent, *, name: str, value: str):
-        super().__init__(parent, name = name, blocks = StageEditor.blocks, column_offset = 4) # we autoindent the content, so 4 offset for error messages
+        super().__init__(parent, name = name, blocks_type = 'stage', column_offset = 4) # we autoindent the content, so 4 offset for error messages
         self.set_text(value)
 
     def get_script(self, *, is_export: bool, omit_media: bool):
@@ -1674,10 +1700,9 @@ class StageEditor(CodeEditor):
 
 class TurtleEditor(CodeEditor):
     prefix_lines = 3
-    blocks = []
 
     def __init__(self, parent, *, name: str, value: str):
-        super().__init__(parent, name = name, blocks = TurtleEditor.blocks, column_offset = 4) # we autoindent the content, so 4 offset for error messages
+        super().__init__(parent, name = name, blocks_type = 'turtle', column_offset = 4) # we autoindent the content, so 4 offset for error messages
         self.set_text(value)
 
     def get_script(self, *, is_export: bool, omit_media: bool):
@@ -2015,25 +2040,25 @@ class MainMenu(tk.Menu):
         res = messagebox.askyesnocancel(title, msg)
         return res == False or (res == True and self.save(save_dict))
 
-    def import_image(self):
+    def load_image_common(self, max_pixels: Optional[int]) -> Optional[Image.Image]:
         p = filedialog.askopenfilename(filetypes = IMAGE_FILETYPES)
         if type(p) is not str or not p:
-            return
+            return None
 
-        img = None
         try:
-            # make sure we can load the image
-            img = Image.open(p)
-
-            # make sure it's not enormous - otherwise shrink it down to a reasonable size
-            scale = math.sqrt((720 * 480) / (img.width * img.height))
-            if scale < 1:
-                img = img.resize((round(img.width * scale), round(img.height * scale)), common.get_antialias_mode())
-
-            # make sure it can round-trip to b64 (also, this ensures any import format is converted to png)
-            img = common.decode_image(common.encode_image(img))
+            img = Image.open(p) # make sure we can load the image
+            if max_pixels is not None:
+                scale = math.sqrt(max_pixels / (img.width * img.height)) # make sure it's not enormous - otherwise shrink it down to a reasonable size
+                if scale < 1:
+                    img = img.resize((round(img.width * scale), round(img.height * scale)), common.get_antialias_mode())
+            return common.decode_image(common.encode_image(img)) # make sure it can round-trip to b64 (also, this ensures any import format is converted to png)
         except Exception as e:
             messagebox.showerror(title = 'Failed to load image', message = str(e))
+            return None
+
+    def import_image(self):
+        img = self.load_image_common(720 * 480)
+        if img is None:
             return
 
         name = None

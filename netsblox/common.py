@@ -88,6 +88,8 @@ def load_image(uri: str) -> _Image.Image:
             return _img_cache[uri]
         elif protocol == 'netsblox':
             img = _Image.open(f'{_NETSBLOX_PY_PATH}/{uri[11:]}')
+        elif protocol == 'base64':
+            return decode_image(uri[9:]) # return so we don't cache local data (also the uri is long)
         elif protocol in ['https', 'http']:
             res = _requests.get(uri)
             if res.status_code == 200:
