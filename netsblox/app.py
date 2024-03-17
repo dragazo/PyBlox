@@ -2100,13 +2100,18 @@ class MainMenu(tk.Menu):
             return
         block = blocks[0]
 
+        source = content.project.blocks[block]['source']
+        if source is not None:
+            messagebox.showerror(title = 'Cannot Edit Readonly Block', message = f'This block is readonly due to coming from an external block source:\n{source}')
+            return
+
         prompt = tk.Toplevel(root)
         prompt.title('Edit Block')
         prompt.geometry('600x600')
         prompt.transient(root)
         prompt.grab_set()
 
-        info = tk.Label(prompt, text = 'Enter replacement text values (empty to hide the block)')
+        info = tk.Label(prompt, text = 'Replacement text values (empty to delete it from a palette)')
         info.pack(side = tk.TOP)
 
         editors = {}
