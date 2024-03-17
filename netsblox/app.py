@@ -218,7 +218,7 @@ otherwise the user's input is returned directly (which may be the empty string).
 }
 PROP_DOC_REMAPS = {}
 
-for T in [netsblox.turtle.StageBase, netsblox.turtle.TurtleBase]:
+for T in [netsblox.graphical.StageBase, netsblox.graphical.SpriteBase]:
     for k in dir(T):
         if k.startswith('_') or k.startswith('_'):
             continue
@@ -227,7 +227,7 @@ for T in [netsblox.turtle.StageBase, netsblox.turtle.TurtleBase]:
         if type(field) is property:
             doc = normalize_strip(field.__doc__)
             PROP_DOC_REMAPS[k] = doc
-            FULL_NAME_DOC_REMAPS[f'netsblox.turtle.{T.__name__}.{k}'] = doc
+            FULL_NAME_DOC_REMAPS[f'netsblox.graphical.{T.__name__}.{k}'] = doc
 
 INLINE_CODE_REGEX = re.compile(r'`([^`]+)`')
 def clean_docstring(content: str) -> str:
@@ -517,8 +517,20 @@ class BlocksList(tk.Frame):
         self.scrollbar.pack(side = tk.RIGHT, fill = tk.Y)
         self.text.pack(side = tk.LEFT, fill = tk.BOTH, expand = True)
 
+        self.main_ctx_menu = ContextMenu(self.text)
+        self.main_ctx_menu.add_command(label = 'Create Block', command = lambda: main_menu.create_block())
+
+        self.block_ctx_target = None
+        self.block_ctx_menu = ContextMenu(self.text, auto_bind = False)
+        self.block_ctx_menu.add_command(label = 'Create Block', command = lambda: main_menu.create_block())
+        self.block_ctx_menu.add_command(label = 'Edit Block', command = lambda: main_menu.edit_block(self.block_ctx_target))
+
         # make sure user can't select anything with the mouse (would look weird)
-        self.text.bind('<Button-1>', lambda e: 'break')
+        def hide_main_ctx_menu(e):
+            self.main_ctx_menu.hide()
+            self.focus()
+            return 'break'
+        self.text.bind('<Button-1>', hide_main_ctx_menu)
         self.text.bind('<B1-Motion>', lambda e: 'break')
         self.text.configure(cursor = 'arrow')
 
@@ -590,8 +602,16 @@ class BlocksList(tk.Frame):
                 if not replace:
                     continue
 
+                id = block['uuid']
                 img = common.load_tkimage(block['url'], scale = block['scale'])
                 label = tk.Label(self.text, image = img, bg = COLOR_INFO['text-background-disabled'])
+
+                def make_block_menu_shower(id):
+                    def show_block_menu(e):
+                        self.block_ctx_target = id
+                        self.block_ctx_menu.show(e.x_root, e.y_root)
+                    return show_block_menu
+                label.bind(f'<{SYS_INFO["right-click"]}>', make_block_menu_shower(id))
 
                 self.text.window_create('end', window = label)
                 self.text.insert('end', '\n')
@@ -685,9 +705,9 @@ class ProjectEditor(tk.Frame):
             self.ctx_tab_idx = idx
             e_idx = idx if idx is not None else -1
 
-            turtle_option_state = tk.NORMAL if e_idx >= 2 else tk.DISABLED
+            sprite_option_state = tk.NORMAL if e_idx >= 2 else tk.DISABLED
             for key in ['dupe', 'rename', 'delete']:
-                self.ctx_menu.entryconfigure(self.ctx_menu_entries[key], state = turtle_option_state)
+                self.ctx_menu.entryconfigure(self.ctx_menu_entries[key], state = sprite_option_state)
 
             return idx is not None
 
@@ -698,23 +718,22 @@ class ProjectEditor(tk.Frame):
             idx = len(self.ctx_menu_entries)
             self.ctx_menu_entries[id] = idx
 
-        add_command('new-turtle', label = 'New Sprite', command = lambda: self.newturtle(source = 'new'))
-        add_command('dupe', label = 'Copy Sprite', command = lambda: self.dupe_turtle(self.ctx_tab_idx))
-        add_command('rename', label = 'Rename', command = lambda: self.rename_turtle(self.ctx_tab_idx))
+        add_command('new-sprite', label = 'New Sprite', command = lambda: self.new_sprite(source = 'new'))
+        add_command('dupe', label = 'Copy Sprite', command = lambda: self.dupe_sprite(self.ctx_tab_idx))
+        add_command('rename', label = 'Rename', command = lambda: self.rename_sprite(self.ctx_tab_idx))
         add_command('delete', label = 'Delete', command = lambda: self.delete_tab(self.ctx_tab_idx))
 
-        self.notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
+        self.notebook.bind('<<NotebookTabChanged>>', lambda e: self.on_tab_change())
 
-    def on_tab_change(self, e = None):
+    def on_tab_change(self):
         key_logger.flush()
 
         for editor in self.editors:
             editor.hide_suggestion()
-        if e is None: return
 
         tab = None
         try:
-            tab = e.widget.tab('current')['text']
+            tab = self.notebook.tab('current')['text']
         except:
             return
 
@@ -728,8 +747,8 @@ class ProjectEditor(tk.Frame):
         key_logger.flush()
 
         editor = self.editors[idx]
-        if not isinstance(editor, TurtleEditor):
-            return # only turtle editors can be deleted
+        if not isinstance(editor, SpriteEditor):
+            return # only sprite editors can be deleted
 
         title = f'Delete {editor.name}'
         msg = f'Are you sure you would like to delete {editor.name}? This operation cannot be undone.'
@@ -745,21 +764,21 @@ class ProjectEditor(tk.Frame):
     def is_unique_name(self, name: str) -> bool:
         return not any(x.name == name for x in self.editors)
 
-    def dupe_turtle(self, idx) -> Any:
+    def dupe_sprite(self, idx) -> Any:
         key_logger.flush()
 
         editor = self.editors[idx]
-        if not isinstance(editor, TurtleEditor):
-            return # only turtle editors can be duped
+        if not isinstance(editor, SpriteEditor):
+            return # only sprite editors can be duped
 
-        return self.newturtle(base_name = f'{editor.name}_copy', value = editor.text.get('1.0', 'end-1c'), source = f'dupe::{editor.name}')
+        return self.new_sprite(base_name = f'{editor.name}_copy', value = editor.text.get('1.0', 'end-1c'), source = f'dupe::{editor.name}')
 
-    def rename_turtle(self, idx) -> None:
+    def rename_sprite(self, idx) -> None:
         key_logger.flush()
 
         editor = self.editors[idx]
-        if not isinstance(editor, TurtleEditor):
-            return # only turtle editors can be renamed
+        if not isinstance(editor, SpriteEditor):
+            return # only sprite editors can be renamed
 
         name = None
         while True:
@@ -781,7 +800,7 @@ class ProjectEditor(tk.Frame):
         editor.name = name
         self.notebook.tab(idx, text = name)
 
-    def newturtle(self, *, base_name = 'sprite', value = None, source: str) -> Any:
+    def new_sprite(self, *, base_name = 'sprite', value = None, source: str) -> Any:
         key_logger.flush()
 
         name_counter = 0
@@ -792,7 +811,7 @@ class ProjectEditor(tk.Frame):
 
         assert self.is_unique_name(name) and is_valid_ident(name) # sanity check
         value = value or ProjectEditor.DEFAULT_PROJECT['roles'][0]['editors'][2]['value']
-        editor = TurtleEditor(self.notebook, name = name, value = value)
+        editor = SpriteEditor(self.notebook, name = name, value = value)
         self.notebook.add(editor, text = name)
         self.editors.append(editor)
 
@@ -834,8 +853,8 @@ class ProjectEditor(tk.Frame):
                     'scale': block['scale'],
                     'global': block['global'],
                     'stage': block['stage'],
-                    'turtle': block['turtle'],
-                } for block in self.blocks if block['source'] == None and (block['global'] or block['stage'] or block['turtle'])
+                    'sprite': block['sprite'],
+                } for block in self.blocks if block['source'] == None and (block['global'] or block['stage'] or block['sprite'])
             ]
 
             role_res['imports'] = []
@@ -848,7 +867,7 @@ class ProjectEditor(tk.Frame):
                 ty = None
                 if isinstance(editor, GlobalEditor): ty = 'global'
                 elif isinstance(editor, StageEditor): ty = 'stage'
-                elif isinstance(editor, TurtleEditor): ty = 'turtle'
+                elif isinstance(editor, SpriteEditor): ty = 'sprite'
                 else: raise Exception(f'unknown editor type: {type(editor)}')
                 role_res['editors'].append({
                     'type': ty,
@@ -897,7 +916,7 @@ class ProjectEditor(tk.Frame):
                             'scale': block['scale'],
                             'global': block['replace'] if k == 'global' else '',
                             'stage': block['replace'] if k == 'stage' else '',
-                            'turtle': block['replace'] if k == 'turtle' else '',
+                            'sprite': block['replace'] if k == 'sprite' or k == 'turtle' else '',
                         })
             elif isinstance(blocks, list):
                 for block in blocks:
@@ -909,7 +928,7 @@ class ProjectEditor(tk.Frame):
                         'scale': block.get('scale', 1),
                         'global': block.get('global', ''),
                         'stage': block.get('stage', ''),
-                        'turtle': block.get('turtle', ''),
+                        'sprite': block.get('sprite', '') or block.get('turtle', ''),
                     })
             else:
                 raise RuntimeError(f'unknown blocks type: {type(blocks)}')
@@ -920,7 +939,7 @@ class ProjectEditor(tk.Frame):
         add_blocks({ # legacy support
             'global': proj.get('global_blocks', []),
             'stage': proj.get('stage_blocks', []),
-            'turtle': proj.get('turtle_blocks', []),
+            'sprite': proj.get('turtle_blocks', []),
         }, source = None)
 
         self.client_type = client_type
@@ -944,7 +963,7 @@ class ProjectEditor(tk.Frame):
             editor = None
             if ty == 'global': editor = GlobalEditor(self.notebook, value = value)
             elif ty == 'stage': editor = StageEditor(self.notebook, name = name, value = value)
-            elif ty == 'turtle': editor = TurtleEditor(self.notebook, name = name, value = value)
+            elif ty == 'sprite' or ty == 'turtle': editor = SpriteEditor(self.notebook, name = name, value = value)
             else: raise Exception(f'unknown editor type: {ty}')
 
             self.notebook.add(editor, text = name)
@@ -962,9 +981,9 @@ class ProjectEditor(tk.Frame):
         self.imports.batch_update()
 
         if len(self.editors) > 0:
-            default_tab_idx = len(self.editors) - 1 # default to stage (last tab) if no turtle editors
+            default_tab_idx = len(self.editors) - 1 # default to stage (last tab) if no sprite editors
             for i, editor in enumerate(self.editors):
-                if isinstance(editor, TurtleEditor):
+                if isinstance(editor, SpriteEditor):
                     default_tab_idx = i
                     break
             self.notebook.select(default_tab_idx)
@@ -976,9 +995,10 @@ class ProjectEditor(tk.Frame):
             log({ 'type': 'ide::reopen', 'role': roles[active_role]['name'], 'source': source })
 
 class ContextMenu(tk.Menu):
-    def __init__(self, parent, *, on_show = None):
+    def __init__(self, parent, *, on_show = None, auto_bind = True):
         super().__init__(parent, tearoff = False)
-        parent.bind(f'<{SYS_INFO["right-click"]}>', lambda e: self.show(e.x_root, e.y_root))
+        if auto_bind:
+            parent.bind(f'<{SYS_INFO["right-click"]}>', lambda e: self.show(e.x_root, e.y_root))
         self.bind('<FocusOut>', lambda e: self.hide())
         self.visible = False
         self.on_show = on_show
@@ -1310,7 +1330,7 @@ class CodeEditor(ScrolledText):
             cdg = colorizer.ColorDelegator()
 
             props = set()
-            for T in [netsblox.turtle.TurtleBase, netsblox.turtle.StageBase]:
+            for T in [netsblox.graphical.SpriteBase, netsblox.graphical.StageBase]:
                 for key in dir(T):
                     if not key.startswith('_') and not key.endswith('_') and isinstance(getattr(T, key), property):
                         props.add(key)
@@ -1638,12 +1658,12 @@ class GlobalEditor(CodeEditor):
     BASE_PREFIX = '''
 import netsblox
 from netsblox import get_location, get_error, nothrow
-from netsblox.turtle import *
+from netsblox.graphical import *
 from netsblox.concurrency import *
 nb = $client_type(project_name = """$project_name""", project_id = $project_id)
 'A connection to NetsBlox, which allows you to use services and RPCs from python.'
-netsblox.turtle._INITIAL_SIZE = $stage_size
-getattr(netsblox.turtle._get_proj_handle(), '_Project__tk').title(f'PyBlox - {nb.public_id}')
+netsblox.graphical._INITIAL_SIZE = $stage_size
+getattr(netsblox.graphical._get_proj_handle(), '_Project__tk').title(f'PyBlox - {nb.public_id}')
 nb.set_room($room_handle)
 setup_stdio()
 setup_yielding()
@@ -1696,18 +1716,18 @@ class StageEditor(CodeEditor):
 
     def get_script(self, *, is_export: bool, omit_media: bool):
         raw = self.text.get('1.0', 'end-1c')
-        return f'@netsblox.turtle.stage\nclass {self.name}(netsblox.turtle.StageBase):\n    pass\n{indent(raw)}\n{self.name} = {self.name}()'
+        return f'@netsblox.graphical.stage\nclass {self.name}(netsblox.graphical.StageBase):\n    pass\n{indent(raw)}\n{self.name} = {self.name}()'
 
-class TurtleEditor(CodeEditor):
+class SpriteEditor(CodeEditor):
     prefix_lines = 3
 
     def __init__(self, parent, *, name: str, value: str):
-        super().__init__(parent, name = name, blocks_type = 'turtle', column_offset = 4) # we autoindent the content, so 4 offset for error messages
+        super().__init__(parent, name = name, blocks_type = 'sprite', column_offset = 4) # we autoindent the content, so 4 offset for error messages
         self.set_text(value)
 
     def get_script(self, *, is_export: bool, omit_media: bool):
         raw = self.text.get('1.0', 'end-1c')
-        return f'@netsblox.turtle.turtle\nclass {self.name}(netsblox.turtle.TurtleBase):\n    pass\n{indent(raw)}\n{self.name} = {self.name}()'
+        return f'@netsblox.graphical.sprite\nclass {self.name}(netsblox.graphical.SpriteBase):\n    pass\n{indent(raw)}\n{self.name} = {self.name}()'
 
 class Display(tk.Frame):
     def __init__(self, parent):
@@ -2055,6 +2075,61 @@ class MainMenu(tk.Menu):
         except Exception as e:
             messagebox.showerror(title = 'Failed to load image', message = str(e))
             return None
+
+    def create_block(self):
+        img = self.load_image_common(128 * 128)
+        if img is None:
+            return
+
+        content.project.blocks.append({
+            'uuid': str(uuid.uuid4()),
+            'source': None,
+
+            'url': f'base64://{common.encode_image(img)}',
+            'scale': 1,
+            'global': 'pass',
+            'stage': 'pass',
+            'sprite': 'pass',
+        })
+        content.project.on_tab_change()
+
+    def edit_block(self, id):
+        blocks = [i for i,v in enumerate(content.project.blocks) if v['uuid'] == id]
+        if len(blocks) != 1:
+            messagebox.showerror(title = 'Failed to Find Block', message = f'{"No block" if len(blocks) == 0 else "Multiple blocks"} with id \'{id}\'')
+            return
+        block = blocks[0]
+
+        prompt = tk.Toplevel(root)
+        prompt.title('Edit Block')
+        prompt.geometry('600x600')
+        prompt.transient(root)
+        prompt.grab_set()
+
+        info = tk.Label(prompt, text = 'Enter replacement text values (empty to hide the block)')
+        info.pack(side = tk.TOP)
+
+        editors = {}
+        def do_save():
+            for kind in ['global', 'stage', 'sprite']:
+                content.project.blocks[block][kind] = editors[kind].get('1.0', 'end-1c').strip()
+            prompt.destroy()
+            content.project.on_tab_change()
+        ok_btn = tk.Button(prompt, text = 'Save', command = do_save)
+        ok_btn.pack(side = tk.BOTTOM)
+
+        layout = tk.Frame(prompt)
+        layout.pack(fill = tk.BOTH, expand = True)
+        for i, kind in enumerate(['global', 'stage', 'sprite']):
+            frame = tk.Frame(layout)
+            l = tk.Label(frame, text = kind)
+            l.pack(side = tk.TOP)
+            w = editors[kind] = tk.Text(frame)
+            w.pack(fill = tk.BOTH, expand = True)
+            w.insert('1.0', content.project.blocks[block][kind])
+            frame.grid(row = i, column = 0, sticky = tk.EW, pady = 10)
+            layout.rowconfigure(i, weight = 1)
+        layout.columnconfigure(0, weight = 1)
 
     def import_image(self):
         img = self.load_image_common(720 * 480)

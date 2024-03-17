@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import netsblox
-from netsblox.turtle import *
+from netsblox.graphical import *
 import time
 import random
 
@@ -9,8 +9,8 @@ client = netsblox.Client()
 google_maps = client.google_maps
 this_x_dne = client.this_x_does_not_exist
 
-@turtle
-class MyTurtle(TurtleBase):
+@sprite
+class MySprite(SpriteBase):
     @onstart
     def start(self):
         while True:
@@ -23,7 +23,7 @@ class MyTurtle(TurtleBase):
             self.pos = (x, y)
 
             time.sleep(1)
-t = MyTurtle()
+t = MySprite()
 
 @stage
 class MyStage(StageBase):

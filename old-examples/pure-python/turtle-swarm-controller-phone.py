@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import netsblox
-from netsblox.turtle import *
+from netsblox.graphical import *
 
 client = netsblox.Client()
 phoneiot = client.phone_iot
@@ -21,8 +21,8 @@ phoneiot.add_button(device, 65, 50, 25, 25, '>', { 'event': 'rightbtn2' })
 
 phoneiot.listen_to_gui(device)
 
-@turtle
-class MyTurtle(TurtleBase):
+@sprite
+class MySprite(SpriteBase):
     def __init__(self, x, y):
         self.pos = (x * 50, y * 50)
 
@@ -51,5 +51,5 @@ def press_space():
 
 for x in range(-5, 5 + 1):
     for y in range(-5, 5 + 1):
-        MyTurtle(x, y)
+        MySprite(x, y)
 start_project()

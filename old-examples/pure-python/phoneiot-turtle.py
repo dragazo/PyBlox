@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from netsblox.turtle import *
+from netsblox.graphical import *
 import netsblox
 import time
 import math
@@ -22,8 +22,8 @@ phone_iot.add_button(device, 15, 40, 70, 20, 'terminate', { 'event': 'terminate'
 phone_iot.listen_to_gui(device)
 phone_iot.listen_to_sensors(device, { 'accelerometer': 100 })
 
-@turtle
-class MyTurtle(TurtleBase):
+@sprite
+class MySprite(SpriteBase):
     @onstart
     def start(self):
         self.degrees = 2 * math.pi # math.atan2() returns radians, so switch to radians mode
@@ -53,5 +53,5 @@ class MyTurtle(TurtleBase):
 def terminate():
     stop_project()
 
-MyTurtle()
+MySprite()
 start_project()

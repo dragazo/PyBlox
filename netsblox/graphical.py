@@ -38,7 +38,7 @@ def _get_font() -> ImageFont.ImageFont:
         return _CACHED_FONT
 
 _RENDER_PERIOD = 16 # time between frames in ms
-_SAY_PAGINATE_LEN = 30 # max length of a paginated line in turtle.say()
+_SAY_PAGINATE_LEN = 30 # max length of a paginated line in sprite.say()
 _SAY_PAGINATE_MAX_LINES = 8 # max number of lines to show before ...-ing the rest
 
 _GRAPHICS_SLEEP_TIME = 0.0085 # time to pause after gui stuff like sprite movement
@@ -256,7 +256,7 @@ class _Project:
     def __init__(self, *, logical_size: Tuple[int, int], physical_size: Tuple[int, int]):
         self.__lock = _threading.RLock()
         self.__stages = {}
-        self.__turtles = {}
+        self.__sprites = {}
 
         self.__tk = _tk.Tk()
         self.__tk.minsize(400, 200)
@@ -310,8 +310,8 @@ class _Project:
                 should_handle = True
                 wrapped = event.wrapped()
                 obj = getattr(wrapped, '__self__', None)
-                if isinstance(obj, TurtleBase) and not anywhere:
-                    obj_disp_img = getattr(obj, '_TurtleBase__display_image')
+                if isinstance(obj, SpriteBase) and not anywhere:
+                    obj_disp_img = getattr(obj, '_SpriteBase__display_image')
                     should_handle = _intersects((obj_disp_img, *obj.pos), (_CURSOR_KERNEL, x, y))
 
                 if should_handle: event.schedule_no_queueing(x, y)
@@ -364,14 +364,14 @@ class _Project:
         return self.__key_manager.is_key_down(key)
 
     @property
-    def turtles(self) -> List[Any]:
+    def sprites(self) -> List[Any]:
         with self.__lock:
-            return [x['obj'] for x in self.__turtles.values()]
+            return [x['obj'] for x in self.__sprites.values()]
 
     def register_entity(self, ent):
         if isinstance(ent, StageBase): target = self.__stages
-        elif isinstance(ent, TurtleBase): target = self.__turtles
-        else: raise TypeError(f'expected stage or turtle - got {type(ent)}')
+        elif isinstance(ent, SpriteBase): target = self.__sprites
+        else: raise TypeError(f'expected stage or sprite - got {type(ent)}')
 
         with self.__lock:
             id = len(target)
@@ -399,19 +399,19 @@ class _Project:
 
             frame.paste(self.__drawings_img, (0, 0), self.__drawings_img)
 
-            for info in self.__turtles.values():
-                turtle = info['obj']
-                if not turtle.visible: continue
+            for info in self.__sprites.values():
+                sprite = info['obj']
+                if not sprite.visible: continue
 
-                turtle_pos = list(turtle.pos)
-                turtle_pos[1] = -turtle_pos[1]
-                turtle_img = getattr(turtle, '_TurtleBase__display_image')
-                paste_pos = tuple(round(logical_size[i] / 2 + turtle_pos[i] - turtle_img.size[i] / 2) for i in range(2))
-                frame.paste(turtle_img, paste_pos, turtle_img)
+                sprite_pos = list(sprite.pos)
+                sprite_pos[1] = -sprite_pos[1]
+                sprite_img = getattr(sprite, '_SpriteBase__display_image')
+                paste_pos = tuple(round(logical_size[i] / 2 + sprite_pos[i] - sprite_img.size[i] / 2) for i in range(2))
+                frame.paste(sprite_img, paste_pos, sprite_img)
 
-                say_img = getattr(turtle, '_TurtleBase__say_img')
+                say_img = getattr(sprite, '_SpriteBase__say_img')
                 if say_img is not None:
-                    say_pos = (paste_pos[0] + turtle_img.width, paste_pos[1] - say_img.height)
+                    say_pos = (paste_pos[0] + sprite_img.width, paste_pos[1] - say_img.height)
                     frame.paste(say_img, say_pos, say_img)
 
             self.__last_frame = frame # keep track of this for the image grab functions
@@ -538,12 +538,12 @@ def _get_proj_handle():
 
 def start_project():
     '''
-    Run turtle game logic.
-    Turtles begin running as soon as they are created,
+    Run sprite game logic.
+    Sprites begin running as soon as they are created,
     but you must call this function for them to start moving around and interacting.
-    This must be called from the main thread (global scope), not from within a turtle.
+    This must be called from the main thread (global scope), not from within a sprite.
 
-    The game can manually be stopped by calling stop_project() (e.g., from a turtle).
+    The game can manually be stopped by calling stop_project() (e.g., from a sprite).
 
     Trying to start a game that is already running results in a ProjectStateError.
     '''
@@ -597,7 +597,7 @@ def _qinvoke_wait(fn, *args) -> Any:
 
 _CURSOR_KERNEL = Image.new('RGBA', (3, 3), 'black') # used for cursor click collision detection on sprites - should be roughly circle-ish
 
-def _turtle_image(color: Tuple[int, int, int], scale: float) -> Image.Image:
+def _default_sprite_image(color: Tuple[int, int, int], scale: float) -> Image.Image:
     scale *= 1.25
     w, h = round(32 * scale), round(18 * scale)
     img = Image.new('RGBA', (w, h))
@@ -756,7 +756,7 @@ class StageBase(_Ref):
     def size(self) -> Tuple[int, int]:
         '''
         Gets or sets the logical size of the stage (width, height).
-        This controls the space in which turtles are visible.
+        This controls the space in which sprites are visible.
         Higher resolutions mean you can display higher-quality images, but may also slow down the simulation.
         Note that this has nothing to do with the window size.
 
@@ -836,7 +836,7 @@ class StageBase(_Ref):
     def turbo(self) -> bool:
         '''
         Get or set whether or not turbo mode is enabled (for all sprites).
-        Turbo mode disables all implicit sleeping between calls to graphical functions like moving turtles.
+        Turbo mode disables all implicit sleeping between calls to graphical functions like moving sprites.
         If you are doing a lot of graphical operations like movement or drawing, enabling turbo mode will speed it up.
 
         ```
@@ -884,27 +884,27 @@ class StageBase(_Ref):
 
 def _get_meta_name(obj):
     cls = getattr(obj, '_Derived__DerivedFrom', None)
-    return cls.__name__ if cls is not None else 'turtle'
+    return cls.__name__ if cls is not None else 'sprite'
 
-class TurtleBase(_Ref):
+class SpriteBase(_Ref):
     '''
-    The base class for any custom turtle.
-    Custom turtles should use this as their base class, and additionally use the `@turtle` decorator.
+    The base class for any custom sprite.
+    Custom sprites should use this as their base class, and additionally use the `@sprite` decorator.
 
     ```
-    @turtle
-    class MyTurtle(TurtleBase):
+    @sprite
+    class MySprite(SpriteBase):
         @onstart()
         def start(self):
             self.forward(75)
 
-    t = MyTurtle() # create an instance of MyTurtle - start() is executed automatically
+    t = MySprite() # create an instance of MySprite. start() is executed automatically
     ```
     '''
     def __init__(self):
         try:
             if self.__initialized:
-                return # don't initialize twice (can happen from mixing @turtle decorator and explicit TurtleBase base class)
+                return # don't initialize twice (can happen from mixing @sprite decorator and explicit SpriteBase base class)
         except:
             self.__initialized = True
 
@@ -939,18 +939,18 @@ class TurtleBase(_Ref):
 
     def __update_costume(self):
         src = self.__costume # grab this so it can't change during evaluation (used multiple times)
-        self.__display_image = _apply_transforms(src, self.__scale, self.__rot) if src is not None else _apply_transforms(_turtle_image(self.__pen_color, self.__scale), 1.0, self.__rot)
+        self.__display_image = _apply_transforms(src, self.__scale, self.__rot) if src is not None else _apply_transforms(_default_sprite_image(self.__pen_color, self.__scale), 1.0, self.__rot)
         self.__proj.invalidate()
 
     def clone(self) -> Any:
         '''
-        Create and return a clone (copy) of this turtle.
-        The created turtle will have a deep copy of any variables this turtle has set.
-        The new turtle will be created at the same position and in the same direction as the current turtle (everything is identical).
+        Create and return a clone (copy) of this sprite.
+        The created sprite will have a deep copy of any variables this sprite has set.
+        The new sprite will be created at the same position and in the same direction as the current sprite (everything is identical).
 
         Cloning is a great way to reduce duplicated code.
-        If you need many turtles which happen to do the same thing,
-        consider writing a single turtle and making it clone itself several times at the beginning.
+        If you need many sprites which happen to do the same thing,
+        consider writing a single sprite and making it clone itself several times at the beginning.
 
         ```
         my_clone = self.clone()
@@ -958,7 +958,7 @@ class TurtleBase(_Ref):
         '''
         Derived = getattr(self, '_Derived__Derived', None)
         if Derived is None:
-            raise RuntimeError('Tried to clone a turtle type which was not defined with @turtle')
+            raise RuntimeError('Tried to clone a sprite type which was not defined with @sprite')
         return Derived(_CloneTag(self))
 
     def watch(self, name: str):
@@ -1026,8 +1026,8 @@ class TurtleBase(_Ref):
     @property
     def scale(self) -> float:
         '''
-        Get or set the current turtle scale (default 1.0).
-        Larger values make the turtle larger.
+        Get or set the current sprite scale (default 1.0).
+        Larger values make the sprite larger.
 
         This should be a positive number.
 
@@ -1040,14 +1040,14 @@ class TurtleBase(_Ref):
     def scale(self, new_scale: float) -> None:
         new_scale = float(new_scale)
         if new_scale <= 0:
-            raise RuntimeError(f'attempt to set turtle scale to non-positive value: {new_scale}')
+            raise RuntimeError(f'attempt to set sprite scale to non-positive value: {new_scale}')
         self.__scale = new_scale
         self.__update_costume() # invalidates project internally
 
     @property
     def pos(self) -> Tuple[float, float]:
         '''
-        Get or set the position of the turtle, which is a pair of (x, y) coordinates.
+        Get or set the position of the sprite, which is a pair of (x, y) coordinates.
 
         ```
         self.pos = (10, 45)
@@ -1070,11 +1070,11 @@ class TurtleBase(_Ref):
     def goto(self, target: Union[Tuple[float, float], Any]) -> None:
         '''
         Goes to the specified location.
-        The target can either be a tuple/list of `[x, y]` coordinates, or another turtle.
+        The target can either be a tuple/list of `[x, y]` coordinates, or another sprite.
 
         ```
         self.goto([15, 23])
-        self.goto(other_turtle)
+        self.goto(other_sprite)
         ```
         '''
         if isinstance(target, list) or isinstance(target, tuple):
@@ -1085,7 +1085,7 @@ class TurtleBase(_Ref):
     @property
     def x_pos(self) -> float:
         '''
-        Get or set the x position of the turtle.
+        Get or set the x position of the sprite.
 
         ```
         self.x_pos = 60
@@ -1099,7 +1099,7 @@ class TurtleBase(_Ref):
     @property
     def y_pos(self) -> float:
         '''
-        Get or set the y position of the turtle.
+        Get or set the y position of the sprite.
 
         ```
         self.y_pos = -10
@@ -1113,7 +1113,7 @@ class TurtleBase(_Ref):
     @property
     def heading(self) -> float:
         '''
-        Get or set the heading (direction) of the turtle.
+        Get or set the heading (direction) of the sprite.
         Note that this is affected by the current degrees mode.
 
         ```
@@ -1135,7 +1135,7 @@ class TurtleBase(_Ref):
         Get or set how many "degrees" are in a circle (default 360).
         This is useful if you want to draw pie charts (100 "degrees" per circle) or work in radians (2*pi "degrees" per circle).
 
-        The apparent heading of the turtle is unchanged - this is just a way of measuring angles.
+        The apparent heading of the sprite is unchanged - this is just a way of measuring angles.
 
         ```
         self.degrees = 360         # switch to (normal) degrees mode
@@ -1150,11 +1150,11 @@ class TurtleBase(_Ref):
     @property
     def visible(self) -> bool:
         '''
-        Get or set whether or not the turtle is visible
+        Get or set whether or not the sprite is visible
 
         ```
-        self.visible = True  # show the turtle
-        self.visible = False # hide the turtle
+        self.visible = True  # show the sprite
+        self.visible = False # hide the sprite
         ```
         '''
         return self.__visible
@@ -1166,7 +1166,7 @@ class TurtleBase(_Ref):
     @property
     def drawing(self) -> bool:
         '''
-        Get or set whether or not the turtle should draw a trail behind it as it moves.
+        Get or set whether or not the sprite should draw a trail behind it as it moves.
 
         ```
         self.drawing = True  # start drawing
@@ -1233,7 +1233,7 @@ class TurtleBase(_Ref):
 
     def turn_left(self, angle: float = None) -> None:
         '''
-        Turn the turtle to the left by the given angle.
+        Turn the sprite to the left by the given angle.
         Note that this is affected by the current degrees mode.
         If no angle is specified, turns the equivalent of 90 degrees.
 
@@ -1244,7 +1244,7 @@ class TurtleBase(_Ref):
         self.heading -= float(angle) if angle is not None else self.__degrees / 4 # invalidates project internally
     def turn_right(self, angle: float = None) -> None:
         '''
-        Turn the turtle to the right by the given angle.
+        Turn the sprite to the right by the given angle.
         Note that this is affected by the current degrees mode.
         If no angle is specified, turns the equivalent of 90 degrees.
 
@@ -1276,10 +1276,10 @@ class TurtleBase(_Ref):
         if stage is None: return
 
         logical_size = self.__proj.logical_size
-        turtle_pos = self.pos
-        turtle_img = self.__display_image
-        top_left = tuple(round(logical_size[i] / 2 + turtle_pos[i] - turtle_img.size[i] / 2) for i in range(2))
-        box = (top_left[0], top_left[1], top_left[0] + turtle_img.size[0], top_left[1] + turtle_img.size[1])
+        sprite_pos = self.pos
+        sprite_img = self.__display_image
+        top_left = tuple(round(logical_size[i] / 2 + sprite_pos[i] - sprite_img.size[i] / 2) for i in range(2))
+        box = (top_left[0], top_left[1], top_left[0] + sprite_img.size[0], top_left[1] + sprite_img.size[1])
 
         h = self.__rot * 2 * _math.pi
         fx, fy = _math.sin(h), _math.cos(h)
@@ -1306,7 +1306,7 @@ class TurtleBase(_Ref):
 
     def stamp(self) -> None:
         '''
-        Stamps an image of the turtle on the background at the current position.
+        Stamps an image of the sprite on the background at the current position.
         Stamps can be deleted by calling `self.clear_stamps()` (just stamps) or `self.clear()` (all drawings).
 
         ```
@@ -1319,7 +1319,7 @@ class TurtleBase(_Ref):
         '''
         Draws text onto the background.
         The `size` argument sets the font size of the drawn text.
-        The `move` argument specifies if the turtle should move to the end of the text after drawing.
+        The `move` argument specifies if the sprite should move to the end of the text after drawing.
 
         Text counts as a drawing, so it can be erased by calling `self.clear()`.
 
@@ -1380,28 +1380,28 @@ class TurtleBase(_Ref):
 
     def is_touching(self, other: Any) -> bool:
         '''
-        Checks if this turtle is touching the other turtle, that is, they are both visible overlapping.
+        Checks if this sprite is touching the other sprite, that is, they are both visible overlapping.
 
         ```
-        if self.is_touching(other_turtle):
+        if self.is_touching(other_sprite):
             self.turn_right(180)
         ```
         '''
-        if not isinstance(other, TurtleBase):
-            raise TypeError(f'Attempt to check if a turtle is touching a non-turtle (type {type(other)})')
+        if not isinstance(other, SpriteBase):
+            raise TypeError(f'Attempt to check if a sprite is touching a non-sprite (type {type(other)})')
 
         return self.__visible and other.__visible and _intersects(
             (self.__display_image, self.__x, self.__y),
             (other.__display_image, other.__x, other.__y))
     def get_all_touching(self) -> List[Any]:
         '''
-        Gets a list of all the turtles that this turtle is touching, other than itself.
+        Gets a list of all the sprites that this sprite is touching, other than itself.
 
         ```
         touch_count = len(self.get_all_touching())
         ```
         '''
-        return [other for other in self.__proj.turtles if other is not self and self.is_touching(other)]
+        return [other for other in self.__proj.sprites if other is not self and self.is_touching(other)]
 
 class _CloneTag:
     def __init__(self, src):
@@ -1460,40 +1460,40 @@ def _derive(bases, cls):
 
         def __clone_from(self, src):
             def filter_out(name):
-                return any(name.startswith(x) for x in ['_Derived_', '_TurtleBase_', '_StageBase_'])
+                return any(name.startswith(x) for x in ['_Derived_', '_SpriteBase_', '_StageBase_'])
             fields = [x for x in vars(src).keys() if not filter_out(x)]
             for field in fields:
                 setattr(self, field, _copy.deepcopy(getattr(src, field)))
 
-            for base in bases: # recurse to child types for specialized cloning logic (like turtle repositioning)
+            for base in bases: # recurse to child types for specialized cloning logic (like sprite repositioning)
                 getattr(self, f'_{base.__name__}__clone_from')(src)
 
     return Derived
 
-def turtle(cls):
+def sprite(cls):
     '''
-    The `@turtle` decorator for a class creates a new type of turtle.
-    This should be used in conjunction with the `TurtleBase` base class.
+    The `@sprite` decorator for a class creates a new type of sprite.
+    This should be used in conjunction with the `SpriteBase` base class.
 
-    You can use the `@onstart()` decorator on any method definition to make it run when a turtle of this type is created.
+    You can use the `@onstart()` decorator on any method definition to make it run when a sprite of this type is created.
 
     ```
-    @turtle
-    class MyTurtle(TurtleBase):
+    @sprite
+    class MySprite(SpriteBase):
         @onstart()
         def start(self):
             self.forward(75)
 
-    t = MyTurtle() # create an instance of MyTurtle - start() is executed automatically
+    t = MySprite() # create an instance of MySprite - start() is executed automatically
     ```
     '''
-    return _derive([TurtleBase], cls)
+    return _derive([SpriteBase], cls)
 
 def stage(cls):
     '''
     The `@stage` decorator for a class creates a new type of stage.
     This should be used in conjunction with the `StageBase` base class.
-    Stages function much like the stage in NetsBlox - equivalent to a sprite/turtle except with no movement controls.
+    Stages function much like the stage in NetsBlox - equivalent to a sprite/sprite except with no movement controls.
     Unlike in NetsBlox, you may create multiple instances of a stage, or even multiple types of stages.
 
     You can use the `@onstart()` decorator on any method definition to make it run when a stage of this type is created.
@@ -1523,8 +1523,8 @@ def _add_gui_event_wrapper(field, register, keys):
 
 def onstart(when: str = 'now'):
     '''
-    The `@onstart()` decorator can be applied to a method definition inside a stage or turtle
-    to make that function run whenever the stage/turtle is created.
+    The `@onstart()` decorator can be applied to a method definition inside a stage or sprite
+    to make that function run whenever the stage/sprite is created.
 
     The `when` keyword argument controls when the function should be called.
     The following options are available:
@@ -1549,7 +1549,7 @@ def onstart(when: str = 'now'):
 def onkey(*keys: str, when: Union[str, List[str]] = ['down', 'hold']):
     '''
     The `@onkey()` decorator can be applied to a function at global scope
-    or a method definition inside a stage or turtle
+    or a method definition inside a stage or sprite
     to make that function run whenever the user presses a key on the keyboard.
 
     The special `'any'` or `'any key'` values (equivalent) can be used to catch any key press.
@@ -1585,7 +1585,7 @@ def onkey(*keys: str, when: Union[str, List[str]] = ['down', 'hold']):
 def onmouse(when: str, *, anywhere: bool = False):
     '''
     The `@onmouse()` decorator can be applied to a function to make it run
-    when a user interacts with the turtle or display with their mouse.
+    when a user interacts with the sprite or display with their mouse.
     The function you apply it to will receive the `x` and `y` position of the mouse.
 
     When used on sprite methods, by default this will only be triggered when the user

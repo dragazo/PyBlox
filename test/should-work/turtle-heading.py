@@ -1,19 +1,18 @@
 #!/usr/bin/env python
 
-from netsblox.turtle import *
+from netsblox.graphical import *
 import sys
 
 steps = 100
 
-@turtle
-class MyTurtle:
-    @onstart
+@sprite
+class MySprite:
+    @onstart()
     def start(self):
         pos_set = set()
-        self.radians()
         for _ in range(steps):
-            pos_set.add(self.heading())
-            self.left(1)
+            pos_set.add(self.heading)
+            self.turn_left(1)
         if len(pos_set) != steps:
             print(f'got {len(pos_set)} steps - expected {steps}', file = sys.stderr)
             assert False
@@ -22,5 +21,5 @@ class MyTurtle:
             assert False
         stop_project()
 
-MyTurtle()
+MySprite()
 start_project()

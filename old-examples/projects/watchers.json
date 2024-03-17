@@ -2,11 +2,7 @@
   "block_sources": [
     "netsblox://assets/default-blocks.json"
   ],
-  "blocks": {
-    "global": [], 
-    "stage": [], 
-    "turtle": []
-  }, 
+  "blocks": [], 
   "show_blocks": true, 
   "imports": [
     "time", 
@@ -24,7 +20,7 @@
       "value": "@onstart()\ndef my_onstart(self): # functions need different names\n    self.my_list = [1, 2, 3] # create a stage variable\n"
     }, 
     {
-      "type": "turtle", 
+      "type": "sprite", 
       "name": "sprite", 
       "value": "@onstart()\ndef my_onstart(self): # functions need different names\n    self.my_distance = 2 # create a sprite variable\n\n    for i in range(360): # repeat code 360 times\n        self.forward(self.my_distance)\n        self.turn_right(1)\n\n@onstart()\ndef do_counting(self):\n    self.my_counter = 0\n    self.watch('my_counter')\n    \n    global counter, other\n    while True:\n        time.sleep(0.1)\n        counter += 1\n        self.my_counter += random.randrange(4)\n        letter = chr(random.randrange(65, 65 + 26))\n        if letter not in other:\n            other[letter] = [0, 0]\n        other[letter][random.randrange(2)] += 3\n"
     }

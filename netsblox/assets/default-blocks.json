@@ -4,73 +4,73 @@
         "scale": 1,
         "global": "@onstart()\ndef my_onstart(): # functions need different names\n    pass # replace with your code",
         "stage": "@onstart()\ndef my_onstart(self): # functions need different names\n    pass # replace with your code",
-        "turtle": "@onstart()\ndef my_onstart(self): # functions need different names\n    pass # replace with your code"
+        "sprite": "@onstart()\ndef my_onstart(self): # functions need different names\n    pass # replace with your code"
     },
     {
         "url": "netsblox://assets/img/blocks/onstartclone.png",
         "scale": 1,
-        "turtle": "@onstart(when = 'clone')\ndef my_onstartclone(self): # functions need different names\n    pass # replace with your code"
+        "sprite": "@onstart(when = 'clone')\ndef my_onstartclone(self): # functions need different names\n    pass # replace with your code"
     },
     {
         "url": "netsblox://assets/img/blocks/keypress.png",
         "scale": 1,
         "global": "@onkey('space')\ndef my_onkey(): # functions need different names\n    pass # replace with your code",
         "stage": "@onkey('space')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code",
-        "turtle": "@onkey('space')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code"
+        "sprite": "@onkey('space')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code"
     },
     {
         "url": "netsblox://assets/img/blocks/onclick.png",
         "scale": 1,
         "stage": "@onmouse('down')\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code",
-        "turtle": "@onmouse('down')\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code"
+        "sprite": "@onmouse('down')\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code"
     },
     {
         "url": "netsblox://assets/img/blocks/msgrecv-snap.png",
         "scale": 1,
         "global": "@nb.on_message('signal')\ndef my_on_message(): # functions need different names\n    pass # replace with your code",
         "stage": "@nb.on_message('signal')\ndef my_on_message(self): # functions need different names\n    pass # replace with your code",
-        "turtle": "@nb.on_message('signal')\ndef my_on_message(self): # functions need different names\n    pass # replace with your code"
+        "sprite": "@nb.on_message('signal')\ndef my_on_message(self): # functions need different names\n    pass # replace with your code"
     },
     {
         "url": "netsblox://assets/img/blocks/sendmsg-snap.png",
         "scale": 1,
         "global": "nb.send_message('signal', 'local')",
         "stage": "nb.send_message('signal', 'local')",
-        "turtle": "nb.send_message('signal', 'local')"
+        "sprite": "nb.send_message('signal', 'local')"
     },
     {
         "url": "netsblox://assets/img/blocks/loop-forever.png",
         "scale": 1,
         "global": "while True:\n    pass # replace with your code",
         "stage": "while True:\n    pass # replace with your code",
-        "turtle": "while True:\n    pass # replace with your code"
+        "sprite": "while True:\n    pass # replace with your code"
     },
     {
         "url": "netsblox://assets/img/blocks/warp.png",
         "scale": 1,
         "global": "with Warp():\n    pass # replace with your code",
         "stage": "with Warp():\n    pass # replace with your code",
-        "turtle": "with Warp():\n    pass # replace with your code"
+        "sprite": "with Warp():\n    pass # replace with your code"
     },
     {
         "url": "netsblox://assets/img/blocks/msgrecv.png",
         "scale": 1,
         "global": "@nb.on_message('message')\ndef my_on_message(msg): # functions need different names\n    pass # replace with your code",
         "stage": "@nb.on_message('message')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code",
-        "turtle": "@nb.on_message('message')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code"
+        "sprite": "@nb.on_message('message')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code"
     },
     {
         "url": "netsblox://assets/img/blocks/sendmsg.png",
         "scale": 1,
         "global": "nb.send_message('message', 'everyone in room', msg = 'hello')",
         "stage": "nb.send_message('message', 'everyone in room', msg = 'hello')",
-        "turtle": "nb.send_message('message', 'everyone in room', msg = 'hello')"
+        "sprite": "nb.send_message('message', 'everyone in room', msg = 'hello')"
     },
     {
         "url": "netsblox://assets/img/blocks/loop-foreach.png",
         "scale": 1,
         "global": "for item in my_list:\n    pass # replace with your code",
         "stage": "for item in my_list:\n    pass # replace with your code",
-        "turtle": "for item in my_list:\n    pass # replace with your code"
+        "sprite": "for item in my_list:\n    pass # replace with your code"
     }
 ]

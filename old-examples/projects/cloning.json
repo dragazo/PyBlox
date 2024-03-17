@@ -2,11 +2,7 @@
   "block_sources": [
     "netsblox://assets/default-blocks.json"
   ], 
-  "blocks": {
-    "global": [], 
-    "stage": [], 
-    "turtle": []
-  }, 
+  "blocks": [], 
   "show_blocks": true, 
   "imports": [
     "random"
@@ -23,7 +19,7 @@
       "value": ""
     }, 
     {
-      "type": "turtle", 
+      "type": "sprite", 
       "name": "sprite", 
       "value": "@onstart()\ndef my_onstart(self):\n    self.drawing = True\n\n@onstart(when = 'clone')\ndef my_onstartclone(self):\n    self.drawing = True\n    r = random.randrange(256)\n    g = random.randrange(256)\n    b = random.randrange(256)\n    self.pen_color = (r, g, b)\n    self.heading = random.random() * 360\n    self.forward(random.random() * 30 + 20)\n\n@onclick()\ndef my_onclick(self, x, y):\n    self.clone()\n\n@onkey('up arrow', 'w')\ndef my_onup(self):\n    self.forward(10)\n\n@onkey('down arrow', 's')\ndef my_ondown(self):\n    self.forward(-10)\n\n@onkey('left arrow', 'a')\ndef my_onleft(self):\n    self.turn_left(15)\n    \n@onkey('right arrow', 'd')\ndef my_onright(self):\n    self.turn_right(15)\n"
     }

@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-from netsblox.turtle import *
+from netsblox.graphical import *
 
-@turtle
-class MyTurtle(TurtleBase):
+@sprite
+class MySprite(SpriteBase):
     def __init__(self, start_angle):
         self.heading = start_angle
         self.drawing = True
@@ -18,7 +18,7 @@ class MyTurtle(TurtleBase):
 
         self.visible = False
 
-num_turtles = 50
-for i in range(num_turtles):
-    MyTurtle(i * 360 / num_turtles)
+num_sprites = 50
+for i in range(num_sprites):
+    MySprite(i * 360 / num_sprites)
 start_project()

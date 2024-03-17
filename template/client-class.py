@@ -278,7 +278,7 @@ $service_instances
             handlers.append(_events.get_event_wrapper(handler))
     def on_message(self, *msg_types: str):
         '''
-        This is a decorator that can be applied to a turtle/stage method or a function
+        This is a decorator that can be applied to a sprite/stage method or a function
         to cause the function to be executed when a message of the given type is received from NetsBlox.
         You can receive message fields by specifying input parameters.
 

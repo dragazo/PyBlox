@@ -23,7 +23,7 @@ print(data)
 # Graphical Environment
 
 PyBlox, while useful on its own for accessing NetsBlox services, has a side goal of helping transition students from block-based languages like NetsBlox and Snap! into textual languages like python.
-Because of this, PyBlox comes with a power graphical environment that supports most of the same features as NetsBlox/Snap!, as well as an IDE for creating python projects in a way that is still structured like a NetsBlox/Snap! project in both appearnance and concurrency model (closest approximation).
+Because of this, PyBlox comes with a power graphical environment that supports most of the same features as NetsBlox/Snap!, as well as an IDE for creating python projects in a way that is still structured like a NetsBlox/Snap! project in both appearance and concurrency model (closest approximation).
 
 These features are only activated when explicitly called, leaving the default behavior as a normal python package for accessing NetsBlox services.
 

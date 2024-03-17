@@ -23,7 +23,7 @@
                     "value": ""
                 },
                 {
-                    "type": "turtle",
+                    "type": "sprite",
                     "name": "sprite",
                     "value": "@onstart()\ndef my_onstart(self): # functions need different names\n    for i in range(120): # repeat code 120 times\n        self.forward(4)\n        self.turn_right(3)\n"
                 }

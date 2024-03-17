@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-from netsblox.turtle import *
+from netsblox.graphical import *
 import time
 
-@turtle
-class MyTurtle(TurtleBase):
+@sprite
+class MySprite(SpriteBase):
     @onstart
     def start(self):
         self.drawing = True
@@ -19,5 +19,5 @@ class MyTurtle(TurtleBase):
         time.sleep(2) # give time to appreciate the artwork
         stop_project()
 
-MyTurtle()
+MySprite()
 start_project()

@@ -85,10 +85,19 @@
         "yview"
     ],
     "cSpell.words": [
+        "antialiasing",
         "autocomment",
         "autoindent",
+        "capslock",
+        "frombytes",
+        "getchannel",
+        "getmask",
         "keylogger",
+        "KEYSYM",
         "lineend",
+        "pagedown",
+        "putalpha",
+        "scrolllock",
         "wordstart"
     ]
 }

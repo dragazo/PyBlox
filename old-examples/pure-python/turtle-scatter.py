@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-from netsblox.turtle import *
+from netsblox.graphical import *
 import random
 
-@turtle
-class MyTurtle(TurtleBase):
+@sprite
+class MySprite(SpriteBase):
     def __init__(self, rot, dist):
         self.rot = rot
         self.dist = dist
@@ -23,6 +23,6 @@ class MyTurtle(TurtleBase):
             if random.random() < 0.01:
                 self.clear()
 
-turtles = [MyTurtle(50, 5) for _ in range(100)]
+sprites = [MySprite(50, 5) for _ in range(100)]
 
 start_project()

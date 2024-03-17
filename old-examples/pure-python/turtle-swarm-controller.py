@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-from netsblox.turtle import *
+from netsblox.graphical import *
 
-@turtle
-class MyTurtle(TurtleBase):
+@sprite
+class MySPrite(SpriteBase):
     def __init__(self, x, y):
         self.pos = (x * 50, y * 50)
-    
+
     @onkey('w', 'up')
     def press_forward(self):
         self.forward(10)
@@ -25,5 +25,5 @@ def press_space():
 
 for x in range(-5, 5 + 1):
     for y in range(-5, 5 + 1):
-        MyTurtle(x, y)
+        MySprite(x, y)
 start_project()

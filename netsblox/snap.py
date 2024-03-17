@@ -604,7 +604,7 @@ def is_bool(value: Any) -> bool:
 def is_list(value: Any) -> bool:
     return isinstance(value, list) or isinstance(value, tuple) or isinstance(value, dict)
 def is_sprite(value: Any) -> bool:
-    return isinstance(value, _netsblox.turtle.TurtleBase)
+    return isinstance(value, _netsblox.graphical.SpriteBase)
 
 if __name__ == '__main__':
     assert is_wrapped(True)

@@ -2,17 +2,17 @@
 
 import netsblox
 
-editor = netsblox.Editor()
-phoneiot = editor.phone_iot
+editor = netsblox.Client()
+phone_iot = editor.phone_iot
 public_roles = editor.public_roles
 
-assert type(phoneiot.get_sensors()) == list
+assert type(phone_iot.get_sensors()) == list
 assert public_roles.get_public_role_id() == editor.get_public_role_id()
 
-assert phoneiot.get_color(12, 34, 54, 34) == 571220534
-assert phoneiot.get_color(12, 34, 54) == -15982026
-assert phoneiot.get_color(12, 34, blue=54) == -15982026
-assert phoneiot.get_color(12, blue=54, green=34) == -15982026
+assert phone_iot.get_color(12, 34, 54, 34) == 571220534
+assert phone_iot.get_color(12, 34, 54) == -15982026
+assert phone_iot.get_color(12, 34, blue=54) == -15982026
+assert phone_iot.get_color(12, blue=54, green=34) == -15982026
 
 assert type(editor.chart.default_options()) == dict
 v = editor.hurricane_data.get_hurricane_data('katrina', 2005)
