@@ -951,6 +951,7 @@ class ProjectEditor(tk.Frame):
         self.block_sources = new_sources
 
         for i in range(len(self.editors) - 1, -1, -1):
+            key_logger.kill(self.editors[i]) # kill the editor in the keylogger since the widget is about to die
             self.notebook.forget(i)
             self.editors[i].destroy()
         self.editors = []
@@ -2026,9 +2027,6 @@ class MainMenu(tk.Menu):
                 content.project.load(super_proj = rstor, source = 'revert')
 
     def open_trans_xml(self):
-        content.project.on_tab_change()
-        if not self.try_close_project(): return
-
         try:
             p = filedialog.askopenfilename(filetypes = NB_PROJECT_FILETYPES)
             if type(p) is not str or not p:
