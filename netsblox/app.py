@@ -1126,8 +1126,12 @@ class ScrolledText(tk.Frame):
         self.linenumbers = None # default to none - conditionally created
 
         if readonly:
-            # make text readonly be ignoring all (default) keystrokes
-            self.text.bind('<Key>', lambda e: 'break')
+            # make text readonly by ignoring all keystrokes except some specific non-modifying ones
+            allow_list = set(['Left', 'Right', 'Up', 'Down', 'Home', 'End'])
+            def check_ignore(e):
+                if e.keysym not in allow_list:
+                    return 'break'
+            self.text.bind('<Key>', check_ignore)
         else:
             def do_undo(e):
                 key_logger.watch(self) # just to be sure
@@ -1207,6 +1211,7 @@ class ScrolledText(tk.Frame):
                 if self.text.tag_ranges(tk.SEL):
                     self.text.delete(tk.SEL_FIRST, tk.SEL_LAST)
                 self.text.insert(tk.INSERT, content)
+                self.text.see(tk.INSERT)
                 after = self.text.get('1.0', 'end-1c')
 
                 key_logger.clear()
@@ -1315,7 +1320,9 @@ class CodeEditor(ScrolledText):
 
         self.text.bind('<Home>',       lambda e: self.do_home(select_mode = False))
         self.text.bind('<Shift-Home>', lambda e: self.do_home(select_mode = True))
-        self.text.bind('<End>', lambda e: self.do_end())
+        self.text.bind('<End>', lambda e: self.do_flush())
+        self.text.bind('<Prior>', lambda e: self.do_flush()) # page up
+        self.text.bind('<Next>', lambda e: self.do_flush()) # page down
 
         if color_enabled:
             # source: https://stackoverflow.com/questions/38594978/tkinter-syntax-highlighting-for-text-widget
@@ -1658,9 +1665,10 @@ class CodeEditor(ScrolledText):
         else:
             self.text.selection_clear()
         self.text.mark_set('insert', target)
+        self.text.see('insert')
         return 'break' # override default behavior
 
-    def do_end(self):
+    def do_flush(self):
         key_logger.watch(self) # just to be sure
         key_logger.flush()
 
