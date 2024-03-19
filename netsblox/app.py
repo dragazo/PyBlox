@@ -1123,19 +1123,6 @@ class ScrolledText(tk.Frame):
         self.text.bind(f'<{SYS_INFO["mod"]}-Key-a>', on_select_all)
         self.text.bind(f'<{SYS_INFO["mod"]}-Key-A>', on_select_all)
 
-        def on_home(*, do_select: bool):
-            white, _ = get_white_nonwhite(self.text.get('insert linestart', 'insert lineend'))
-            target = f'insert linestart +{len(white)}c'
-            if do_select:
-                col = int(self.text.index('insert').split('.')[1])
-                self.text.tag_add(tk.SEL, *((target, 'insert') if col >= len(white) else ('insert', target)))
-            else:
-                self.text.selection_clear()
-            self.text.mark_set('insert', target)
-            return 'break'
-        self.text.bind('<Home>',       lambda e: on_home(do_select = False))
-        self.text.bind('<Shift-Home>', lambda e: on_home(do_select = True))
-
         self.linenumbers = None # default to none - conditionally created
 
         if readonly:
@@ -1325,6 +1312,10 @@ class CodeEditor(ScrolledText):
         self.text.bind('<Down>', lambda e: self.do_arrowing(1))
         self.text.bind('<Left>', lambda e: self.do_arrowing(0))
         self.text.bind('<Right>', lambda e: self.do_arrowing(0))
+
+        self.text.bind('<Home>',       lambda e: self.do_home(select_mode = False))
+        self.text.bind('<Shift-Home>', lambda e: self.do_home(select_mode = True))
+        self.text.bind('<End>', lambda e: self.do_end())
 
         if color_enabled:
             # source: https://stackoverflow.com/questions/38594978/tkinter-syntax-highlighting-for-text-widget
@@ -1654,6 +1645,24 @@ class CodeEditor(ScrolledText):
         log({ 'type': 'text::toggle-comment', 'editor': self.name, 'diff': common.unified_diff(before, after) })
 
         return 'break'
+
+    def do_home(self, *, select_mode: bool):
+        key_logger.watch(self) # just to be sure
+        key_logger.flush()
+
+        white, _ = get_white_nonwhite(self.text.get('insert linestart', 'insert lineend'))
+        target = f'insert linestart +{len(white)}c'
+        if select_mode:
+            col = int(self.text.index('insert').split('.')[1])
+            self.text.tag_add(tk.SEL, *((target, 'insert') if col >= len(white) else ('insert', target)))
+        else:
+            self.text.selection_clear()
+        self.text.mark_set('insert', target)
+        return 'break' # override default behavior
+
+    def do_end(self):
+        key_logger.watch(self) # just to be sure
+        key_logger.flush()
 
 class GlobalEditor(CodeEditor):
     BASE_PREFIX = '''
