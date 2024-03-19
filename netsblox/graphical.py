@@ -41,6 +41,9 @@ _RENDER_PERIOD = 16 # time between frames in ms
 _SAY_PAGINATE_LEN = 30 # max length of a paginated line in sprite.say()
 _SAY_PAGINATE_MAX_LINES = 8 # max number of lines to show before ...-ing the rest
 
+_SECRET_CENTER_FIELD_NAME = '__nb_cst_center' # field name of our secret center point on an image
+_SECRET_DELTA_FIELD_NAME = '__nb_cst_delta' # field name pf our secret delta point on an image
+
 _GRAPHICS_SLEEP_TIME = 0.0085 # time to pause after gui stuff like sprite movement
 _do_graphics_sleep = True
 def _graphics_sleep():
@@ -61,8 +64,9 @@ def _intersects(a: Tuple[Image.Image, int, int], b: Tuple[Image.Image, int, int]
         a, b = b, a
 
     base, other = _image_alpha(a[0]), _image_alpha(b[0])
-    other_center_x = float(b[1] - a[1])
-    other_center_y = -float(b[2] - a[2])
+    a_delta, b_delta = getattr(a[0], _SECRET_DELTA_FIELD_NAME, (0, 0)), getattr(b[0], _SECRET_DELTA_FIELD_NAME, (0, 0))
+    other_center_x = float((b[1] + b_delta[0]) - (a[1] + a_delta[0]))
+    other_center_y = -float((b[2] + b_delta[1]) - (a[2] + a_delta[1]))
     other_x = base.width / 2 + other_center_x - other.width / 2
     other_y = base.height / 2 + other_center_y - other.height / 2
 
@@ -403,9 +407,10 @@ class _Project:
                 sprite = info['obj']
                 if not sprite.visible: continue
 
-                sprite_pos = list(sprite.pos)
-                sprite_pos[1] = -sprite_pos[1]
                 sprite_img = getattr(sprite, '_SpriteBase__display_image')
+                d = getattr(sprite_img, _SECRET_DELTA_FIELD_NAME)
+                p = sprite.pos
+                sprite_pos = (p[0] + d[0], -p[1] - d[1])
                 paste_pos = tuple(round(logical_size[i] / 2 + sprite_pos[i] - sprite_img.size[i] / 2) for i in range(2))
                 frame.paste(sprite_img, paste_pos, sprite_img)
 
@@ -608,8 +613,14 @@ def _default_sprite_image(color: Tuple[int, int, int], scale: float) -> Image.Im
 def _apply_transforms(img: Optional[Image.Image], scale: float, rot: float) -> Image.Image:
     if img is None: return None
     w, h = img.size
+    x, y = getattr(img, _SECRET_CENTER_FIELD_NAME, (0, 0))
     img = img.resize((round(w * scale), round(h * scale)))
-    return img.rotate((0.25 - rot) * 360, expand = True, resample = Image.BICUBIC)
+    res = img.rotate((0.25 - rot) * 360, expand = True, resample = Image.BICUBIC)
+    t = 2 * (0.25 - rot) * _math.pi
+    sin_t = _math.sin(t) * scale
+    cos_t = _math.cos(t) * scale
+    setattr(res, _SECRET_DELTA_FIELD_NAME, (-x * cos_t + y * sin_t, -y * cos_t - x * sin_t))
+    return res
 
 class CostumeSet:
     def __init__(self):
@@ -623,10 +634,14 @@ class CostumeSet:
         self.__ordered.clear()
         self.__unordered.clear()
 
-    def add(self, name: str, value: Image.Image):
+    def add(self, name: str, value: Image.Image, *, center: Tuple[float, float] = (0, 0)):
         '''
         Adds a single new costume to the collection of costumes.
+        `name` is the name of the costume and `value` is the actual image that should be used.
+        The `center` keyword argument can be used to change the center point of the image (in pixels) that sprites should use (default (0, 0)).
         '''
+        assert len(center) == 2
+        center = (float(center[0]), float(center[1]))
 
         if not isinstance(name, str):
             raise RuntimeError(f'costume name must be a string, got {type(name)}')
@@ -634,6 +649,8 @@ class CostumeSet:
             raise RuntimeError(f'costume value must be an image, got {type(value)}')
         if name in self.__unordered:
             raise RuntimeError(f'a costume with name \'{name}\' already exists')
+
+        setattr(value, _SECRET_CENTER_FIELD_NAME, center)
 
         self.__unordered[name] = value
         self.__ordered.append(name)
