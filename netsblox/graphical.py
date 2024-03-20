@@ -44,6 +44,23 @@ _SAY_PAGINATE_MAX_LINES = 8 # max number of lines to show before ...-ing the res
 _SECRET_CENTER_FIELD_NAME = '__nb_cst_center' # field name of our secret center point on an image
 _SECRET_DELTA_FIELD_NAME = '__nb_cst_delta' # field name pf our secret delta point on an image
 
+def set_center(img: Image.Image, center: Tuple[float, float]) -> Image.Image:
+    '''
+    Sets the center point of the image when used as a sprite costume.
+    Returns the same image, but with its center point updated.
+    '''
+    assert len(center) == 2, f'center must be a pair of numbers'
+    assert isinstance(img, Image.Image), f'expected an image, got {type(img)}'
+    setattr(img, _SECRET_CENTER_FIELD_NAME, (float(center[0]), float(center[1])))
+    return img
+def get_center(img: Image.Image) -> Tuple[float, float]:
+    '''
+    Gets the current center point of the image when used as a sprite costume.
+    This can get set with `set_center`.
+    '''
+    assert isinstance(img, Image.Image), f'expected an image, got {type(img)}'
+    return getattr(img, _SECRET_CENTER_FIELD_NAME, (0.0, 0.0))
+
 _GRAPHICS_SLEEP_TIME = 0.0085 # time to pause after gui stuff like sprite movement
 _do_graphics_sleep = True
 def _graphics_sleep():
@@ -613,7 +630,7 @@ def _default_sprite_image(color: Tuple[int, int, int], scale: float) -> Image.Im
 def _apply_transforms(img: Optional[Image.Image], scale: float, rot: float) -> Image.Image:
     if img is None: return None
     w, h = img.size
-    x, y = getattr(img, _SECRET_CENTER_FIELD_NAME, (0, 0))
+    x, y = get_center(img)
     img = img.resize((round(w * scale), round(h * scale)))
     res = img.rotate((0.25 - rot) * 360, expand = True, resample = Image.BICUBIC)
     t = 2 * (0.25 - rot) * _math.pi
@@ -634,23 +651,17 @@ class CostumeSet:
         self.__ordered.clear()
         self.__unordered.clear()
 
-    def add(self, name: str, value: Image.Image, *, center: Tuple[float, float] = (0, 0)):
+    def add(self, name: str, value: Image.Image):
         '''
         Adds a single new costume to the collection of costumes.
         `name` is the name of the costume and `value` is the actual image that should be used.
-        The `center` keyword argument can be used to change the center point of the image (in pixels) that sprites should use (default (0, 0)).
         '''
-        assert len(center) == 2
-        center = (float(center[0]), float(center[1]))
-
         if not isinstance(name, str):
             raise RuntimeError(f'costume name must be a string, got {type(name)}')
         if not isinstance(value, Image.Image):
             raise RuntimeError(f'costume value must be an image, got {type(value)}')
         if name in self.__unordered:
             raise RuntimeError(f'a costume with name \'{name}\' already exists')
-
-        setattr(value, _SECRET_CENTER_FIELD_NAME, center)
 
         self.__unordered[name] = value
         self.__ordered.append(name)

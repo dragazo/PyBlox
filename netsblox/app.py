@@ -179,10 +179,43 @@ IDENT_REGEX = re.compile('^[a-zA-Z_][0-9a-zA-Z_]*$')
 def is_valid_ident(ident: str) -> bool:
     return bool(IDENT_REGEX.match(ident))
 
-SIZE_REGEX = re.compile('^\s*(\d+)\s*[xX]\s*(\d+)\s*$')
+SIZE_REGEX = re.compile('^\s*([+-]?\d+)\s*[xX]\s*([+-]?\d+)\s*$')
 def parse_size(value: str) -> Optional[Tuple[int, int]]:
     m = SIZE_REGEX.match(value)
     return (int(m.group(1)), int(m.group(2))) if m is not None else None
+
+def prompt_canvas_size(*, title: str, prompt: str) -> Optional[Tuple[int, int]]:
+    while True:
+        value = simpledialog.askstring(title = title, prompt = prompt)
+        if value is None: return None
+        res = parse_size(value)
+        if res is None:
+            messagebox.showerror('Invalid canvas size', message = f'\'{value}\' is not a valid canvas size. Should be a width and height pair like \'720x480\'')
+            continue
+        if any(res[i] < MIN_CANV_SIZE[i] or res[i] > MAX_CANV_SIZE[i] for i in range(2)):
+            messagebox.showerror('Invalid canvas size', message = f'Size {res[0]}x{res[1]} is not a valid canvas size. Width should be [{MIN_CANV_SIZE[0]}, {MAX_CANV_SIZE[0]}] and height should be [{MIN_CANV_SIZE[1]}, {MAX_CANV_SIZE[1]}].')
+            continue
+        return res
+def prompt_center_point(*, title: str, prompt: str) -> Optional[Tuple[float, float]]:
+    while True:
+        value = simpledialog.askstring(title = title, prompt = prompt)
+        if value is None: return None
+        res = parse_size(value)
+        if res is None:
+            messagebox.showerror('Invalid center point', message = f'\'{value}\' is not a valid center point. Should be an x/y pair in pixels, like \'20x40\' or \'60x-40\'')
+            continue
+        return res
+def prompt_role_name(*, title: str, prompt: str) -> Optional[str]:
+    while True:
+        name = simpledialog.askstring(title = title, prompt = prompt)
+        if name is None: return None
+        if not is_valid_ident(name):
+            messagebox.showerror('Invalid name', message = f'"{name}" is not a valid python variable name')
+            continue
+        if any(x['name'] == name for x in content.project.roles):
+            messagebox.showerror(title = 'Invalid name', message = f'A role named {name} already exists.')
+            continue
+        return name
 
 MIN_CANV_SIZE = (64, 64)
 MAX_CANV_SIZE = (8192, 8192)
@@ -648,8 +681,8 @@ class Imports:
         if len(self.images) != 0:
             image_lines.append('import gelidum as _gelidum')
             image_lines.append('class images:')
-        for name, img in self.images.items():
-            image_lines.append(f'    {name} = netsblox.common.decode_image(\'{"<<<OMITTED>>>" if omit_media else common.encode_image(img)}\').convert(\'RGBA\')')
+        for name, entry in self.images.items():
+            image_lines.append(f'    {name} = set_center(netsblox.common.decode_image(\'{"<<<OMITTED>>>" if omit_media else common.encode_image(entry["img"])}\').convert(\'RGBA\'), {tuple(entry["center"])})')
         if len(self.images) != 0:
             image_lines.append('images = images()')
             image_lines.append('_gelidum.freeze(images, on_freeze = \'inplace\')')
@@ -875,7 +908,7 @@ class ProjectEditor(tk.Frame):
                     'value': editor.text.get('1.0', 'end-1c'),
                 })
 
-            role_res['images'] = { name: common.encode_image(img) for name, img in self.imports.images.items() }
+            role_res['images'] = { name: { 'img': common.encode_image(entry['img']), 'center': entry['center'][:] } for name, entry in self.imports.images.items() }
 
         return res
     def load(self, *, super_proj: Optional[dict] = None, active_role: Optional[int] = None, source: str) -> None:
@@ -977,7 +1010,12 @@ class ProjectEditor(tk.Frame):
 
         self.imports.images.clear()
         for name, raw in proj.get('images', {}).items():
-            self.imports.images[name] = common.decode_image(raw)
+            assert name not in self.imports.images, f'an image named \'{name}\' was defined multiple times'
+            if isinstance(raw, dict):
+                assert len(raw['center']) == 2
+                self.imports.images[name] = { 'img': common.decode_image(raw['img']), 'center': [float(raw['center'][0]), float(raw['center'][1])] }
+            else: # legacy support
+                self.imports.images[name] = { 'img': common.decode_image(raw), 'center': [0.0, 0.0] }
 
         self.imports.batch_update()
 
@@ -2168,7 +2206,7 @@ class MainMenu(tk.Menu):
                 continue
             break
 
-        content.project.imports.images[name] = img
+        content.project.imports.images[name] = { 'img': img, 'center': [0.0, 0.0] }
         content.project.imports.batch_update()
 
     def update_images(self):
@@ -2178,12 +2216,22 @@ class MainMenu(tk.Menu):
         if len(content.project.imports.images) != 0:
             self.images_dropdown.add_separator()
 
-        for name, img in content.project.imports.images.items():
+        for name, entry in content.project.imports.images.items():
             submenu = tk.Menu(**MENU_STYLE)
 
-            def get_viewer(img):
-                return lambda: img.show()
-            submenu.add_command(label = 'View', command = get_viewer(img))
+            def get_viewer(entry):
+                return lambda: entry['img'].show()
+            submenu.add_command(label = 'View', command = get_viewer(entry))
+
+            def get_center_changer(name):
+                def center_changer():
+                    old_center = content.project.imports.images[name]['center'][:]
+                    new_center = prompt_center_point(title = 'Set Center Point', prompt = f'Changing center point for image \'{name}\' (old center {round(old_center[0])}x{round(old_center[1])}). Enter the new center point, which should be an x/y pair in pixels, like \'20x40\' or \'60x-40\'.')
+                    if new_center is not None:
+                        content.project.imports.images[name]['center'] = [float(new_center[0]), float(new_center[1])]
+                        content.project.imports.batch_update()
+                return center_changer
+            submenu.add_command(label = f'Set Center ({round(entry["center"][0])}x{round(entry["center"][1])})', command = get_center_changer(name))
 
             def get_deleter(name):
                 def deleter():
@@ -2195,7 +2243,7 @@ class MainMenu(tk.Menu):
                 return deleter
             submenu.add_command(label = 'Delete', command = get_deleter(name))
 
-            self.images_dropdown.add_cascade(label = f'{name} {img.width}x{img.height}', menu = submenu)
+            self.images_dropdown.add_cascade(label = f'{name} ({entry["img"].width}x{entry["img"].height})', menu = submenu)
 
     def update_roles(self):
         self.roles_dropdown.delete(0, 'end')
@@ -2235,30 +2283,6 @@ class MainMenu(tk.Menu):
             command = leave_room, state = tk.ACTIVE if self.room_manager.room_name is not None else tk.DISABLED)
 
         self.roles_dropdown.add_cascade(label = 'Room', menu = submenu)
-
-        def prompt_role_name(*, title: str, prompt: str) -> Optional[str]:
-            while True:
-                name = simpledialog.askstring(title = title, prompt = prompt)
-                if name is None: return None
-                if not is_valid_ident(name):
-                    messagebox.showerror('Invalid name', message = f'"{name}" is not a valid python variable name')
-                    continue
-                if any(x['name'] == name for x in content.project.roles):
-                    messagebox.showerror(title = 'Invalid name', message = f'A role named {name} already exists.')
-                    continue
-                return name
-        def prompt_canvas_size(*, title: str, prompt: str) -> Optional[Tuple[int, int]]:
-            while True:
-                value = simpledialog.askstring(title = title, prompt = prompt)
-                if value is None: return None
-                res = parse_size(value)
-                if res is None:
-                    messagebox.showerror('Invalid canvas size', message = f'\'{value}\' is not a valid canvas size. Should be a width and height pair like \'720x480\'')
-                    continue
-                if any(res[i] < MIN_CANV_SIZE[i] or res[i] > MAX_CANV_SIZE[i] for i in range(2)):
-                    messagebox.showerror('Invalid canvas size', message = f'Size {res[0]}x{res[1]} is not a valid canvas size. Width should be [{MIN_CANV_SIZE[0]}, {MAX_CANV_SIZE[0]}] and height should be [{MIN_CANV_SIZE[1]}, {MAX_CANV_SIZE[1]}].')
-                    continue
-                return res
 
         def make_role():
             name = prompt_role_name(title = 'Name Role', prompt = 'Enter the name of the new role, which should be a valid variable name')
