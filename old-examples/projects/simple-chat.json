@@ -3,7 +3,6 @@
     "netsblox://assets/default-blocks.json"
   ],
   "blocks": [], 
-  "show_blocks": true, 
   "imports": [], 
   "editors": [
     {
