@@ -26,7 +26,7 @@ import os
 
 from PIL import Image
 
-from typing import List, Tuple, Any, Optional
+from typing import List, Tuple, Any, Optional, Dict
 
 import nb2pb
 
@@ -121,6 +121,16 @@ def _process_print_queue():
             except:
                 pass # throwing would break print queue
     root.after(33, _process_print_queue)
+
+DEF_REGEX = re.compile(r'^def\s+(\w+)\s*\(')
+def def_counts(code: str) -> Dict[str, int]:
+    res = {}
+    for line in code.splitlines():
+        m = DEF_REGEX.match(line)
+        if m is None: continue
+        k = m.group(1)
+        res[k] = res.get(k, 0) + 1
+    return res
 
 def basename_noext(path: str) -> str:
     file = os.path.basename(path)
@@ -344,6 +354,12 @@ def play_button():
         main_menu.run_menu.entryconfig(stop_entry, state = tk.DISABLED)
         return
 
+    try:
+        code = transform.add_yields(content.project.get_full_script(is_export = False, omit_media = False, static_check = True))
+    except Exception as e:
+        messagebox.showerror(title = 'Failed to run project', message = str(e))
+        return
+
     log({ 'type': 'exec::start' })
 
     main_menu.run_menu.entryconfig(run_entry, state = tk.DISABLED)
@@ -382,7 +398,6 @@ def play_button():
 
         log({ 'type': 'exec::stop' })
 
-    code = transform.add_yields(content.project.get_full_script(is_export = False, omit_media = False))
     _exec_process = subprocess.Popen([sys.executable, '-u'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
     _exec_process.stdin.write(code.encode('utf-8'))
     _exec_process.stdin.close()
@@ -852,9 +867,14 @@ class ProjectEditor(tk.Frame):
 
         return editor
 
-    def get_full_script(self, *, is_export: bool, omit_media: bool) -> str:
+    def get_full_script(self, *, is_export: bool, omit_media: bool, static_check: bool) -> str:
         scripts = []
         for editor in self.editors:
+            if static_check:
+                counts = def_counts(editor.text.get('1.0', 'end-1c'))
+                for k, v in counts.items():
+                    if v >= 2:
+                        raise RuntimeError(f'Editor \'{editor.name}\' contains multiple ({v}) definitions of \'{k}\'. This would cause problems when running your code. Consider giving them different names.')
             scripts.append(editor.get_script(is_export = is_export, omit_media = omit_media))
             scripts.append('\n\n')
         scripts.append('start_project()')
@@ -1421,7 +1441,7 @@ class CodeEditor(ScrolledText):
         if self.text.compare('end-1c', '==', '1.0'):
             return # if our text is empty, don't do anything
 
-        code = content.project.get_full_script(is_export = False, omit_media = True)
+        code = content.project.get_full_script(is_export = False, omit_media = True, static_check = False)
         script = jedi.Script(code)
         self.update_highlighting(script)
 
@@ -1493,7 +1513,7 @@ class CodeEditor(ScrolledText):
         if not force_enabled or content is None or content.project is None:
             return
         if script is None:
-            code = content.project.get_full_script(is_export = False, omit_media = True)
+            code = content.project.get_full_script(is_export = False, omit_media = True, static_check = False)
             script = jedi.Script(code)
 
         edit_line, edit_col = self.total_pos()
@@ -2046,7 +2066,7 @@ class MainMenu(tk.Menu):
         p = filedialog.asksaveasfilename(filetypes = PYTHON_FILETYPES, defaultextension = '.py')
         if type(p) is str and p: # despite the type hints, above returns empty tuple on cancel
             try:
-                res = transform.add_yields(content.project.get_full_script(is_export = True, omit_media = False))
+                res = transform.add_yields(content.project.get_full_script(is_export = True, omit_media = False, static_check = True))
                 with open(p, 'w') as f:
                     f.write(res)
 
