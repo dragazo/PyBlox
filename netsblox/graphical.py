@@ -433,7 +433,9 @@ class _Project:
 
                 say_img = getattr(sprite, '_SpriteBase__say_img')
                 if say_img is not None:
-                    say_pos = (paste_pos[0] + sprite_img.width, paste_pos[1] - say_img.height)
+                    radius = min(*sprite.costume.size) * sprite.scale / 2 / _math.sqrt(2)
+                    say_offset = (radius, -radius - say_img.height)
+                    say_pos = tuple(round(logical_size[i] / 2 + sprite_pos[i] + say_offset[i]) for i in range(2))
                     frame.paste(say_img, say_pos, say_img)
 
             self.__last_frame = frame # keep track of this for the image grab functions
@@ -1387,9 +1389,11 @@ class SpriteBase(_Ref):
         line_spacing = 3
 
         res_size = (maxw + 2 * padding, sum(x.height for x in imgs) + max(len(imgs) - 1, 0) * line_spacing + 2 * padding)
+        radius = 10
         res = Image.new('RGBA', res_size)
         draw = ImageDraw.Draw(res)
-        draw.rounded_rectangle((0, 0, res.width - 1, res.height - 1), fill = (255, 255, 255), outline = (150, 150, 150), width = 3, radius = 10)
+        draw.rectangle((0, res.height - 1 - radius, radius, res.height - 1), fill = (150, 150, 150))
+        draw.rounded_rectangle((0, 0, res.width - 1, res.height - 1), fill = (255, 255, 255), outline = (150, 150, 150), width = 3, radius = radius)
         hpos = padding
         for img in imgs:
             paste_pos = (round((maxw - img.width) / 2) + padding, hpos)
