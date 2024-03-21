@@ -1,76 +1,93 @@
 [
     {
-        "url": "netsblox://assets/img/blocks/onstart.png",
+        "url": "netsblox://assets/img/blocks/motion/forward.png",
         "scale": 1,
-        "global": "@onstart()\ndef my_onstart(): # functions need different names\n    pass # replace with your code",
-        "stage": "@onstart()\ndef my_onstart(self): # functions need different names\n    pass # replace with your code",
-        "sprite": "@onstart()\ndef my_onstart(self): # functions need different names\n    pass # replace with your code"
+        "global": "",
+        "stage": "",
+        "sprite": "self.forward(10)"
     },
     {
-        "url": "netsblox://assets/img/blocks/onstartclone.png",
+        "url": "netsblox://assets/img/blocks/motion/turn-right.png",
         "scale": 1,
-        "sprite": "@onstart(when = 'clone')\ndef my_onstartclone(self): # functions need different names\n    pass # replace with your code"
+        "global": "",
+        "stage": "",
+        "sprite": "self.turn_right(15)"
     },
     {
-        "url": "netsblox://assets/img/blocks/keypress.png",
+        "url": "netsblox://assets/img/blocks/motion/turn-left.png",
         "scale": 1,
-        "global": "@onkey('space')\ndef my_onkey(): # functions need different names\n    pass # replace with your code",
-        "stage": "@onkey('space')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code",
-        "sprite": "@onkey('space')\ndef my_onkey(self): # functions need different names\n    pass # replace with your code"
+        "global": "",
+        "stage": "",
+        "sprite": "self.turn_left(15)"
     },
     {
-        "url": "netsblox://assets/img/blocks/onclick.png",
+        "url": "netsblox://assets/img/blocks/motion/set-heading.png",
         "scale": 1,
-        "stage": "@onmouse('down')\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code",
-        "sprite": "@onmouse('down')\ndef my_onclick(self, x, y): # functions need different names\n    pass # replace with your code"
+        "global": "",
+        "stage": "",
+        "sprite": "self.heading = 90"
     },
     {
-        "url": "netsblox://assets/img/blocks/msgrecv-snap.png",
+        "url": "netsblox://assets/img/blocks/motion/set-pos.png",
         "scale": 1,
-        "global": "@nb.on_message('signal')\ndef my_on_message(): # functions need different names\n    pass # replace with your code",
-        "stage": "@nb.on_message('signal')\ndef my_on_message(self): # functions need different names\n    pass # replace with your code",
-        "sprite": "@nb.on_message('signal')\ndef my_on_message(self): # functions need different names\n    pass # replace with your code"
+        "global": "",
+        "stage": "",
+        "sprite": "self.pos = (0, 0)"
     },
     {
-        "url": "netsblox://assets/img/blocks/sendmsg-snap.png",
+        "url": "netsblox://assets/img/blocks/motion/change-pos-x.png",
         "scale": 1,
-        "global": "nb.send_message('signal', 'local')",
-        "stage": "nb.send_message('signal', 'local')",
-        "sprite": "nb.send_message('signal', 'local')"
+        "global": "",
+        "stage": "",
+        "sprite": "self.x_pos += 10"
     },
     {
-        "url": "netsblox://assets/img/blocks/loop-forever.png",
+        "url": "netsblox://assets/img/blocks/motion/set-pos-x.png",
         "scale": 1,
-        "global": "while True:\n    pass # replace with your code",
-        "stage": "while True:\n    pass # replace with your code",
-        "sprite": "while True:\n    pass # replace with your code"
+        "global": "",
+        "stage": "",
+        "sprite": "self.x_pos = 0"
     },
     {
-        "url": "netsblox://assets/img/blocks/warp.png",
+        "url": "netsblox://assets/img/blocks/motion/change-pos-y.png",
         "scale": 1,
-        "global": "with Warp():\n    pass # replace with your code",
-        "stage": "with Warp():\n    pass # replace with your code",
-        "sprite": "with Warp():\n    pass # replace with your code"
+        "global": "",
+        "stage": "",
+        "sprite": "self.y_pos += 10"
     },
     {
-        "url": "netsblox://assets/img/blocks/msgrecv.png",
+        "url": "netsblox://assets/img/blocks/motion/set-pos-y.png",
         "scale": 1,
-        "global": "@nb.on_message('message')\ndef my_on_message(msg): # functions need different names\n    pass # replace with your code",
-        "stage": "@nb.on_message('message')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code",
-        "sprite": "@nb.on_message('message')\ndef my_on_message(self, msg): # functions need different names\n    pass # replace with your code"
+        "global": "",
+        "stage": "",
+        "sprite": "self.y_pos = 0"
     },
     {
-        "url": "netsblox://assets/img/blocks/sendmsg.png",
+        "url": "netsblox://assets/img/blocks/motion/edge-bounce.png",
         "scale": 1,
-        "global": "nb.send_message('message', 'everyone in room', msg = 'hello')",
-        "stage": "nb.send_message('message', 'everyone in room', msg = 'hello')",
-        "sprite": "nb.send_message('message', 'everyone in room', msg = 'hello')"
+        "global": "",
+        "stage": "",
+        "sprite": "self.keep_on_stage(bounce = True)"
     },
     {
-        "url": "netsblox://assets/img/blocks/loop-foreach.png",
+        "url": "netsblox://assets/img/blocks/motion/get-pos-x.png",
         "scale": 1,
-        "global": "for item in my_list:\n    pass # replace with your code",
-        "stage": "for item in my_list:\n    pass # replace with your code",
-        "sprite": "for item in my_list:\n    pass # replace with your code"
+        "global": "",
+        "stage": "",
+        "sprite": "self.x_pos"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/motion/get-pos-y.png",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.y_pos"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/motion/get-heading.png",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.heading"
     }
 ]
