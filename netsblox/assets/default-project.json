@@ -10,7 +10,9 @@
                 "netsblox://assets/default-blocks.json"
             ],
             "blocks": [],
-            "imports": [],
+            "imports": [
+                "time"
+            ],
             "editors": [
                 {
                     "type": "global",

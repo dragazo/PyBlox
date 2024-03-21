@@ -433,7 +433,7 @@ class _Project:
 
                 say_img = getattr(sprite, '_SpriteBase__say_img')
                 if say_img is not None:
-                    radius = min(*sprite.costume.size) * sprite.scale / 2 / _math.sqrt(2)
+                    radius = min(*getattr(sprite.costume, 'size', (40, 22.5))) * sprite.scale / 2 / _math.sqrt(2)
                     say_offset = (radius, -radius - say_img.height)
                     say_pos = tuple(round(logical_size[i] / 2 + sprite_pos[i] + say_offset[i]) for i in range(2))
                     frame.paste(say_img, say_pos, say_img)
@@ -1616,8 +1616,8 @@ def onkey(*keys: str, when: Union[str, List[str]] = ['down', 'hold']):
 
 def onmouse(when: str, *, anywhere: bool = False):
     '''
-    The `@onmouse()` decorator can be applied to a function to make it run
-    when a user interacts with the sprite or display with their mouse.
+    The `@onmouse()` decorator can be applied to a global function or sprite/stage method to make it run
+    when a user interacts with the sprite or stage with their mouse.
     The function you apply it to will receive the `x` and `y` position of the mouse.
 
     When used on sprite methods, by default this will only be triggered when the user

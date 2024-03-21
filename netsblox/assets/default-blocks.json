@@ -1,6 +1,7 @@
 [
     {
         "url": "netsblox://assets/img/blocks/motion/forward.png",
+        "category": "motion",
         "scale": 1,
         "global": "",
         "stage": "",
@@ -8,6 +9,7 @@
     },
     {
         "url": "netsblox://assets/img/blocks/motion/turn-right.png",
+        "category": "motion",
         "scale": 1,
         "global": "",
         "stage": "",
@@ -15,6 +17,7 @@
     },
     {
         "url": "netsblox://assets/img/blocks/motion/turn-left.png",
+        "category": "motion",
         "scale": 1,
         "global": "",
         "stage": "",
@@ -22,6 +25,7 @@
     },
     {
         "url": "netsblox://assets/img/blocks/motion/set-heading.png",
+        "category": "motion",
         "scale": 1,
         "global": "",
         "stage": "",
@@ -29,6 +33,7 @@
     },
     {
         "url": "netsblox://assets/img/blocks/motion/set-pos.png",
+        "category": "motion",
         "scale": 1,
         "global": "",
         "stage": "",
@@ -36,6 +41,7 @@
     },
     {
         "url": "netsblox://assets/img/blocks/motion/change-pos-x.png",
+        "category": "motion",
         "scale": 1,
         "global": "",
         "stage": "",
@@ -43,6 +49,7 @@
     },
     {
         "url": "netsblox://assets/img/blocks/motion/set-pos-x.png",
+        "category": "motion",
         "scale": 1,
         "global": "",
         "stage": "",
@@ -50,6 +57,7 @@
     },
     {
         "url": "netsblox://assets/img/blocks/motion/change-pos-y.png",
+        "category": "motion",
         "scale": 1,
         "global": "",
         "stage": "",
@@ -57,6 +65,7 @@
     },
     {
         "url": "netsblox://assets/img/blocks/motion/set-pos-y.png",
+        "category": "motion",
         "scale": 1,
         "global": "",
         "stage": "",
@@ -64,6 +73,7 @@
     },
     {
         "url": "netsblox://assets/img/blocks/motion/edge-bounce.png",
+        "category": "motion",
         "scale": 1,
         "global": "",
         "stage": "",
@@ -71,6 +81,7 @@
     },
     {
         "url": "netsblox://assets/img/blocks/motion/get-pos-x.png",
+        "category": "motion",
         "scale": 1,
         "global": "",
         "stage": "",
@@ -78,6 +89,7 @@
     },
     {
         "url": "netsblox://assets/img/blocks/motion/get-pos-y.png",
+        "category": "motion",
         "scale": 1,
         "global": "",
         "stage": "",
@@ -85,9 +97,170 @@
     },
     {
         "url": "netsblox://assets/img/blocks/motion/get-heading.png",
+        "category": "motion",
         "scale": 1,
         "global": "",
         "stage": "",
         "sprite": "self.heading"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/onstart.png",
+        "category": "control",
+        "scale": 1,
+        "global": "@onstart()\ndef my_onstart(): # functions need unique names\n    pass # replace with your code",
+        "stage": "@onstart()\ndef my_onstart(self): # functions need unique names\n    pass # replace with your code",
+        "sprite": "@onstart()\ndef my_onstart(self): # functions need unique names\n    pass # replace with your code"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/onkey.png",
+        "category": "control",
+        "scale": 1,
+        "global": "@onkey('space')\ndef my_onkey(): # functions need unique names\n    pass # replace with your code",
+        "stage": "@onkey('space')\ndef my_onkey(self): # functions need unique names\n    pass # replace with your code",
+        "sprite": "@onkey('space')\ndef my_onkey(self): # functions need unique names\n    pass # replace with your code"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/onmouse.png",
+        "category": "control",
+        "scale": 1,
+        "global": "@onmouse('up')\ndef my_onmouse(x, y): # functions need unique names\n    pass # replace with your code",
+        "stage": "@onmouse('up')\ndef my_onmouse(self, x, y): # functions need unique names\n    pass # replace with your code",
+        "sprite": "@onmouse('up')\ndef my_onmouse(self, x, y): # functions need unique names\n    pass # replace with your code"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/receive.png",
+        "category": "control",
+        "scale": 1,
+        "global": "@nb.on_message('my message')\ndef my_on_message(): # functions need unique names\n    pass # replace with your code",
+        "stage": "@nb.on_message('my message')\ndef my_on_message(self): # functions need unique names\n    pass # replace with your code",
+        "sprite": "@nb.on_message('my message')\ndef my_on_message(self): # functions need unique names\n    pass # replace with your code"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/broadcast.png",
+        "category": "control",
+        "scale": 1,
+        "global": "nb.send_message('my message')",
+        "stage": "nb.send_message('my message')",
+        "sprite": "nb.send_message('my message')"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/no-yield.png",
+        "category": "control",
+        "scale": 1,
+        "global": "with NoYield():\n    pass # replace with your code",
+        "stage": "with NoYield():\n    pass # replace with your code",
+        "sprite": "with NoYield():\n    pass # replace with your code"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/sleep.png",
+        "category": "control",
+        "scale": 1,
+        "global": "time.sleep(1)",
+        "stage": "time.sleep(1)",
+        "sprite": "time.sleep(1)"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/loop-forever.png",
+        "category": "control",
+        "scale": 1,
+        "global": "while True:\n    pass # replace with your code",
+        "stage": "while True:\n    pass # replace with your code",
+        "sprite": "while True:\n    pass # replace with your code"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/loop-repeat.png",
+        "category": "control",
+        "scale": 1,
+        "global": "for _ in range(10):\n    pass # replace with your code",
+        "stage": "for _ in range(10):\n    pass # replace with your code",
+        "sprite": "for _ in range(10):\n    pass # replace with your code"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/loop-until.png",
+        "category": "control",
+        "scale": 1,
+        "global": "while not (condition): # replace with your condition\n    pass # replace with your code",
+        "stage": "while not (condition): # replace with your condition\n    pass # replace with your code",
+        "sprite": "while not (condition): # replace with your condition\n    pass # replace with your code"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/loop-for.png",
+        "category": "control",
+        "scale": 1,
+        "global": "for i in range(1, 11):\n    pass # replace with your code",
+        "stage": "for i in range(1, 11):\n    pass # replace with your code",
+        "sprite": "for i in range(1, 11):\n    pass # replace with your code"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/if.png",
+        "category": "control",
+        "scale": 1,
+        "global": "if condition: # replace with your condition\n    pass # replace with your code",
+        "stage": "if condition: # replace with your condition\n    pass # replace with your code",
+        "sprite": "if condition: # replace with your condition\n    pass # replace with your code"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/if-else.png",
+        "category": "control",
+        "scale": 1,
+        "global": "if condition: # replace with your condition\n    pass # replace with your code\nelse:\n    pass # replace with your code",
+        "stage": "if condition: # replace with your condition\n    pass # replace with your code\nelse:\n    pass # replace with your code",
+        "sprite": "if condition: # replace with your condition\n    pass # replace with your code\nelse:\n    pass # replace with your code"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/if-else-expr.png",
+        "category": "control",
+        "scale": 1,
+        "global": "'abc' if condition else 'xyz'",
+        "stage": "'abc' if condition else 'xyz'",
+        "sprite": "'abc' if condition else 'xyz'"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/return.png",
+        "category": "control",
+        "scale": 1,
+        "global": "return 10",
+        "stage": "return 10",
+        "sprite": "return 10"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/try.png",
+        "category": "control",
+        "scale": 1,
+        "global": "try:\n    pass # replace with your code\nexcept Exception as err:\n    pass # replace with your code",
+        "stage": "try:\n    pass # replace with your code\nexcept Exception as err:\n    pass # replace with your code",
+        "sprite": "try:\n    pass # replace with your code\nexcept Exception as err:\n    pass # replace with your code"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/throw.png",
+        "category": "control",
+        "scale": 1,
+        "global": "raise RuntimeError('uhoh!')",
+        "stage": "raise RuntimeError('uhoh!')",
+        "sprite": "raise RuntimeError('uhoh!')"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/onstart-clone.png",
+        "category": "control",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "@onstart('clone')\ndef my_onstart_clone(self): # functions need unique names\n    pass # replace with your code"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/clone-stmt.png",
+        "category": "control",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.clone()"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/clone-expr.png",
+        "category": "control",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.clone()"
     }
 ]
