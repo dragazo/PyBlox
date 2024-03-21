@@ -52,6 +52,26 @@ IMAGE_FILETYPES = [('Images', xux('.png .jpg .jpeg')), ('All Files', '.*')]
 MIN_FONT_SIZE = 4
 MAX_FONT_SIZE = 40
 
+class BlockCategory:
+    def __init__(self, *, name: str, color: str):
+        self.name = name
+        self.color = color
+
+BLOCK_CATEGORIES_ORDER = ['motion', 'control', 'looks', 'sensing', 'sound', 'operators', 'pen', 'variables', 'network', 'custom']
+BLOCK_CATEGORIES = {
+    'motion':    BlockCategory(name = 'Motion',    color = '4a6cd4'),
+    'control':   BlockCategory(name = 'Control',   color = 'e6a822'),
+    'looks':     BlockCategory(name = 'Looks',     color = '8f56e3'),
+    'sensing':   BlockCategory(name = 'Sensing',   color = '0494dc'),
+    'sound':     BlockCategory(name = 'Sound',     color = 'cf4ad9'),
+    'operators': BlockCategory(name = 'Operators', color = '62c213'),
+    'pen':       BlockCategory(name = 'Pen',       color = '00a178'),
+    'variables': BlockCategory(name = 'Variables', color = 'f3761d'),
+    'network':   BlockCategory(name = 'Network',   color = 'd94d11'),
+    'custom':    BlockCategory(name = 'Custom',    color = '787878'),
+}
+assert set(BLOCK_CATEGORIES.keys()) == set(BLOCK_CATEGORIES_ORDER)
+
 color_enabled = False
 try:
     # idle gives us syntax highlighting, but we don't require it otherwise
@@ -554,9 +574,49 @@ class DndManager:
                 target.on_drop(e)
                 break
 
+class BlocksCategorySelector(tk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.default_button_color = None
+        self.buttons = []
+        for i, name in enumerate(BLOCK_CATEGORIES_ORDER):
+            category = BLOCK_CATEGORIES[name]
+            def make_clicker(name):
+                def clicker():
+                    self.selected = name
+                    content.project.on_tab_change()
+                return clicker
+            button = tk.Button(self, text = category.name, width = 1, height = 1, padx = 0, pady = 0, border = 0, relief = 'flat', command = make_clicker(name))
+            button.grid(row = i // 2, column = i % 2, sticky = 'nesw')
+            self.default_button_color = button.cget('background')
+            self.buttons.append(button)
+        for col in [0, 1]:
+            self.columnconfigure(col, weight = 1, minsize = 80)
+
+        self.selected = BLOCK_CATEGORIES_ORDER[0]
+
+    @property
+    def selected(self):
+        return self.__selected
+
+    @selected.setter
+    def selected(self, name: str):
+        assert name in BLOCK_CATEGORIES
+        self.__selected = name
+        for i in range(len(BLOCK_CATEGORIES_ORDER)):
+            category = BLOCK_CATEGORIES[BLOCK_CATEGORIES_ORDER[i]]
+            if BLOCK_CATEGORIES_ORDER[i] == self.__selected:
+                self.buttons[i].configure(bg = f'#{category.color}', activebackground = f'#{category.color}', fg = 'white', activeforeground = 'white')
+            else:
+                self.buttons[i].configure(bg = self.default_button_color, activebackground = f'#{category.color}', fg = 'black', activeforeground = 'white')
+
 class BlocksList(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
+
+        self.category_selector = BlocksCategorySelector(self)
+        self.category_selector.pack(side = tk.TOP, fill = tk.X, expand = False)
 
         self.scrollbar = ttk.Scrollbar(self)
         self.text = tk.Text(self, wrap = tk.NONE, width = 24, yscrollcommand = self.scrollbar.set, bg = COLOR_INFO['text-background-disabled'])
@@ -645,7 +705,11 @@ class BlocksList(tk.Frame):
             self.text.delete('1.0', 'end')
             self.imgs.clear()
 
+            selected_category = self.category_selector.selected
             for block in content.project.blocks:
+                if block['category'] != selected_category:
+                    continue
+
                 replace = block[blocks_type]
                 if not replace:
                     continue
@@ -904,6 +968,7 @@ class ProjectEditor(tk.Frame):
                 {
                     'url': block['url'],
                     'scale': block['scale'],
+                    'category': block['category'],
                     'global': block['global'],
                     'stage': block['stage'],
                     'sprite': block['sprite'],
@@ -967,6 +1032,7 @@ class ProjectEditor(tk.Frame):
 
                             'url': block['url'],
                             'scale': block['scale'],
+                            'category': 'custom',
                             'global': block['replace'] if k == 'global' else '',
                             'stage': block['replace'] if k == 'stage' else '',
                             'sprite': block['replace'] if k == 'sprite' or k == 'turtle' else '',
@@ -979,6 +1045,7 @@ class ProjectEditor(tk.Frame):
 
                         'url': block['url'],
                         'scale': block.get('scale', 1),
+                        'category': block.get('category', 'custom'),
                         'global': block.get('global', ''),
                         'stage': block.get('stage', ''),
                         'sprite': block.get('sprite', '') or block.get('turtle', ''),
@@ -2160,6 +2227,7 @@ class MainMenu(tk.Menu):
 
             'url': f'base64://{common.encode_image(img)}',
             'scale': 1,
+            'category': content.blocks.category_selector.selected,
             'global': 'pass',
             'stage': 'pass',
             'sprite': 'pass',
