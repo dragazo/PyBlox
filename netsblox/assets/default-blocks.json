@@ -342,5 +342,101 @@
         "global": "",
         "stage": "",
         "sprite": "self.visible"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sensing/get-touching.png",
+        "category": "sensing",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.is_touching(sprite) # replace with your (other) sprite"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sensing/ask.png",
+        "category": "sensing",
+        "scale": 1,
+        "global": "answer = input(\"what's your name?\")",
+        "stage": "answer = input(\"what's your name?\")",
+        "sprite": "answer = input(\"what's your name?\")"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sensing/answer.png",
+        "category": "sensing",
+        "scale": 1,
+        "global": "answer",
+        "stage": "answer",
+        "sprite": "answer"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sensing/get-mouse-x.png",
+        "category": "sensing",
+        "scale": 1,
+        "global": "",
+        "stage": "stage.mouse_pos[0]",
+        "sprite": "stage.mouse_pos[0]"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sensing/get-mouse-y.png",
+        "category": "sensing",
+        "scale": 1,
+        "global": "",
+        "stage": "stage.mouse_pos[1]",
+        "sprite": "stage.mouse_pos[1]"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sensing/get-key-down.png",
+        "category": "sensing",
+        "scale": 1,
+        "global": "",
+        "stage": "stage.is_key_down('space')",
+        "sprite": "stage.is_key_down('space')"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sensing/get-latitude.png",
+        "category": "sensing",
+        "scale": 1,
+        "global": "",
+        "stage": "stage.gps_location[0]",
+        "sprite": "stage.gps_location[0]"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sensing/get-longitude.png",
+        "category": "sensing",
+        "scale": 1,
+        "global": "",
+        "stage": "stage.gps_location[1]",
+        "sprite": "stage.gps_location[1]"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sensing/get-stage-width.png",
+        "category": "sensing",
+        "scale": 1,
+        "global": "",
+        "stage": "stage.width",
+        "sprite": "stage.width"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sensing/get-stage-height.png",
+        "category": "sensing",
+        "scale": 1,
+        "global": "",
+        "stage": "stage.height",
+        "sprite": "stage.height"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sensing/get-image-stage.png",
+        "category": "sensing",
+        "scale": 1,
+        "global": "",
+        "stage": "stage.get_image()",
+        "sprite": "stage.get_image()"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sensing/get-image-self.png",
+        "category": "sensing",
+        "scale": 1,
+        "global": "",
+        "stage": "self.get_image()",
+        "sprite": "self.get_image()"
     }
 ]
