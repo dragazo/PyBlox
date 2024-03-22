@@ -680,6 +680,102 @@
         "sprite": "isinstance(5, str)"
     },
     {
+        "url": "netsblox://assets/img/blocks/pen/clear.png",
+        "category": "pen",
+        "scale": 1,
+        "global": "",
+        "stage": "stage.clear_drawings()",
+        "sprite": "stage.clear_drawings()"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/pen/set-drawing-true.png",
+        "category": "pen",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.drawing = True"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/pen/set-drawing-false.png",
+        "category": "pen",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.drawing = False"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/pen/get-drawing.png",
+        "category": "pen",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.drawing"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/pen/set-pen-color.png",
+        "category": "pen",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.pen_color = 'red'"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/pen/get-pen-color.png",
+        "category": "pen",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.pen_color"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/pen/get-pen-size.png",
+        "category": "pen",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.pen_size"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/pen/change-pen-size.png",
+        "category": "pen",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.pen_size += 1"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/pen/set-pen-size.png",
+        "category": "pen",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.pen_size = 1"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/pen/stamp.png",
+        "category": "pen",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.stamp()"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/pen/write.png",
+        "category": "pen",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.write('Hello!', size = 12)"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/pen/get-drawings.png",
+        "category": "pen",
+        "scale": 1,
+        "global": "",
+        "stage": "stage.get_drawings()",
+        "sprite": "stage.get_drawings()"
+    },
+    {
         "url": "netsblox://assets/img/blocks/variables/var-local.png",
         "category": "variables",
         "scale": 1,

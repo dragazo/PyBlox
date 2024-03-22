@@ -1228,12 +1228,15 @@ class SpriteBase(_Ref):
     def pen_color(self) -> Tuple[int, int, int]:
         '''
         Get or set the current pen color.
+
         For getting, this is returned as three integers [0,255] representing the red, green, and blue (RGB) components.
-        For setting, this can be specified as either an RGB tuple, or as a hex color code like `'#a0c8f0'`.
+
+        For setting, this can be specified as either a color name like `'red'`, an RGB tuple like `(200, 17, 98)`, or as a hex color code like `'#a0c8f0'`.
 
         ```
-        self.pen_color = (34, 23, 104)
+        self.pen_color = 'red'
         self.pen_color = '#a0c8f0'
+        self.pen_color = (34, 23, 104)
         ```
         '''
         return self.__pen_color
@@ -1337,7 +1340,7 @@ class SpriteBase(_Ref):
     def stamp(self) -> None:
         '''
         Stamps an image of the sprite on the background at the current position.
-        Stamps can be deleted by calling `self.clear_stamps()` (just stamps) or `self.clear()` (all drawings).
+        Stamps can be deleted by calling `self.clear_drawings()`.
 
         ```
         self.stamp()
