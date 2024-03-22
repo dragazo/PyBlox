@@ -438,5 +438,197 @@
         "global": "",
         "stage": "self.get_image()",
         "sprite": "self.get_image()"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/var-local.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "a = 0",
+        "stage": "a = 0",
+        "sprite": "a = 0"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "['hello', 'world']",
+        "stage": "['hello', 'world']",
+        "sprite": "['hello', 'world']"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-range.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "[*range(1, 11)]",
+        "stage": "[*range(1, 11)]",
+        "sprite": "[*range(1, 11)]"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-cons.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "[123, *my_list]",
+        "stage": "[123, *my_list]",
+        "sprite": "[123, *my_list]"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-index-first.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "my_list[0]",
+        "stage": "my_list[0]",
+        "sprite": "my_list[0]"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-index-last.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "my_list[-1]",
+        "stage": "my_list[-1]",
+        "sprite": "my_list[-1]"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-cdr.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "my_list[1:]",
+        "stage": "my_list[1:]",
+        "sprite": "my_list[1:]"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-len.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "len(my_list)",
+        "stage": "len(my_list)",
+        "sprite": "len(my_list)"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-rev.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "my_list[::-1]",
+        "stage": "my_list[::-1]",
+        "sprite": "my_list[::-1]"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-in.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "'thing' in my_list",
+        "stage": "'thing' in my_list",
+        "sprite": "'thing' in my_list"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-empty.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "len(my_list) == 0",
+        "stage": "len(my_list) == 0",
+        "sprite": "len(my_list) == 0"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-map.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "[2 * x for x in my_list]",
+        "stage": "[2 * x for x in my_list]",
+        "sprite": "[2 * x for x in my_list]"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-filter.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "[x for x in my_list if x > 0]",
+        "stage": "[x for x in my_list if x > 0]",
+        "sprite": "[x for x in my_list if x > 0]"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/loop-foreach.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "for item in my_list: # replace with your list\n    pass # replace with your code",
+        "stage": "for item in my_list: # replace with your list\n    pass # replace with your code",
+        "sprite": "for item in my_list: # replace with your list\n    pass # replace with your code"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-push.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "my_list.append('thing')",
+        "stage": "my_list.append('thing')",
+        "sprite": "my_list.append('thing')"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-remove-first.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "del my_list[0]",
+        "stage": "del my_list[0]",
+        "sprite": "del my_list[0]"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-remove-last.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "del my_list[-1]",
+        "stage": "del my_list[-1]",
+        "sprite": "del my_list[-1]"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-remove-all.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "my_list.clear()",
+        "stage": "my_list.clear()",
+        "sprite": "my_list.clear()"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-insert-first.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "my_list.insert(0, 'thing')",
+        "stage": "my_list.insert(0, 'thing')",
+        "sprite": "my_list.insert(0, 'thing')"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-insert-last.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "my_list.append('thing')",
+        "stage": "my_list.append('thing')",
+        "sprite": "my_list.append('thing')"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-replace-first.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "my_list[0] = 'thing'",
+        "stage": "my_list[0] = 'thing'",
+        "sprite": "my_list[0] = 'thing'"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-replace-last.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "my_list[-1] = 'thing'",
+        "stage": "my_list[-1] = 'thing'",
+        "sprite": "my_list[-1] = 'thing'"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-cat.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "[*list_1, *list_2]",
+        "stage": "[*list_1, *list_2]",
+        "sprite": "[*list_1, *list_2]"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/variables/list-sort.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "sorted(my_list)",
+        "stage": "sorted(my_list)",
+        "sprite": "sorted(my_list)"
     }
 ]
