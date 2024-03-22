@@ -1360,7 +1360,7 @@ class SpriteBase(_Ref):
         '''
         self.__proj.draw_text((self.__x, self.__y), self.__rot, str(text), float(size), self.__pen_color, critical = self.forward if move else None)
 
-    def say(self, text: str = '', *, duration: Optional[float] = None) -> None:
+    def say(self, *values: Any, duration: Optional[float] = None) -> None:
         '''
         Causes the sprite to show a message bubble on the display with the given content.
         The message bubble will follow the sprite around as it moves on the display.
@@ -1374,7 +1374,7 @@ class SpriteBase(_Ref):
         self.say('something else', duration = 2)
         ```
         '''
-        text = str(text)
+        text = ' '.join([str(x) for x in values])
         if text == '':
             self.__say_img = None
             self.__proj.invalidate()
