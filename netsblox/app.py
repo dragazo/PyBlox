@@ -725,6 +725,13 @@ class BlocksList(tk.Frame):
                     return show_block_menu
                 label.bind(f'<{SYS_INFO["right-click"]}>', make_block_menu_shower(id))
 
+                def do_scroll(delta: int):
+                    self.text.yview_scroll(-2 * delta, 'units')
+                    return 'break'
+                label.bind('<MouseWheel>', lambda e: do_scroll(1 if e.delta > 0 else -1 if e.delta < 0 else 0))
+                label.bind('<Button-4>', lambda e: do_scroll(1))
+                label.bind('<Button-5>', lambda e: do_scroll(-1))
+
                 self.text.window_create('end', window = label)
                 self.text.insert('end', '\n')
                 self.imgs.append(img)
