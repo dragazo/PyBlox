@@ -732,6 +732,14 @@ class BlocksList(tk.Frame):
                 label.bind('<Button-4>', lambda e: do_scroll(1))
                 label.bind('<Button-5>', lambda e: do_scroll(-1))
 
+                def make_doc_shower(block):
+                    def show_docs(e):
+                        text = f'{block[blocks_type]}\n\n-------------------------\n\n{block["docs"]}' if block["docs"] else block[blocks_type]
+                        content.display.docs.text.delete('1.0', 'end')
+                        content.display.docs.text.insert('end', text)
+                    return show_docs
+                label.bind('<Enter>', make_doc_shower(block))
+
                 self.text.window_create('end', window = label)
                 self.text.insert('end', '\n')
                 self.imgs.append(img)
@@ -976,6 +984,7 @@ class ProjectEditor(tk.Frame):
                     'url': block['url'],
                     'scale': block['scale'],
                     'category': block['category'],
+                    'docs': block['docs'],
                     'global': block['global'],
                     'stage': block['stage'],
                     'sprite': block['sprite'],
@@ -1040,6 +1049,7 @@ class ProjectEditor(tk.Frame):
                             'url': block['url'],
                             'scale': block['scale'],
                             'category': 'custom',
+                            'docs': '',
                             'global': block['replace'] if k == 'global' else '',
                             'stage': block['replace'] if k == 'stage' else '',
                             'sprite': block['replace'] if k == 'sprite' or k == 'turtle' else '',
@@ -1053,6 +1063,7 @@ class ProjectEditor(tk.Frame):
                         'url': block['url'],
                         'scale': block.get('scale', 1),
                         'category': block.get('category', 'custom'),
+                        'docs': block.get('docs', ''),
                         'global': block.get('global', ''),
                         'stage': block.get('stage', ''),
                         'sprite': block.get('sprite', '') or block.get('turtle', ''),
@@ -1208,6 +1219,7 @@ class ChangedText(tk.Text):
         try:
             result = self.tk.call(cmd)
         except Exception as e:
+            print(cmd)
             # for some reason our proxying breaks some ops in some cases, so just catch and ignore
             ignore_patterns = [
                 ('edit', 'undo'), ('edit', 'redo'), # fails if stack is empty (undo) or at top of stack (redo)
@@ -2235,6 +2247,7 @@ class MainMenu(tk.Menu):
             'url': f'base64://{common.encode_image(img)}',
             'scale': 1,
             'category': content.blocks.category_selector.selected,
+            'docs': '',
             'global': 'pass',
             'stage': 'pass',
             'sprite': 'pass',

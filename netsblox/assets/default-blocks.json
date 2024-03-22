@@ -5,7 +5,8 @@
         "scale": 1,
         "global": "",
         "stage": "",
-        "sprite": "self.forward(10)"
+        "sprite": "self.forward(10)",
+        "docs": "Distances are measured in pixels."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/turn-right.png",
@@ -13,7 +14,8 @@
         "scale": 1,
         "global": "",
         "stage": "",
-        "sprite": "self.turn_right(15)"
+        "sprite": "self.turn_right(15)",
+        "docs": "Angles are measured in degrees.\n\nThis is equivalent to directly changing the sprite's heading:\n\nself.heading += 15"
     },
     {
         "url": "netsblox://assets/img/blocks/motion/turn-left.png",
@@ -21,7 +23,8 @@
         "scale": 1,
         "global": "",
         "stage": "",
-        "sprite": "self.turn_left(15)"
+        "sprite": "self.turn_left(15)",
+        "docs": "Angles are measured in degrees.\n\nThis is equivalent to directly changing the sprite's heading:\n\nself.heading -= 15"
     },
     {
         "url": "netsblox://assets/img/blocks/motion/set-heading.png",
@@ -29,7 +32,8 @@
         "scale": 1,
         "global": "",
         "stage": "",
-        "sprite": "self.heading = 90"
+        "sprite": "self.heading = 90",
+        "docs": "Angles are measured in degrees."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/set-pos.png",
@@ -37,7 +41,8 @@
         "scale": 1,
         "global": "",
         "stage": "",
-        "sprite": "self.pos = (0, 0)"
+        "sprite": "self.pos = (0, 0)",
+        "docs": "Positions are measured in pixels, where (0, 0) represents the center of the stage."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/change-pos-x.png",
@@ -45,7 +50,8 @@
         "scale": 1,
         "global": "",
         "stage": "",
-        "sprite": "self.x_pos += 10"
+        "sprite": "self.x_pos += 10",
+        "docs": "Distances are measured in pixels."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/set-pos-x.png",
@@ -53,7 +59,8 @@
         "scale": 1,
         "global": "",
         "stage": "",
-        "sprite": "self.x_pos = 0"
+        "sprite": "self.x_pos = 0",
+        "docs": "Positions are measured in pixels, where 0 represents the center of the stage."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/change-pos-y.png",
@@ -61,7 +68,8 @@
         "scale": 1,
         "global": "",
         "stage": "",
-        "sprite": "self.y_pos += 10"
+        "sprite": "self.y_pos += 10",
+        "docs": "Distances are measured in pixels."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/set-pos-y.png",
@@ -69,7 +77,8 @@
         "scale": 1,
         "global": "",
         "stage": "",
-        "sprite": "self.y_pos = 0"
+        "sprite": "self.y_pos = 0",
+        "docs": "Positions are measured in pixels, where 0 represents the center of the stage."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/edge-bounce.png",
@@ -77,7 +86,8 @@
         "scale": 1,
         "global": "",
         "stage": "",
-        "sprite": "self.keep_on_stage(bounce = True)"
+        "sprite": "self.keep_on_stage(bounce = True)",
+        "docs": "The bounce value can be set to False to keep the sprite on the screen without rotating it."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/get-pos-x.png",
@@ -85,7 +95,8 @@
         "scale": 1,
         "global": "",
         "stage": "",
-        "sprite": "self.x_pos"
+        "sprite": "self.x_pos",
+        "docs": "Positions are measured in pixels, where 0 represents the center of the stage.\n\nIf you need both the x and y position, you may use self.pos"
     },
     {
         "url": "netsblox://assets/img/blocks/motion/get-pos-y.png",
@@ -93,7 +104,8 @@
         "scale": 1,
         "global": "",
         "stage": "",
-        "sprite": "self.y_pos"
+        "sprite": "self.y_pos",
+        "docs": "Positions are measured in pixels, where 0 represents the center of the stage.\n\nIf you need both the x and y position, you may use self.pos"
     },
     {
         "url": "netsblox://assets/img/blocks/motion/get-heading.png",
@@ -101,7 +113,8 @@
         "scale": 1,
         "global": "",
         "stage": "",
-        "sprite": "self.heading"
+        "sprite": "self.heading",
+        "docs": "Angles are measured in degrees."
     },
     {
         "url": "netsblox://assets/img/blocks/control/onstart.png",
