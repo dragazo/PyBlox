@@ -728,6 +728,14 @@
         "sprite": "my_list[-1]"
     },
     {
+        "url": "netsblox://assets/img/blocks/variables/list-index-rand.png",
+        "category": "variables",
+        "scale": 1,
+        "global": "random.choice(my_list)",
+        "stage": "random.choice(my_list)",
+        "sprite": "random.choice(my_list)"
+    },
+    {
         "url": "netsblox://assets/img/blocks/variables/list-cdr.png",
         "category": "variables",
         "scale": 1,
