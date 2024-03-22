@@ -262,5 +262,85 @@
         "global": "",
         "stage": "",
         "sprite": "self.clone()"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/looks/set-costume.png",
+        "category": "looks",
+        "scale": 1,
+        "global": "",
+        "stage": "self.costume = costume # replace with your costume",
+        "sprite": "self.costume = costume # replace with your costume"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/looks/get-costume-num.png",
+        "category": "looks",
+        "scale": 1,
+        "global": "",
+        "stage": "self.costumes.index(self.costume, -1)",
+        "sprite": "self.costumes.index(self.costume, -1)"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/looks/say-duration.png",
+        "category": "looks",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.say('Hello!', duration = 2)"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/looks/say.png",
+        "category": "looks",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.say('Hello!')"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/looks/change-scale.png",
+        "category": "looks",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.scale += 0.1 # base scale is 1"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/looks/set-scale.png",
+        "category": "looks",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.scale = 1 # base scale is 1"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/looks/get-scale.png",
+        "category": "looks",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.scale"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/looks/set-visible-true.png",
+        "category": "looks",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.visible = True"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/looks/set-visible-false.png",
+        "category": "looks",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.visible = False"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/looks/get-visible.png",
+        "category": "looks",
+        "scale": 1,
+        "global": "",
+        "stage": "",
+        "sprite": "self.visible"
     }
 ]
