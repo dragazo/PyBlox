@@ -619,7 +619,7 @@ class BlocksList(tk.Frame):
         self.category_selector.pack(side = tk.TOP, fill = tk.X, expand = False)
 
         self.scrollbar = ttk.Scrollbar(self)
-        self.text = tk.Text(self, wrap = tk.NONE, width = 24, yscrollcommand = self.scrollbar.set, bg = COLOR_INFO['text-background-disabled'])
+        self.text = tk.Text(self, wrap = tk.NONE, width = 30, yscrollcommand = self.scrollbar.set, bg = COLOR_INFO['text-background-disabled'])
         self.scrollbar.configure(command = self.text.yview)
 
         self.scrollbar.pack(side = tk.RIGHT, fill = tk.Y)

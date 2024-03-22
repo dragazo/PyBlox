@@ -630,5 +630,37 @@
         "global": "sorted(my_list)",
         "stage": "sorted(my_list)",
         "sprite": "sorted(my_list)"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/network/receive.png",
+        "category": "network",
+        "scale": 1,
+        "global": "@nb.on_message('message') # replace with your message type\ndef my_on_message(msg): # replace with your message fields + functions need unique names\n    pass # replace with your code",
+        "stage": "@nb.on_message('message') # replace with your message type\ndef my_on_message(self, msg): # replace with your message fields + functions need unique names\n    pass # replace with your code",
+        "sprite": "@nb.on_message('message') # replace with your message type\ndef my_on_message(self, msg): # replace with your message fields + functions need unique names\n    pass # replace with your code"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/network/send.png",
+        "category": "network",
+        "scale": 1,
+        "global": "nb.send_message('message', target, msg = 'Hello!') # replace with your message type, target, and message fields",
+        "stage": "nb.send_message('message', target, msg = 'Hello!') # replace with your message type, target, and message fields",
+        "sprite": "nb.send_message('message', target, msg = 'Hello!') # replace with your message type, target, and message fields"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/network/rpc-call.png",
+        "category": "network",
+        "scale": 1,
+        "global": "nb.air_quality.quality_index(34, -87)",
+        "stage": "nb.air_quality.quality_index(34, -87)",
+        "sprite": "nb.air_quality.quality_index(34, -87)"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/network/rpc-run.png",
+        "category": "network",
+        "scale": 1,
+        "global": "res = nb.air_quality.quality_index(34, -87)",
+        "stage": "res = nb.air_quality.quality_index(34, -87)",
+        "sprite": "res = nb.air_quality.quality_index(34, -87)"
     }
 ]
