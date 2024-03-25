@@ -2513,11 +2513,10 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('project', type = str, nargs = '?', default = None)
-    parser.add_argument('--log-to', type = str, required = False)
+    parser.add_argument('--log-to', type = str, default = 'https://logging.pyblox.netsblox.org')
     args = parser.parse_args()
 
-    if args.log_to is not None:
-        _logger_instance = Logger(target = args.log_to)
+    _logger_instance = Logger(target = args.log_to)
 
     nb = netsblox.Client()
 
