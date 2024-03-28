@@ -278,6 +278,19 @@ Prompt the user to input a string.
 If the prompt is closed or canceled, `None` is returned,
 otherwise the user's input is returned directly (which may be the empty string).
 '''.strip(),
+    '__main__.globals': '''
+globals: Namespace
+
+A namespace object that allows you to get or set the values of global variables.
+
+```
+globals.my_var = 123
+
+self.say(globals.my_var)
+
+globals.my_var += 10
+```
+'''.strip(),
 }
 PROP_DOC_REMAPS = {}
 
@@ -1818,9 +1831,10 @@ class CodeEditor(ScrolledText):
 class GlobalEditor(CodeEditor):
     BASE_PREFIX = '''
 import netsblox
-from netsblox import get_location, get_error, nothrow
+from netsblox import get_location, get_error, nothrow, Namespace
 from netsblox.graphical import *
 from netsblox.concurrency import *
+globals = Namespace(globals())
 nb = $client_type(project_name = """$project_name""", project_id = $project_id)
 'A connection to NetsBlox, which allows you to use services and RPCs from python.'
 netsblox.graphical._INITIAL_SIZE = $stage_size

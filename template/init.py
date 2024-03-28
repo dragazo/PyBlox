@@ -9,7 +9,7 @@ from . import concurrency
 from . import snap
 from . import rooms
 
-from .common import get_location, get_error, nothrow
+from .common import get_location, get_error, nothrow, Namespace
 
 __version__ = '$version'
 __author__ = '$author'

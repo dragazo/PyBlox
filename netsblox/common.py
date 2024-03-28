@@ -13,7 +13,7 @@ import io as _io
 import os as _os
 from PIL import Image as _Image, ImageTk as _ImageTk
 
-from typing import Tuple, List, Any, Optional
+from typing import Tuple, List, Any, Optional, Dict
 
 _NETSBLOX_PY_PATH = _os.path.dirname(_netsblox.__file__)
 
@@ -235,6 +235,21 @@ class PointerSet:
             return True
         return False
 
+def unified_diff(before: str, after: str, *, n: int = 3) -> str:
+    before = [f'{x}\n' for x in before.splitlines()]
+    after = [f'{x}\n' for x in after.splitlines()]
+    return ''.join(_difflib.unified_diff(before, after, n = n))
+
+class Namespace:
+    def __init__(self, src: Dict[str, Any]):
+        self.__dict__['src'] = src
+    def __getattr__(self, name: str) -> Any:
+        return self.src[name]
+    def __setattr__(self, name: str, value: Any) -> None:
+        self.src[name] = value
+    def __delattr__(self, name: str) -> None:
+        del self.src[name]
+
 if __name__ == '__main__':
     import sys
     failures = [0]
@@ -294,7 +309,4 @@ if __name__ == '__main__':
         sys.exit(1)
     print(f'passed all {total[0]} tests')
 
-def unified_diff(before: str, after: str, *, n: int = 3) -> str:
-    before = [f'{x}\n' for x in before.splitlines()]
-    after = [f'{x}\n' for x in after.splitlines()]
-    return ''.join(_difflib.unified_diff(before, after, n = n))
+
