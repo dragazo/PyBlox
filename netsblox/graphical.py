@@ -1503,6 +1503,8 @@ def _derive(bases, cls):
             for base in bases: # recurse to child types for specialized cloning logic (like sprite repositioning)
                 getattr(self, f'_{base.__name__}__clone_from')(src)
 
+    Derived.__name__ = cls.__name__
+
     return Derived
 
 def sprite(cls):

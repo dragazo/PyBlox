@@ -1219,7 +1219,6 @@ class ChangedText(tk.Text):
         try:
             result = self.tk.call(cmd)
         except Exception as e:
-            print(cmd)
             # for some reason our proxying breaks some ops in some cases, so just catch and ignore
             ignore_patterns = [
                 ('edit', 'undo'), ('edit', 'redo'), # fails if stack is empty (undo) or at top of stack (redo)
