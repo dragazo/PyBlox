@@ -13,8 +13,8 @@
             "imports": ["time", "math", "random"],
             "editors": [
                 {
-                    "type": "global",
-                    "name": "global",
+                    "type": "globals",
+                    "name": "globals",
                     "value": "my_global_var = 'hello world' # create a global variable\n"
                 },
                 {

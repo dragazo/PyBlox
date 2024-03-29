@@ -13,8 +13,8 @@
       "imports": [], 
       "editors": [
         {
-          "type": "global", 
-          "name": "global", 
+          "type": "globals", 
+          "name": "globals", 
           "value": ""
         }, 
         {

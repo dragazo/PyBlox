@@ -242,13 +242,22 @@ def unified_diff(before: str, after: str, *, n: int = 3) -> str:
 
 class Namespace:
     def __init__(self, src: Dict[str, Any]):
-        self.__dict__['src'] = src
+        self.__dict__['__Namespace_src'] = src
+
     def __getattr__(self, name: str) -> Any:
-        return self.src[name]
+        src = self.__dict__['__Namespace_src']
+        if name not in src:
+            raise AttributeError(name)
+        return src[name]
+
     def __setattr__(self, name: str, value: Any) -> None:
-        self.src[name] = value
+        self.__dict__['__Namespace_src'][name] = value
+
     def __delattr__(self, name: str) -> None:
-        del self.src[name]
+        src = self.__dict__['__Namespace_src']
+        if name not in src:
+            raise AttributeError(name)
+        del src[name]
 
 if __name__ == '__main__':
     import sys

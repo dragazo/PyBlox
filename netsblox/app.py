@@ -998,10 +998,10 @@ class ProjectEditor(tk.Frame):
                     'scale': block['scale'],
                     'category': block['category'],
                     'docs': block['docs'],
-                    'global': block['global'],
+                    'globals': block['globals'],
                     'stage': block['stage'],
                     'sprite': block['sprite'],
-                } for block in self.blocks if block['source'] == None and (block['global'] or block['stage'] or block['sprite'])
+                } for block in self.blocks if block['source'] == None and (block['globals'] or block['stage'] or block['sprite'])
             ]
 
             role_res['imports'] = []
@@ -1012,7 +1012,7 @@ class ProjectEditor(tk.Frame):
             role_res['editors'] = []
             for editor in self.editors:
                 ty = None
-                if isinstance(editor, GlobalEditor): ty = 'global'
+                if isinstance(editor, GlobalEditor): ty = 'globals'
                 elif isinstance(editor, StageEditor): ty = 'stage'
                 elif isinstance(editor, SpriteEditor): ty = 'sprite'
                 else: raise Exception(f'unknown editor type: {type(editor)}')
@@ -1063,7 +1063,7 @@ class ProjectEditor(tk.Frame):
                             'scale': block['scale'],
                             'category': 'custom',
                             'docs': '',
-                            'global': block['replace'] if k == 'global' else '',
+                            'globals': block['replace'] if k == 'globals' or k == 'global' else '',
                             'stage': block['replace'] if k == 'stage' else '',
                             'sprite': block['replace'] if k == 'sprite' or k == 'turtle' else '',
                         })
@@ -1077,7 +1077,7 @@ class ProjectEditor(tk.Frame):
                         'scale': block.get('scale', 1),
                         'category': block.get('category', 'custom'),
                         'docs': block.get('docs', ''),
-                        'global': block.get('global', ''),
+                        'globals': block.get('globals', '') or block.get('global', ''),
                         'stage': block.get('stage', ''),
                         'sprite': block.get('sprite', '') or block.get('turtle', ''),
                     })
@@ -1088,7 +1088,7 @@ class ProjectEditor(tk.Frame):
             add_blocks(json.loads(common.load_text(src)), source = src)
         add_blocks(proj.get('blocks', []), source = None)
         add_blocks({ # legacy support
-            'global': proj.get('global_blocks', []),
+            'globals': proj.get('global_blocks', []),
             'stage': proj.get('stage_blocks', []),
             'sprite': proj.get('turtle_blocks', []),
         }, source = None)
@@ -1113,8 +1113,8 @@ class ProjectEditor(tk.Frame):
             value = info['value']
 
             editor = None
-            if ty == 'global': editor = GlobalEditor(self.notebook, value = value)
-            elif ty == 'stage': editor = StageEditor(self.notebook, name = name, value = value)
+            if ty == 'globals' or ty == 'global':  editor = GlobalEditor(self.notebook, name = name, value = value)
+            elif ty == 'stage':                    editor =  StageEditor(self.notebook, name = name, value = value)
             elif ty == 'sprite' or ty == 'turtle': editor = SpriteEditor(self.notebook, name = name, value = value)
             else: raise Exception(f'unknown editor type: {ty}')
 
@@ -1852,8 +1852,8 @@ def _yield_(x):
 
     prefix_lines = BASE_PREFIX_LINES
 
-    def __init__(self, parent, *, value: str):
-        super().__init__(parent, name = 'global', blocks_type = 'global')
+    def __init__(self, parent, *, name: str, value: str):
+        super().__init__(parent, name = name, blocks_type = 'globals')
         self.set_text(value)
 
     def get_script(self, *, is_export: bool, omit_media: bool):
@@ -2261,7 +2261,7 @@ class MainMenu(tk.Menu):
             'scale': 1,
             'category': content.blocks.category_selector.selected,
             'docs': '',
-            'global': 'pass',
+            'globals': 'pass',
             'stage': 'pass',
             'sprite': 'pass',
         })
@@ -2290,7 +2290,7 @@ class MainMenu(tk.Menu):
 
         editors = {}
         def do_save():
-            for kind in ['global', 'stage', 'sprite']:
+            for kind in ['globals', 'stage', 'sprite']:
                 content.project.blocks[block][kind] = editors[kind].get('1.0', 'end-1c').strip()
             prompt.destroy()
             content.project.on_tab_change()
@@ -2299,7 +2299,7 @@ class MainMenu(tk.Menu):
 
         layout = tk.Frame(prompt)
         layout.pack(fill = tk.BOTH, expand = True)
-        for i, kind in enumerate(['global', 'stage', 'sprite']):
+        for i, kind in enumerate(['globals', 'stage', 'sprite']):
             frame = tk.Frame(layout)
             l = tk.Label(frame, text = kind)
             l.pack(side = tk.TOP)
