@@ -91,6 +91,23 @@ def _intersects(a: Tuple[Image.Image, int, int], b: Tuple[Image.Image, int, int]
     other_trans.paste(other, (round(other_x), round(other_y)))
 
     return _np.bitwise_and(_np.array(base) >= _VIS_THRESH, _np.array(other_trans) >= _VIS_THRESH).any()
+def _bounding_box(img: Image.Image, pos: Tuple[int, int]) -> Tuple[int, int, int, int]:
+    if _area(img.size) == 0:
+        return (0, 0, 0, 0)
+
+    delta = getattr(img, _SECRET_DELTA_FIELD_NAME, (0, 0))
+    mask = _np.array(_image_alpha(img)) >= _VIS_THRESH
+
+    i, j = _np.meshgrid(range(mask.shape[0]), range(mask.shape[1]), indexing = 'ij')
+    assert i.shape == mask.shape and j.shape == mask.shape, f'{mask.shape} -> {i.shape} == {j.shape}'
+
+    i_min = _np.min(i[mask])
+    i_max = _np.max(i[mask])
+
+    j_min = _np.min(j[mask])
+    j_max = _np.max(j[mask])
+
+    return (round(j_min - img.width / 2 + pos[0] + delta[0]), round(-i_min + img.height / 2 + pos[1] + delta[1]), j_max - j_min, i_max - i_min)
 
 def _render_text(text: str, size: float, color: Tuple[int, int, int]) -> Image.Image:
     if len(text) == 0:
@@ -1305,31 +1322,27 @@ class SpriteBase(_Ref):
         self.keep_on_stage(bounce = True) # bouncing
         ```
         '''
-        stage = self.__proj.get_stage()
-        if stage is None: return
-
         logical_size = self.__proj.logical_size
-        sprite_pos = self.pos
         sprite_img = self.__display_image
-        top_left = tuple(round(logical_size[i] / 2 + sprite_pos[i] - sprite_img.size[i] / 2) for i in range(2))
-        box = (top_left[0], top_left[1], top_left[0] + sprite_img.size[0], top_left[1] + sprite_img.size[1])
+        sprite_pos = self.pos
+        bounds = _bounding_box(sprite_img, sprite_pos)
 
         h = self.__rot * 2 * _math.pi
         fx, fy = _math.sin(h), _math.cos(h)
         dx, dy = 0, 0
 
-        if box[0] < 0: # left
-            dx = -box[0]
+        if bounds[0] < -logical_size[0] / 2: # left
+            dx = -logical_size[0] / 2 - bounds[0]
             fx = abs(fx)
-        elif box[2] > logical_size[0]: # right
-            dx = logical_size[0] - box[2]
+        elif bounds[0] + bounds[2] > logical_size[0] / 2: # right
+            dx = logical_size[0] / 2 - bounds[0] - bounds[2]
             fx = -abs(fx)
 
-        if box[3] > logical_size[1]: # top
-            dy = logical_size[1] - box[3]
+        if bounds[1] > logical_size[1] / 2: # top
+            dy = logical_size[1] / 2 - bounds[1]
             fy = -abs(fy)
-        elif box[1] < 0: # bottom
-            dy = -box[1]
+        elif bounds[1] - bounds[3] < -logical_size[1] / 2: # bottom
+            dy = -logical_size[1] / 2 - bounds[1] + bounds[3]
             fy = abs(fy)
 
         self.pos = (self.__x + dx, self.__y + dy) # using pos wrapper so we draw lines
