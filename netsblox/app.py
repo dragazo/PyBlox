@@ -13,6 +13,7 @@ import traceback
 import platform
 import argparse
 import requests
+import tkmacosx
 import random
 import copy
 import json
@@ -600,7 +601,7 @@ class BlocksCategorySelector(tk.Frame):
                     self.selected = name
                     content.project.on_tab_change()
                 return clicker
-            button = tk.Button(self, text = category.name, width = 1, height = 1, padx = 0, pady = 0, border = 0, relief = 'flat', command = make_clicker(name))
+            button = tkmacosx.Button(self, text = category.name, width = 1, padx = 0, pady = 0, border = 0, focuscolor = '', relief = 'flat', command = make_clicker(name))
             button.grid(row = i // 2, column = i % 2, sticky = 'nesw')
             self.default_button_color = button.cget('background')
             self.buttons.append(button)
@@ -620,9 +621,24 @@ class BlocksCategorySelector(tk.Frame):
         for i in range(len(BLOCK_CATEGORIES_ORDER)):
             category = BLOCK_CATEGORIES[BLOCK_CATEGORIES_ORDER[i]]
             if BLOCK_CATEGORIES_ORDER[i] == self.__selected:
-                self.buttons[i].configure(bg = f'#{category.color}', activebackground = f'#{category.color}', fg = 'white', activeforeground = 'white')
+                cfg = {
+                    'bg': f'#{category.color}',
+                    'fg': 'white',
+                    'overbackground': f'#{category.color}',
+                    'overforeground': 'white',
+                    'activebackground': f'#{category.color}',
+                    'activeforeground': 'white',
+                }
             else:
-                self.buttons[i].configure(bg = self.default_button_color, activebackground = f'#{category.color}', fg = 'black', activeforeground = 'white')
+                cfg = {
+                    'bg': self.default_button_color,
+                    'fg': 'black',
+                    'overbackground': f'#{category.color}',
+                    'overforeground': 'white',
+                    'activebackground': f'#{category.color}',
+                    'activeforeground': 'white',
+                }
+            self.buttons[i].configure(**cfg)
 
 class BlocksList(tk.Frame):
     def __init__(self, parent):
