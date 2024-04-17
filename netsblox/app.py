@@ -13,7 +13,6 @@ import traceback
 import platform
 import argparse
 import requests
-import tkmacosx
 import random
 import copy
 import json
@@ -588,6 +587,49 @@ class DndManager:
                 target.on_drop(e)
                 break
 
+class ColoredButton(tk.Frame):
+    def __init__(self, parent, *, text = 'Button', command = None):
+        super().__init__(parent)
+
+        self.label = tk.Label(self, text = text)
+        self.label.pack()
+
+        self.default_bg = self.cget('background')
+        self.default_fg = self.label.cget('foreground')
+
+        self.bg = None
+        self.fg = None
+        self.over_bg = None
+        self.over_fg = None
+
+        self.over = False
+        def on_enter(e):
+            self.over = True
+            self.redraw()
+        def on_leave(e):
+            self.over = False
+            self.redraw()
+        self.bind('<Enter>', on_enter)
+        self.bind('<Leave>', on_leave)
+
+        if command is not None:
+            self.bind('<Button-1>', lambda e: command())
+            self.label.bind('<Button-1>', lambda e: command())
+
+    def set_color(self, *, bg = None, fg = None, over_bg = None, over_fg = None):
+        self.bg = bg
+        self.fg = fg
+        self.over_bg = over_bg
+        self.over_fg = over_fg
+        self.redraw()
+
+    def redraw(self):
+        bg = (self.over_bg if self.over else self.bg) or self.default_bg
+        fg = (self.over_fg if self.over else self.fg) or self.default_fg
+
+        self.configure(bg = bg)
+        self.label.configure(bg = bg, fg = fg)
+
 class BlocksCategorySelector(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
@@ -601,9 +643,9 @@ class BlocksCategorySelector(tk.Frame):
                     self.selected = name
                     content.project.on_tab_change()
                 return clicker
-            button = tkmacosx.Button(self, text = category.name, width = 1, padx = 0, pady = 0, border = 0, focuscolor = '', relief = 'flat', command = make_clicker(name))
+            button = ColoredButton(self, text = category.name, command = make_clicker(name))
             button.grid(row = i // 2, column = i % 2, sticky = 'nesw')
-            self.default_button_color = button.cget('background')
+            self.default_button_color = parent.cget('background')
             self.buttons.append(button)
         for col in [0, 1]:
             self.columnconfigure(col, weight = 1, minsize = 80)
@@ -621,24 +663,9 @@ class BlocksCategorySelector(tk.Frame):
         for i in range(len(BLOCK_CATEGORIES_ORDER)):
             category = BLOCK_CATEGORIES[BLOCK_CATEGORIES_ORDER[i]]
             if BLOCK_CATEGORIES_ORDER[i] == self.__selected:
-                cfg = {
-                    'bg': f'#{category.color}',
-                    'fg': 'white',
-                    'overbackground': f'#{category.color}',
-                    'overforeground': 'white',
-                    'activebackground': f'#{category.color}',
-                    'activeforeground': 'white',
-                }
+                self.buttons[i].set_color(bg = f'#{category.color}', fg = 'white', over_bg = f'#{category.color}', over_fg = 'white')
             else:
-                cfg = {
-                    'bg': self.default_button_color,
-                    'fg': 'black',
-                    'overbackground': f'#{category.color}',
-                    'overforeground': 'white',
-                    'activebackground': f'#{category.color}',
-                    'activeforeground': 'white',
-                }
-            self.buttons[i].configure(**cfg)
+                self.buttons[i].set_color(fg = None, bg = None, over_bg = f'#{category.color}', over_fg = 'white')
 
 class BlocksList(tk.Frame):
     def __init__(self, parent):
