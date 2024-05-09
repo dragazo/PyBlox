@@ -5,6 +5,7 @@ import io
 import json
 import csv
 import itertools
+from PIL import Image
 
 from typing import Any, Union, Callable, Sequence
 
@@ -605,6 +606,8 @@ def is_list(value: Any) -> bool:
     return isinstance(value, list) or isinstance(value, tuple) or isinstance(value, dict)
 def is_sprite(value: Any) -> bool:
     return isinstance(value, _netsblox.graphical.SpriteBase)
+def is_costume(value: Any) -> bool:
+    return isinstance(value, Image.Image)
 
 if __name__ == '__main__':
     assert is_wrapped(True)

@@ -978,11 +978,13 @@ class SpriteBase(_Ref):
         self.__raw_set_pos(*src.pos)        # avoid motion sleep
         self.degrees = src.degrees          # needed for heading
         self.__raw_set_heading(src.heading) # avoid motion sleep
+        self.drawing = src.drawing
         self.visible = src.visible
-        self.costume = src.costume
         self.pen_size = src.pen_size
         self.pen_color = src.pen_color
-        self.drawing = src.drawing
+        self.scale = src.scale
+        self.__costume_set = src.costumes
+        self.costume = src.costume
 
     def __update_costume(self):
         src = self.__costume # grab this so it can't change during evaluation (used multiple times)
@@ -1476,16 +1478,16 @@ def _derive(bases, cls):
                 self.__Derived_kwargs = src.__Derived_kwargs
 
                 self.__clone_from(src)
-                self.__is_clone = src
+                self.__clone_parent = src
                 cls.__init__(self, *self.__Derived_args, **self.__Derived_kwargs)
             else:
                 self.__Derived_args = args
                 self.__Derived_kwargs = kwargs
 
-                self.__is_clone = None
+                self.__clone_parent = None
                 cls.__init__(self, *args, **kwargs)
 
-            exec_start_tag = 'clone' if self.__is_clone else 'now'
+            exec_start_tag = 'clone' if self.__clone_parent is not None else 'now'
             start_scripts = _inspect.getmembers(self, predicate = lambda x: _inspect.ismethod(x) and hasattr(x, '__run_on_start'))
             for _, start_script in start_scripts:
                 for key in getattr(start_script, '__run_on_start'):
