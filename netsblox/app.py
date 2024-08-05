@@ -52,6 +52,8 @@ IMAGE_FILETYPES = [('Images', xux('.png .jpg .jpeg')), ('All Files', '.*')]
 MIN_FONT_SIZE = 4
 MAX_FONT_SIZE = 40
 
+DRAG_BLOCK_FOLLOW_PADDING = 6
+
 class BlockCategory:
     def __init__(self, *, name: str, color: str):
         self.name = name
@@ -126,6 +128,7 @@ nb = None
 root = None
 main_menu = None
 content = None
+drag_widget = None
 
 _print_queue = mproc.Queue(maxsize = 256)
 _print_batchsize = 256
@@ -539,13 +542,12 @@ class Content(tk.Frame):
         self.pane.add(self.display, stretch = 'always', width = 3, minsize = 300)
 
 class DndTarget:
-    def __init__(self, widget, on_start, on_stop, on_drop, on_drag, on_undrag):
+    def __init__(self, widget, on_start, on_stop, on_drop, on_drag):
         self.widget = widget
         self.on_start = on_start
         self.on_stop = on_stop
         self.on_drop = on_drop
         self.on_drag = on_drag
-        self.on_undrag = on_undrag
 
 class DndManager:
     def __init__(self, widget, targets: List[DndTarget]):
@@ -567,10 +569,7 @@ class DndManager:
             return # fail silently, but don't hide later errors if we get past this point
 
         for target in self.targets:
-            if dest_widget is target.widget:
-                target.on_drag(e)
-            else:
-                target.on_undrag(e)
+            target.on_drag(e, dest_widget is target.widget)
 
     def on_drop(self, e):
         for target in self.targets:
@@ -708,7 +707,12 @@ class BlocksList(tk.Frame):
         orig_bcolor = target.text.cget('background')
 
         def make_dnd_manager(widget, code):
-            def get_pos(e):
+            def get_window_pos(e) -> Tuple[int, int]:
+                x, y = target.text.winfo_pointerxy()
+                x -= root.winfo_rootx()
+                y -= root.winfo_rooty()
+                return x, y
+            def get_text_pos(e) -> str:
                 x, y = target.text.winfo_pointerxy()
                 x -= target.text.winfo_rootx()
                 y -= target.text.winfo_rooty()
@@ -730,12 +734,14 @@ class BlocksList(tk.Frame):
 
                 target.text.configure(highlightbackground = orig_bcolor)
 
+                drag_widget.place_forget()
+
                 log({ 'type': 'drag-n-drop::stop', 'editor': target.name })
             def on_drop(e):
                 key_logger.watch(target)
                 key_logger.flush()
 
-                pos = get_pos(e)
+                pos = get_text_pos(e)
                 before = target.text.get('1.0', 'end-1c')
                 target.text.insert(f'{pos} linestart', f'{code}\n')
                 after = target.text.get('1.0', 'end-1c')
@@ -746,14 +752,20 @@ class BlocksList(tk.Frame):
                 log({ 'type': 'drag-n-drop::commit', 'editor': target.name, 'diff': common.unified_diff(before, after) })
 
                 return 'break'
-            def on_drag(e):
-                pos = get_pos(e)
-                target.text.mark_set('insert', f'{pos}')
-                target.text.focus() # give focus so we can see the cursor pos
-            def on_undrag(e):
-                widget.focus() # give focus back to the widget so the text highlight shows again
+            def on_drag(e, is_inside):
+                wx, wy = get_window_pos(e)
+                drag_widget.config(image = widget.cget('image'), background = target.text.cget('background'))
+                drag_widget.place(x = wx + DRAG_BLOCK_FOLLOW_PADDING, y = wy - drag_widget.winfo_reqheight() / 2)
+                drag_widget.lift()
 
-            return DndManager(widget, [DndTarget(target.text, on_start, on_stop, on_drop, on_drag, on_undrag)])
+                if is_inside:
+                    pos = get_text_pos(e)
+                    target.text.mark_set('insert', pos)
+                    target.text.focus() # give focus so we can see the cursor pos
+                else:
+                    widget.focus() # give focus back to the widget so the text highlight shows again
+
+            return DndManager(widget, [DndTarget(target.text, on_start, on_stop, on_drop, on_drag)])
 
         try:
             self.text.config(state = tk.NORMAL)
@@ -2565,7 +2577,7 @@ def log(msg: str) -> None:
         _logger_instance.log(msg)
 
 def main():
-    global nb, root, main_menu, content, _logger_instance
+    global nb, root, main_menu, content, drag_widget, _logger_instance
 
     parser = argparse.ArgumentParser()
     parser.add_argument('project', type = str, nargs = '?', default = None)
@@ -2588,6 +2600,7 @@ def main():
 
     content = Content(root)
     main_menu = MainMenu(root)
+    drag_widget = tk.Label(root)
 
     if args.project is None:
         main_menu.open_project(super_proj = ProjectEditor.DEFAULT_PROJECT, source = 'new')
