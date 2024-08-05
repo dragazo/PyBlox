@@ -405,6 +405,23 @@
         "sprite": "stage.is_key_down('space')"
     },
     {
+        "url": "netsblox://assets/img/blocks/sensing/timer-reset.png",
+        "category": "sensing",
+        "scale": 1,
+        "globals": "",
+        "stage": "stage.timer = 0",
+        "sprite": "stage.timer = 0",
+        "docs": "The timer can be set to any starting point. The reset timer block in NetsBlox is equivalent to setting the timer to zero."
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sensing/timer-get.png",
+        "category": "sensing",
+        "scale": 1,
+        "globals": "",
+        "stage": "stage.timer",
+        "sprite": "stage.timer"
+    },
+    {
         "url": "netsblox://assets/img/blocks/sensing/get-latitude.png",
         "category": "sensing",
         "scale": 1,

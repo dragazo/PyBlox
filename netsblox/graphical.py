@@ -296,6 +296,8 @@ class _Project:
         self.__stages = {}
         self.__sprites = {}
 
+        self.timer = 0
+
         self.__tk = _tk.Tk()
         self.__tk.minsize(400, 200)
         self.__tk.geometry(f'{physical_size[0]}x{physical_size[1]}')
@@ -405,6 +407,13 @@ class _Project:
     def sprites(self) -> List[Any]:
         with self.__lock:
             return [x['obj'] for x in self.__sprites.values()]
+
+    @property
+    def timer(self) -> float:
+        return _time.time() - self.__time_base
+    @timer.setter
+    def timer(self, value: float) -> None:
+        self.__time_base = _time.time() - value
 
     def register_entity(self, ent):
         if isinstance(ent, StageBase): target = self.__stages
@@ -776,10 +785,10 @@ class StageBase(_Ref):
          - None, which is returned directly (i.e., no lookup needed) and represents no costume
 
         ```
-        self.costume = None
-        self.costume = img
-        self.costume = 2         # assuming at least 3 costumes were already added
-        self.costume = 'dog pic' # assuming a costume with this name was already added
+        stage.costume = None
+        stage.costume = img
+        stage.costume = 2         # assuming at least 3 costumes were already added
+        stage.costume = 'dog pic' # assuming a costume with this name was already added
         ```
         '''
         return self.__costume
@@ -808,8 +817,8 @@ class StageBase(_Ref):
         Note that this has nothing to do with the window size.
 
         ```
-        width, height = self.size
-        self.size = (1080, 720)
+        width, height = stage.size
+        stage.size = (1080, 720)
         ```
         '''
         return self.__proj.logical_size
@@ -826,7 +835,7 @@ class StageBase(_Ref):
         Get the width of the stage in pixels.
 
         ```
-        print('width:', self.width)
+        print('width:', stage.width)
         ```
         '''
         return self.size[0]
@@ -837,10 +846,27 @@ class StageBase(_Ref):
         Get the height of the stage in pixels.
 
         ```
-        print('height:', self.height)
+        print('height:', stage.height)
         ```
         '''
         return self.size[1]
+
+    @property
+    def timer(self) -> float:
+        '''
+        Get or set the value of the global timer.
+        This value can be reset to any starting point and automatically increases by 1 per second.
+
+        ```
+        stage.timer = 0
+        # ... do something ...
+        print('time:', stage.timer)
+        ```
+        '''
+        return self.__proj.timer
+    @timer.setter
+    def timer(self, value: float) -> None:
+        self.__proj.timer = float(value)
 
     @property
     def mouse_pos(self) -> Tuple[float, float]:
