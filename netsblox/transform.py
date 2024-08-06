@@ -1,9 +1,27 @@
-from typing import Any, List
+from typing import Any, List, Tuple
 
 import parso # docs: https://parso.readthedocs.io/_/downloads/en/latest/pdf/
 import unittest
+import re
 
 import netsblox.common as common
+
+def split_code_comment(line: str) -> Tuple[str, str]:
+    i = 0
+    quote_char = None
+    while i < len(line):
+        if quote_char is None:
+            if line[i] in ('"', "'"):
+                quote_char = line[i]
+            elif line[i] == '#':
+                return line[:i], line[i:]
+        else:
+            if line[i] == quote_char:
+                quote_char = None
+            elif line[i] == '\\' and i + 1 < len(line) and line[i + 1] == quote_char:
+                i += 1
+        i += 1
+    return line, ''
 
 def remove_new_line(line: str) -> str:
     if line.endswith('\r\n'):
@@ -62,7 +80,7 @@ def add_yields_recursive(node: Any, lines: List[str], res: List[str], res_pos: L
     elif node.type == 'for_stmt':
         if len(node.children) >= 5 and node.children[0] == 'for' and node.children[2] == 'in' and node.children[4] == ':':
             for_tok, vars, in_tok, vals, colon_tok = node.children[:5]
-            
+
             for_line = for_tok.start_pos[0]
             colon_line, colon_col = colon_tok.end_pos
 
@@ -78,7 +96,7 @@ def add_yields_recursive(node: Any, lines: List[str], res: List[str], res_pos: L
             add_to_pos(lines, res, res_pos, for_line - 1)
             res.append(f'{for_code}{vars_code}{in_code} map(_yield_, {vals_code}){colon_code}{lines[colon_line - 1][colon_col:]}\n')
             adv_to_pos(res_pos, colon_line)
-    
+
     if hasattr(node, 'children'):
         for child in node.children:
             add_yields_recursive(child, lines, res, res_pos)
@@ -283,6 +301,26 @@ class MyClass:
             while _yield_(x[i] and z[y[i]]):
                 foo(bar)
 ''')
+
+    def test_split_code_comment(self):
+        self.assertEqual(split_code_comment('a = b'), ('a = b', ''))
+        self.assertEqual(split_code_comment('a = b '), ('a = b ', ''))
+        self.assertEqual(split_code_comment(' a = b '), (' a = b ', ''))
+        self.assertEqual(split_code_comment(' a = b #'), (' a = b ', '#'))
+        self.assertEqual(split_code_comment(' a = b # hello'), (' a = b ', '# hello'))
+        self.assertEqual(split_code_comment(' a = b # '), (' a = b ', '# '))
+        self.assertEqual(split_code_comment('a = "#"'), ('a = "#"', ''))
+        self.assertEqual(split_code_comment('a = "#"#'), ('a = "#"', '#'))
+        self.assertEqual(split_code_comment('a = \'#\''), ('a = \'#\'', ''))
+        self.assertEqual(split_code_comment('a = \'#\'#f'), ('a = \'#\'', '#f'))
+        self.assertEqual(split_code_comment('a = \'#\' #f'), ('a = \'#\' ', '#f'))
+        self.assertEqual(split_code_comment('a = \'#\' # f'), ('a = \'#\' ', '# f'))
+        self.assertEqual(split_code_comment('a = "\\"#"'), ('a = "\\"#"', ''))
+        self.assertEqual(split_code_comment('a = \'\\\'#\''), ('a = \'\\\'#\'', ''))
+        self.assertEqual(split_code_comment('a = "\\"#'), ('a = "\\"#', ''))
+        self.assertEqual(split_code_comment('a = \'\\\'#'), ('a = \'\\\'#', ''))
+        self.assertEqual(split_code_comment('a = \'\\\'##'), ('a = \'\\\'##', ''))
+        self.assertEqual(split_code_comment('a = \'\\\'# #'), ('a = \'\\\'# #', ''))
 
 def test():
     assert '하나 둘 셋 넷'[0] == '하' # sanity check: str indexing is char based

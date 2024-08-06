@@ -3,6 +3,7 @@
         "url": "netsblox://assets/img/blocks/motion/forward.png",
         "category": "motion",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.forward(10)",
@@ -12,6 +13,7 @@
         "url": "netsblox://assets/img/blocks/motion/turn-right.png",
         "category": "motion",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.turn_right(15)",
@@ -21,6 +23,7 @@
         "url": "netsblox://assets/img/blocks/motion/turn-left.png",
         "category": "motion",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.turn_left(15)",
@@ -30,6 +33,7 @@
         "url": "netsblox://assets/img/blocks/motion/set-heading.png",
         "category": "motion",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.heading = 90",
@@ -39,6 +43,7 @@
         "url": "netsblox://assets/img/blocks/motion/set-pos.png",
         "category": "motion",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.pos = (0, 0)",
@@ -48,6 +53,7 @@
         "url": "netsblox://assets/img/blocks/motion/change-pos-x.png",
         "category": "motion",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.x_pos += 10",
@@ -57,6 +63,7 @@
         "url": "netsblox://assets/img/blocks/motion/set-pos-x.png",
         "category": "motion",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.x_pos = 0",
@@ -66,6 +73,7 @@
         "url": "netsblox://assets/img/blocks/motion/change-pos-y.png",
         "category": "motion",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.y_pos += 10",
@@ -75,6 +83,7 @@
         "url": "netsblox://assets/img/blocks/motion/set-pos-y.png",
         "category": "motion",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.y_pos = 0",
@@ -84,6 +93,7 @@
         "url": "netsblox://assets/img/blocks/motion/edge-bounce.png",
         "category": "motion",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.keep_on_stage(bounce = True)",
@@ -93,6 +103,7 @@
         "url": "netsblox://assets/img/blocks/motion/get-pos-x.png",
         "category": "motion",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "",
         "sprite": "self.x_pos",
@@ -102,6 +113,7 @@
         "url": "netsblox://assets/img/blocks/motion/get-pos-y.png",
         "category": "motion",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "",
         "sprite": "self.y_pos",
@@ -111,6 +123,7 @@
         "url": "netsblox://assets/img/blocks/motion/get-heading.png",
         "category": "motion",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "",
         "sprite": "self.heading",
@@ -120,6 +133,7 @@
         "url": "netsblox://assets/img/blocks/control/onstart.png",
         "category": "control",
         "scale": 1,
+        "kind": "hat",
         "globals": "@onstart()\ndef my_onstart(): # functions need unique names\n    pass # replace with your code",
         "stage": "@onstart()\ndef my_onstart(self): # functions need unique names\n    pass # replace with your code",
         "sprite": "@onstart()\ndef my_onstart(self): # functions need unique names\n    pass # replace with your code"
@@ -128,6 +142,7 @@
         "url": "netsblox://assets/img/blocks/control/onkey.png",
         "category": "control",
         "scale": 1,
+        "kind": "hat",
         "globals": "@onkey('space')\ndef my_onkey(): # functions need unique names\n    pass # replace with your code",
         "stage": "@onkey('space')\ndef my_onkey(self): # functions need unique names\n    pass # replace with your code",
         "sprite": "@onkey('space')\ndef my_onkey(self): # functions need unique names\n    pass # replace with your code"
@@ -136,6 +151,7 @@
         "url": "netsblox://assets/img/blocks/control/onmouse.png",
         "category": "control",
         "scale": 1,
+        "kind": "hat",
         "globals": "@onmouse('up')\ndef my_onmouse(x, y): # functions need unique names\n    pass # replace with your code",
         "stage": "@onmouse('up')\ndef my_onmouse(self, x, y): # functions need unique names\n    pass # replace with your code",
         "sprite": "@onmouse('up')\ndef my_onmouse(self, x, y): # functions need unique names\n    pass # replace with your code"
@@ -144,6 +160,7 @@
         "url": "netsblox://assets/img/blocks/control/receive.png",
         "category": "control",
         "scale": 1,
+        "kind": "hat",
         "globals": "@nb.on_message('my message')\ndef my_on_message(): # functions need unique names\n    pass # replace with your code",
         "stage": "@nb.on_message('my message')\ndef my_on_message(self): # functions need unique names\n    pass # replace with your code",
         "sprite": "@nb.on_message('my message')\ndef my_on_message(self): # functions need unique names\n    pass # replace with your code"
@@ -152,6 +169,7 @@
         "url": "netsblox://assets/img/blocks/control/broadcast.png",
         "category": "control",
         "scale": 1,
+        "kind": "command",
         "globals": "nb.send_message('my message')",
         "stage": "nb.send_message('my message')",
         "sprite": "nb.send_message('my message')"
@@ -160,6 +178,7 @@
         "url": "netsblox://assets/img/blocks/control/no-yield.png",
         "category": "control",
         "scale": 1,
+        "kind": "command",
         "globals": "with NoYield():\n    pass # replace with your code",
         "stage": "with NoYield():\n    pass # replace with your code",
         "sprite": "with NoYield():\n    pass # replace with your code"
@@ -168,6 +187,7 @@
         "url": "netsblox://assets/img/blocks/control/sleep.png",
         "category": "control",
         "scale": 1,
+        "kind": "command",
         "globals": "time.sleep(1)",
         "stage": "time.sleep(1)",
         "sprite": "time.sleep(1)"
@@ -176,6 +196,7 @@
         "url": "netsblox://assets/img/blocks/control/loop-forever.png",
         "category": "control",
         "scale": 1,
+        "kind": "command",
         "globals": "while True:\n    pass # replace with your code",
         "stage": "while True:\n    pass # replace with your code",
         "sprite": "while True:\n    pass # replace with your code"
@@ -184,6 +205,7 @@
         "url": "netsblox://assets/img/blocks/control/loop-repeat.png",
         "category": "control",
         "scale": 1,
+        "kind": "command",
         "globals": "for _ in range(10):\n    pass # replace with your code",
         "stage": "for _ in range(10):\n    pass # replace with your code",
         "sprite": "for _ in range(10):\n    pass # replace with your code"
@@ -192,6 +214,7 @@
         "url": "netsblox://assets/img/blocks/control/loop-until.png",
         "category": "control",
         "scale": 1,
+        "kind": "command",
         "globals": "while not (condition): # replace with your condition\n    pass # replace with your code",
         "stage": "while not (condition): # replace with your condition\n    pass # replace with your code",
         "sprite": "while not (condition): # replace with your condition\n    pass # replace with your code"
@@ -200,6 +223,7 @@
         "url": "netsblox://assets/img/blocks/control/loop-for.png",
         "category": "control",
         "scale": 1,
+        "kind": "command",
         "globals": "for i in range(1, 11):\n    pass # replace with your code",
         "stage": "for i in range(1, 11):\n    pass # replace with your code",
         "sprite": "for i in range(1, 11):\n    pass # replace with your code"
@@ -208,6 +232,7 @@
         "url": "netsblox://assets/img/blocks/control/if.png",
         "category": "control",
         "scale": 1,
+        "kind": "command",
         "globals": "if condition: # replace with your condition\n    pass # replace with your code",
         "stage": "if condition: # replace with your condition\n    pass # replace with your code",
         "sprite": "if condition: # replace with your condition\n    pass # replace with your code"
@@ -216,6 +241,7 @@
         "url": "netsblox://assets/img/blocks/control/if-else.png",
         "category": "control",
         "scale": 1,
+        "kind": "command",
         "globals": "if condition: # replace with your condition\n    pass # replace with your code\nelse:\n    pass # replace with your code",
         "stage": "if condition: # replace with your condition\n    pass # replace with your code\nelse:\n    pass # replace with your code",
         "sprite": "if condition: # replace with your condition\n    pass # replace with your code\nelse:\n    pass # replace with your code"
@@ -224,6 +250,7 @@
         "url": "netsblox://assets/img/blocks/control/if-else-expr.png",
         "category": "control",
         "scale": 1,
+        "kind": "reporter",
         "globals": "'abc' if condition else 'xyz'",
         "stage": "'abc' if condition else 'xyz'",
         "sprite": "'abc' if condition else 'xyz'"
@@ -232,6 +259,7 @@
         "url": "netsblox://assets/img/blocks/control/return.png",
         "category": "control",
         "scale": 1,
+        "kind": "command",
         "globals": "return 10",
         "stage": "return 10",
         "sprite": "return 10"
@@ -240,6 +268,7 @@
         "url": "netsblox://assets/img/blocks/control/try.png",
         "category": "control",
         "scale": 1,
+        "kind": "command",
         "globals": "try:\n    pass # replace with your code\nexcept Exception as err:\n    pass # replace with your code",
         "stage": "try:\n    pass # replace with your code\nexcept Exception as err:\n    pass # replace with your code",
         "sprite": "try:\n    pass # replace with your code\nexcept Exception as err:\n    pass # replace with your code"
@@ -248,6 +277,7 @@
         "url": "netsblox://assets/img/blocks/control/throw.png",
         "category": "control",
         "scale": 1,
+        "kind": "command",
         "globals": "raise RuntimeError('uhoh!')",
         "stage": "raise RuntimeError('uhoh!')",
         "sprite": "raise RuntimeError('uhoh!')"
@@ -256,6 +286,7 @@
         "url": "netsblox://assets/img/blocks/control/onstart-clone.png",
         "category": "control",
         "scale": 1,
+        "kind": "hat",
         "globals": "",
         "stage": "",
         "sprite": "@onstart('clone')\ndef my_onstart_clone(self): # functions need unique names\n    pass # replace with your code"
@@ -264,6 +295,7 @@
         "url": "netsblox://assets/img/blocks/control/clone-stmt.png",
         "category": "control",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.clone()"
@@ -272,6 +304,7 @@
         "url": "netsblox://assets/img/blocks/control/clone-expr.png",
         "category": "control",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "",
         "sprite": "self.clone()"
@@ -280,6 +313,7 @@
         "url": "netsblox://assets/img/blocks/looks/set-costume.png",
         "category": "looks",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "self.costume = costume # replace with your costume",
         "sprite": "self.costume = costume # replace with your costume"
@@ -288,6 +322,7 @@
         "url": "netsblox://assets/img/blocks/looks/get-costume-num.png",
         "category": "looks",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "self.costumes.index(self.costume, -1)",
         "sprite": "self.costumes.index(self.costume, -1)"
@@ -296,6 +331,7 @@
         "url": "netsblox://assets/img/blocks/looks/say-duration.png",
         "category": "looks",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.say('Hello!', duration = 2)"
@@ -304,6 +340,7 @@
         "url": "netsblox://assets/img/blocks/looks/say.png",
         "category": "looks",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.say('Hello!')"
@@ -312,6 +349,7 @@
         "url": "netsblox://assets/img/blocks/looks/change-scale.png",
         "category": "looks",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.scale += 0.1 # base scale is 1"
@@ -320,6 +358,7 @@
         "url": "netsblox://assets/img/blocks/looks/set-scale.png",
         "category": "looks",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.scale = 1 # base scale is 1"
@@ -328,6 +367,7 @@
         "url": "netsblox://assets/img/blocks/looks/get-scale.png",
         "category": "looks",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "",
         "sprite": "self.scale"
@@ -336,6 +376,7 @@
         "url": "netsblox://assets/img/blocks/looks/set-visible-true.png",
         "category": "looks",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.visible = True"
@@ -344,6 +385,7 @@
         "url": "netsblox://assets/img/blocks/looks/set-visible-false.png",
         "category": "looks",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.visible = False"
@@ -352,6 +394,7 @@
         "url": "netsblox://assets/img/blocks/looks/get-visible.png",
         "category": "looks",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "",
         "sprite": "self.visible"
@@ -360,6 +403,7 @@
         "url": "netsblox://assets/img/blocks/sensing/get-touching.png",
         "category": "sensing",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "",
         "sprite": "self.is_touching(sprite) # replace with your (other) sprite"
@@ -368,6 +412,7 @@
         "url": "netsblox://assets/img/blocks/sensing/ask.png",
         "category": "sensing",
         "scale": 1,
+        "kind": "command",
         "globals": "answer = input(\"what's your name?\")",
         "stage": "answer = input(\"what's your name?\")",
         "sprite": "answer = input(\"what's your name?\")"
@@ -376,6 +421,7 @@
         "url": "netsblox://assets/img/blocks/sensing/answer.png",
         "category": "sensing",
         "scale": 1,
+        "kind": "reporter",
         "globals": "answer",
         "stage": "answer",
         "sprite": "answer"
@@ -384,6 +430,7 @@
         "url": "netsblox://assets/img/blocks/sensing/get-mouse-x.png",
         "category": "sensing",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "stage.mouse_pos[0]",
         "sprite": "stage.mouse_pos[0]"
@@ -392,6 +439,7 @@
         "url": "netsblox://assets/img/blocks/sensing/get-mouse-y.png",
         "category": "sensing",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "stage.mouse_pos[1]",
         "sprite": "stage.mouse_pos[1]"
@@ -400,6 +448,7 @@
         "url": "netsblox://assets/img/blocks/sensing/get-key-down.png",
         "category": "sensing",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "stage.is_key_down('space')",
         "sprite": "stage.is_key_down('space')"
@@ -408,6 +457,7 @@
         "url": "netsblox://assets/img/blocks/sensing/timer-reset.png",
         "category": "sensing",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "stage.timer = 0",
         "sprite": "stage.timer = 0",
@@ -417,6 +467,7 @@
         "url": "netsblox://assets/img/blocks/sensing/timer-get.png",
         "category": "sensing",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "stage.timer",
         "sprite": "stage.timer"
@@ -425,6 +476,7 @@
         "url": "netsblox://assets/img/blocks/sensing/get-latitude.png",
         "category": "sensing",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "stage.gps_location[0]",
         "sprite": "stage.gps_location[0]"
@@ -433,6 +485,7 @@
         "url": "netsblox://assets/img/blocks/sensing/get-longitude.png",
         "category": "sensing",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "stage.gps_location[1]",
         "sprite": "stage.gps_location[1]"
@@ -441,6 +494,7 @@
         "url": "netsblox://assets/img/blocks/sensing/get-stage-width.png",
         "category": "sensing",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "stage.width",
         "sprite": "stage.width"
@@ -449,6 +503,7 @@
         "url": "netsblox://assets/img/blocks/sensing/get-stage-height.png",
         "category": "sensing",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "stage.height",
         "sprite": "stage.height"
@@ -457,6 +512,7 @@
         "url": "netsblox://assets/img/blocks/sensing/get-image-stage.png",
         "category": "sensing",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "stage.get_image()",
         "sprite": "stage.get_image()"
@@ -465,6 +521,7 @@
         "url": "netsblox://assets/img/blocks/sensing/get-image-self.png",
         "category": "sensing",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "self.get_image()",
         "sprite": "self.get_image()"
@@ -473,6 +530,7 @@
         "url": "netsblox://assets/img/blocks/operators/add.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "7 + 3",
         "stage": "7 + 3",
         "sprite": "7 + 3"
@@ -481,6 +539,7 @@
         "url": "netsblox://assets/img/blocks/operators/sub.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "7 - 3",
         "stage": "7 - 3",
         "sprite": "7 - 3"
@@ -489,6 +548,7 @@
         "url": "netsblox://assets/img/blocks/operators/mul.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "7 * 3",
         "stage": "7 * 3",
         "sprite": "7 * 3"
@@ -497,6 +557,7 @@
         "url": "netsblox://assets/img/blocks/operators/div.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "7 / 3",
         "stage": "7 / 3",
         "sprite": "7 / 3"
@@ -505,6 +566,7 @@
         "url": "netsblox://assets/img/blocks/operators/pow.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "7 ** 3",
         "stage": "7 ** 3",
         "sprite": "7 ** 3"
@@ -513,6 +575,7 @@
         "url": "netsblox://assets/img/blocks/operators/mod.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "7 % 3",
         "stage": "7 % 3",
         "sprite": "7 % 3"
@@ -521,6 +584,7 @@
         "url": "netsblox://assets/img/blocks/operators/round.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "round(3.14)",
         "stage": "round(3.14)",
         "sprite": "round(3.14)"
@@ -529,6 +593,7 @@
         "url": "netsblox://assets/img/blocks/operators/sqrt.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "math.sqrt(10)",
         "stage": "math.sqrt(10)",
         "sprite": "math.sqrt(10)"
@@ -537,6 +602,7 @@
         "url": "netsblox://assets/img/blocks/operators/randrange.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "random.randrange(1, 11)",
         "stage": "random.randrange(1, 11)",
         "sprite": "random.randrange(1, 11)"
@@ -545,6 +611,7 @@
         "url": "netsblox://assets/img/blocks/operators/less.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "7 < 3",
         "stage": "7 < 3",
         "sprite": "7 < 3"
@@ -553,6 +620,7 @@
         "url": "netsblox://assets/img/blocks/operators/less-eq.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "7 <= 3",
         "stage": "7 <= 3",
         "sprite": "7 <= 3"
@@ -561,6 +629,7 @@
         "url": "netsblox://assets/img/blocks/operators/eq.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "7 == 3",
         "stage": "7 == 3",
         "sprite": "7 == 3"
@@ -569,6 +638,7 @@
         "url": "netsblox://assets/img/blocks/operators/neq.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "7 != 3",
         "stage": "7 != 3",
         "sprite": "7 != 3"
@@ -577,6 +647,7 @@
         "url": "netsblox://assets/img/blocks/operators/great-eq.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "7 >= 3",
         "stage": "7 >= 3",
         "sprite": "7 >= 3"
@@ -585,6 +656,7 @@
         "url": "netsblox://assets/img/blocks/operators/great.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "7 > 3",
         "stage": "7 > 3",
         "sprite": "7 > 3"
@@ -593,6 +665,7 @@
         "url": "netsblox://assets/img/blocks/operators/and.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "a and b",
         "stage": "a and b",
         "sprite": "a and b"
@@ -601,6 +674,7 @@
         "url": "netsblox://assets/img/blocks/operators/or.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "a or b",
         "stage": "a or b",
         "sprite": "a or b"
@@ -609,6 +683,7 @@
         "url": "netsblox://assets/img/blocks/operators/not.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "not x",
         "stage": "not x",
         "sprite": "not x"
@@ -617,6 +692,7 @@
         "url": "netsblox://assets/img/blocks/operators/true.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "True",
         "stage": "True",
         "sprite": "True"
@@ -625,6 +701,7 @@
         "url": "netsblox://assets/img/blocks/operators/false.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "False",
         "stage": "False",
         "sprite": "False"
@@ -633,6 +710,7 @@
         "url": "netsblox://assets/img/blocks/operators/join.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "''.join(['hello ', 'world'])",
         "stage": "''.join(['hello ', 'world'])",
         "sprite": "''.join(['hello ', 'world'])"
@@ -641,6 +719,7 @@
         "url": "netsblox://assets/img/blocks/operators/split-space.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "'hello world'.split(' ')",
         "stage": "'hello world'.split(' ')",
         "sprite": "'hello world'.split(' ')"
@@ -649,6 +728,7 @@
         "url": "netsblox://assets/img/blocks/operators/str-index-first.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "'world'[0]",
         "stage": "'world'[0]",
         "sprite": "'world'[0]"
@@ -657,6 +737,7 @@
         "url": "netsblox://assets/img/blocks/operators/str-index-last.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "'world'[-1]",
         "stage": "'world'[-1]",
         "sprite": "'world'[-1]"
@@ -665,6 +746,7 @@
         "url": "netsblox://assets/img/blocks/operators/str-index-rand.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "random.choice('world')",
         "stage": "random.choice('world')",
         "sprite": "random.choice('world')"
@@ -673,6 +755,7 @@
         "url": "netsblox://assets/img/blocks/operators/str-len.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "len('world')",
         "stage": "len('world')",
         "sprite": "len('world')"
@@ -681,6 +764,7 @@
         "url": "netsblox://assets/img/blocks/operators/str-ord.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "ord('a')",
         "stage": "ord('a')",
         "sprite": "ord('a')"
@@ -689,6 +773,7 @@
         "url": "netsblox://assets/img/blocks/operators/str-chr.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "chr(97)",
         "stage": "chr(97)",
         "sprite": "chr(97)"
@@ -697,6 +782,7 @@
         "url": "netsblox://assets/img/blocks/operators/isinstance-list.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "isinstance(5, list)",
         "stage": "isinstance(5, list)",
         "sprite": "isinstance(5, list)"
@@ -705,6 +791,7 @@
         "url": "netsblox://assets/img/blocks/operators/isinstance-str.png",
         "category": "operators",
         "scale": 1,
+        "kind": "reporter",
         "globals": "isinstance(5, str)",
         "stage": "isinstance(5, str)",
         "sprite": "isinstance(5, str)"
@@ -713,6 +800,7 @@
         "url": "netsblox://assets/img/blocks/pen/clear.png",
         "category": "pen",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "stage.clear_drawings()",
         "sprite": "stage.clear_drawings()"
@@ -721,6 +809,7 @@
         "url": "netsblox://assets/img/blocks/pen/set-drawing-true.png",
         "category": "pen",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.drawing = True"
@@ -729,6 +818,7 @@
         "url": "netsblox://assets/img/blocks/pen/set-drawing-false.png",
         "category": "pen",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.drawing = False"
@@ -737,6 +827,7 @@
         "url": "netsblox://assets/img/blocks/pen/get-drawing.png",
         "category": "pen",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "",
         "sprite": "self.drawing"
@@ -745,6 +836,7 @@
         "url": "netsblox://assets/img/blocks/pen/set-pen-color.png",
         "category": "pen",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.pen_color = 'red'"
@@ -753,6 +845,7 @@
         "url": "netsblox://assets/img/blocks/pen/get-pen-color.png",
         "category": "pen",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "",
         "sprite": "self.pen_color"
@@ -761,6 +854,7 @@
         "url": "netsblox://assets/img/blocks/pen/get-pen-size.png",
         "category": "pen",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "",
         "sprite": "self.pen_size"
@@ -769,6 +863,7 @@
         "url": "netsblox://assets/img/blocks/pen/change-pen-size.png",
         "category": "pen",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.pen_size += 1"
@@ -777,6 +872,7 @@
         "url": "netsblox://assets/img/blocks/pen/set-pen-size.png",
         "category": "pen",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.pen_size = 1"
@@ -785,6 +881,7 @@
         "url": "netsblox://assets/img/blocks/pen/stamp.png",
         "category": "pen",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.stamp()"
@@ -793,6 +890,7 @@
         "url": "netsblox://assets/img/blocks/pen/write.png",
         "category": "pen",
         "scale": 1,
+        "kind": "command",
         "globals": "",
         "stage": "",
         "sprite": "self.write('Hello!', size = 12)"
@@ -801,6 +899,7 @@
         "url": "netsblox://assets/img/blocks/pen/get-drawings.png",
         "category": "pen",
         "scale": 1,
+        "kind": "reporter",
         "globals": "",
         "stage": "stage.get_drawings()",
         "sprite": "stage.get_drawings()"
@@ -809,6 +908,7 @@
         "url": "netsblox://assets/img/blocks/variables/var-local.png",
         "category": "variables",
         "scale": 1,
+        "kind": "command",
         "globals": "a = 0",
         "stage": "a = 0",
         "sprite": "a = 0"
@@ -817,6 +917,7 @@
         "url": "netsblox://assets/img/blocks/variables/list.png",
         "category": "variables",
         "scale": 1,
+        "kind": "reporter",
         "globals": "['hello', 'world']",
         "stage": "['hello', 'world']",
         "sprite": "['hello', 'world']"
@@ -825,6 +926,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-range.png",
         "category": "variables",
         "scale": 1,
+        "kind": "reporter",
         "globals": "[*range(1, 11)]",
         "stage": "[*range(1, 11)]",
         "sprite": "[*range(1, 11)]"
@@ -833,6 +935,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-cons.png",
         "category": "variables",
         "scale": 1,
+        "kind": "reporter",
         "globals": "[123, *my_list]",
         "stage": "[123, *my_list]",
         "sprite": "[123, *my_list]"
@@ -841,6 +944,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-index-first.png",
         "category": "variables",
         "scale": 1,
+        "kind": "reporter",
         "globals": "my_list[0]",
         "stage": "my_list[0]",
         "sprite": "my_list[0]"
@@ -849,6 +953,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-index-last.png",
         "category": "variables",
         "scale": 1,
+        "kind": "reporter",
         "globals": "my_list[-1]",
         "stage": "my_list[-1]",
         "sprite": "my_list[-1]"
@@ -857,6 +962,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-index-rand.png",
         "category": "variables",
         "scale": 1,
+        "kind": "reporter",
         "globals": "random.choice(my_list)",
         "stage": "random.choice(my_list)",
         "sprite": "random.choice(my_list)"
@@ -865,6 +971,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-cdr.png",
         "category": "variables",
         "scale": 1,
+        "kind": "reporter",
         "globals": "my_list[1:]",
         "stage": "my_list[1:]",
         "sprite": "my_list[1:]"
@@ -873,6 +980,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-len.png",
         "category": "variables",
         "scale": 1,
+        "kind": "reporter",
         "globals": "len(my_list)",
         "stage": "len(my_list)",
         "sprite": "len(my_list)"
@@ -881,6 +989,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-rev.png",
         "category": "variables",
         "scale": 1,
+        "kind": "reporter",
         "globals": "my_list[::-1]",
         "stage": "my_list[::-1]",
         "sprite": "my_list[::-1]"
@@ -889,6 +998,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-in.png",
         "category": "variables",
         "scale": 1,
+        "kind": "reporter",
         "globals": "'thing' in my_list",
         "stage": "'thing' in my_list",
         "sprite": "'thing' in my_list"
@@ -897,6 +1007,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-empty.png",
         "category": "variables",
         "scale": 1,
+        "kind": "reporter",
         "globals": "len(my_list) == 0",
         "stage": "len(my_list) == 0",
         "sprite": "len(my_list) == 0"
@@ -905,6 +1016,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-map.png",
         "category": "variables",
         "scale": 1,
+        "kind": "reporter",
         "globals": "[2 * x for x in my_list]",
         "stage": "[2 * x for x in my_list]",
         "sprite": "[2 * x for x in my_list]"
@@ -913,6 +1025,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-filter.png",
         "category": "variables",
         "scale": 1,
+        "kind": "reporter",
         "globals": "[x for x in my_list if x > 0]",
         "stage": "[x for x in my_list if x > 0]",
         "sprite": "[x for x in my_list if x > 0]"
@@ -921,6 +1034,7 @@
         "url": "netsblox://assets/img/blocks/variables/loop-foreach.png",
         "category": "variables",
         "scale": 1,
+        "kind": "command",
         "globals": "for item in my_list: # replace with your list\n    pass # replace with your code",
         "stage": "for item in my_list: # replace with your list\n    pass # replace with your code",
         "sprite": "for item in my_list: # replace with your list\n    pass # replace with your code"
@@ -929,6 +1043,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-push.png",
         "category": "variables",
         "scale": 1,
+        "kind": "command",
         "globals": "my_list.append('thing')",
         "stage": "my_list.append('thing')",
         "sprite": "my_list.append('thing')"
@@ -937,6 +1052,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-remove-first.png",
         "category": "variables",
         "scale": 1,
+        "kind": "command",
         "globals": "del my_list[0]",
         "stage": "del my_list[0]",
         "sprite": "del my_list[0]"
@@ -945,6 +1061,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-remove-last.png",
         "category": "variables",
         "scale": 1,
+        "kind": "command",
         "globals": "del my_list[-1]",
         "stage": "del my_list[-1]",
         "sprite": "del my_list[-1]"
@@ -953,6 +1070,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-remove-all.png",
         "category": "variables",
         "scale": 1,
+        "kind": "command",
         "globals": "my_list.clear()",
         "stage": "my_list.clear()",
         "sprite": "my_list.clear()"
@@ -961,6 +1079,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-insert-first.png",
         "category": "variables",
         "scale": 1,
+        "kind": "command",
         "globals": "my_list.insert(0, 'thing')",
         "stage": "my_list.insert(0, 'thing')",
         "sprite": "my_list.insert(0, 'thing')"
@@ -969,6 +1088,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-insert-last.png",
         "category": "variables",
         "scale": 1,
+        "kind": "command",
         "globals": "my_list.append('thing')",
         "stage": "my_list.append('thing')",
         "sprite": "my_list.append('thing')"
@@ -977,6 +1097,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-replace-first.png",
         "category": "variables",
         "scale": 1,
+        "kind": "command",
         "globals": "my_list[0] = 'thing'",
         "stage": "my_list[0] = 'thing'",
         "sprite": "my_list[0] = 'thing'"
@@ -985,6 +1106,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-replace-last.png",
         "category": "variables",
         "scale": 1,
+        "kind": "command",
         "globals": "my_list[-1] = 'thing'",
         "stage": "my_list[-1] = 'thing'",
         "sprite": "my_list[-1] = 'thing'"
@@ -993,6 +1115,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-cat.png",
         "category": "variables",
         "scale": 1,
+        "kind": "reporter",
         "globals": "[*list_1, *list_2]",
         "stage": "[*list_1, *list_2]",
         "sprite": "[*list_1, *list_2]"
@@ -1001,6 +1124,7 @@
         "url": "netsblox://assets/img/blocks/variables/list-sort.png",
         "category": "variables",
         "scale": 1,
+        "kind": "reporter",
         "globals": "sorted(my_list)",
         "stage": "sorted(my_list)",
         "sprite": "sorted(my_list)"
@@ -1009,6 +1133,7 @@
         "url": "netsblox://assets/img/blocks/network/receive.png",
         "category": "network",
         "scale": 1,
+        "kind": "hat",
         "globals": "@nb.on_message('message') # replace with your message type\ndef my_on_message(msg): # replace with your message fields + functions need unique names\n    pass # replace with your code",
         "stage": "@nb.on_message('message') # replace with your message type\ndef my_on_message(self, msg): # replace with your message fields + functions need unique names\n    pass # replace with your code",
         "sprite": "@nb.on_message('message') # replace with your message type\ndef my_on_message(self, msg): # replace with your message fields + functions need unique names\n    pass # replace with your code"
@@ -1017,6 +1142,7 @@
         "url": "netsblox://assets/img/blocks/network/send.png",
         "category": "network",
         "scale": 1,
+        "kind": "command",
         "globals": "nb.send_message('message', target, msg = 'Hello!') # replace with your message type, target, and message fields",
         "stage": "nb.send_message('message', target, msg = 'Hello!') # replace with your message type, target, and message fields",
         "sprite": "nb.send_message('message', target, msg = 'Hello!') # replace with your message type, target, and message fields"
@@ -1025,6 +1151,7 @@
         "url": "netsblox://assets/img/blocks/network/rpc-call.png",
         "category": "network",
         "scale": 1,
+        "kind": "reporter",
         "globals": "nb.air_quality.quality_index(34, -87)",
         "stage": "nb.air_quality.quality_index(34, -87)",
         "sprite": "nb.air_quality.quality_index(34, -87)"
@@ -1033,8 +1160,9 @@
         "url": "netsblox://assets/img/blocks/network/rpc-run.png",
         "category": "network",
         "scale": 1,
-        "globals": "res = nb.air_quality.quality_index(34, -87)",
-        "stage": "res = nb.air_quality.quality_index(34, -87)",
-        "sprite": "res = nb.air_quality.quality_index(34, -87)"
+        "kind": "command",
+        "globals": "nb.air_quality.quality_index(34, -87)",
+        "stage": "nb.air_quality.quality_index(34, -87)",
+        "sprite": "nb.air_quality.quality_index(34, -87)"
     }
 ]

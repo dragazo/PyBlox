@@ -171,11 +171,11 @@ def undent_single(line: str) -> str:
         i += 1
     return line[i:], i # remove at most 4 whitespace chars
 
-def indent(txt: str) -> str:
-    return '\n'.join([ f'    {x}' for x in txt.splitlines() ])
-def indent_info(txt: str) -> str:
-    indents = [ f'    {x}' for x in txt.splitlines() ]
-    return '\n'.join(indents), [4 for _ in indents]
+def indent(txt: str, prefix: str = '    ') -> str:
+    return '\n'.join([ f'{prefix}{x}' for x in txt.splitlines() ])
+def indent_info(txt: str, prefix: str = '    ') -> str:
+    indents = [ f'{prefix}{x}' for x in txt.splitlines() ]
+    return '\n'.join(indents), [len(prefix) for _ in indents]
 def undent_info(txt: str) -> Tuple[str, int, int]:
     undents = [ undent_single(x) for x in txt.splitlines() ]
     if len(undents) == 0:
@@ -706,7 +706,7 @@ class BlocksList(tk.Frame):
         assert isinstance(target, ScrolledText)
         orig_bcolor = target.text.cget('background')
 
-        def make_dnd_manager(widget, code):
+        def make_dnd_manager(widget, code, block_kind):
             def get_window_pos(e) -> Tuple[int, int]:
                 x, y = target.text.winfo_pointerxy()
                 x -= root.winfo_rootx()
@@ -743,7 +743,25 @@ class BlocksList(tk.Frame):
 
                 pos = get_text_pos(e)
                 before = target.text.get('1.0', 'end-1c')
-                target.text.insert(f'{pos} linestart', f'{code}\n')
+
+                if block_kind == 'reporter':
+                    target.text.insert(pos, code)
+                elif block_kind == 'hat':
+                    target.text.insert(f'{pos} linestart', f'{code}\n')
+                else: # command (or default)
+                    insert_line = int(pos.split('.')[0])
+                    prefix = ''
+                    for line_num in range(insert_line, 0, -1):
+                        line, _ = transform.split_code_comment(target.text.get(f'{line_num}.0', f'{line_num}.0 lineend'))
+                        line_clean = line.lstrip()
+                        if line_num != insert_line and line_clean.rstrip().endswith(':'):
+                            prefix = line[:len(line) - len(line_clean)] + '    '
+                            break
+                        if line_clean != '':
+                            prefix = line[:len(line) - len(line_clean)]
+                            break
+                    target.text.insert(f'{pos} linestart', f'{indent(code, prefix)}\n')
+
                 after = target.text.get('1.0', 'end-1c')
                 target.text.edit_separator() # so multiple drag and drops aren't undone as one
 
@@ -812,7 +830,7 @@ class BlocksList(tk.Frame):
                 self.text.insert('end', '\n')
                 self.imgs.append(img)
 
-                make_dnd_manager(label, replace)
+                make_dnd_manager(label, replace, block['kind'])
         finally:
             self.text.config(state = tk.DISABLED)
 
@@ -1053,6 +1071,7 @@ class ProjectEditor(tk.Frame):
                     'scale': block['scale'],
                     'category': block['category'],
                     'docs': block['docs'],
+                    'kind': block['kind'],
                     'globals': block['globals'],
                     'stage': block['stage'],
                     'sprite': block['sprite'],
@@ -1118,6 +1137,7 @@ class ProjectEditor(tk.Frame):
                             'scale': block['scale'],
                             'category': 'custom',
                             'docs': '',
+                            'kind': 'command',
                             'globals': block['replace'] if k == 'globals' or k == 'global' else '',
                             'stage': block['replace'] if k == 'stage' else '',
                             'sprite': block['replace'] if k == 'sprite' or k == 'turtle' else '',
@@ -1132,6 +1152,7 @@ class ProjectEditor(tk.Frame):
                         'scale': block.get('scale', 1),
                         'category': block.get('category', 'custom'),
                         'docs': block.get('docs', ''),
+                        'kind': block.get('kind', 'command'),
                         'globals': block.get('globals', '') or block.get('global', ''),
                         'stage': block.get('stage', ''),
                         'sprite': block.get('sprite', '') or block.get('turtle', ''),
@@ -2316,6 +2337,7 @@ class MainMenu(tk.Menu):
             'scale': 1,
             'category': content.blocks.category_selector.selected,
             'docs': '',
+            'kind': 'command',
             'globals': 'pass',
             'stage': 'pass',
             'sprite': 'pass',
