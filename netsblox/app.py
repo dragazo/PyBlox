@@ -778,7 +778,7 @@ class BlocksList(tk.Frame):
 
                 if is_inside:
                     pos = get_text_pos(e)
-                    target.text.mark_set('insert', pos)
+                    target.text.mark_set('insert', pos if block_kind == 'reporter' else f'{pos} linestart')
                     target.text.focus() # give focus so we can see the cursor pos
                 else:
                     widget.focus() # give focus back to the widget so the text highlight shows again
