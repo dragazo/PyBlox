@@ -1644,18 +1644,16 @@ class CodeEditor(ScrolledText):
             self.text.tag_add('jedi-syntax-err', start, stop)
         self.text.tag_configure('jedi-syntax-err', underline = True, underlinefg = 'red', background = '#f2a5a5', foreground = 'black')
 
-    def total_pos(self):
-        edit_line, edit_col = map(int, self.text.index(tk.INSERT).split('.'))
-        edit_line += self.linenumbers.line_num_offset
-        edit_col += self.column_offset
+    def jedi_script_pos(self):
+        edit_line = int(self.text.index('insert').split('.')[0]) + self.linenumbers.line_num_offset
+        edit_col = len(self.text.get('insert linestart', 'insert')) + self.column_offset
         return edit_line, edit_col
 
     def show_docs(self, script):
         if not force_enabled or content is None or content.project is None:
             return
 
-        edit_line, edit_col = self.total_pos()
-        docs = script.help(edit_line, edit_col)
+        docs = script.help(*self.jedi_script_pos())
 
         def get_docstring(items) -> str:
             res = []
@@ -1690,8 +1688,7 @@ class CodeEditor(ScrolledText):
             code = content.project.get_full_script(is_export = False, omit_media = True, static_check = False)
             script = jedi.Script(code)
 
-        edit_line, edit_col = self.total_pos()
-        completions = script.complete(edit_line, edit_col)
+        completions = script.complete(*self.jedi_script_pos())
 
         should_show = len(completions) >= 2 or (len(completions) == 1 and completions[0].complete != '')
         if should_show:
