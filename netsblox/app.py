@@ -1793,8 +1793,9 @@ class CodeEditor(ScrolledText):
         key_logger.flush()
 
         line = self.text.get('insert linestart', 'insert')
-        white, _ = get_white_nonwhite(line)
-        if line.endswith(':'):
+        code, _ = transform.split_code_comment(line)
+        white = code[:len(code) - len(code.lstrip())]
+        if code.rstrip().endswith(':'):
             white += '    '
         self.text.insert('insert', '\n' + white)
         self.text.see('insert')
