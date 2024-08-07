@@ -120,6 +120,7 @@
         "subsubmenu",
         "tabposition",
         "tearoff",
+        "textvariable",
         "uhoh",
         "undrag",
         "wordstart"

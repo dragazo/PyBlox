@@ -2356,34 +2356,67 @@ class MainMenu(tk.Menu):
 
         prompt = tk.Toplevel(root)
         prompt.title('Edit Block')
-        prompt.geometry('600x600')
+        prompt.geometry('600x300')
+        prompt.minsize(600, 300)
         prompt.transient(root)
         prompt.grab_set()
 
-        info = tk.Label(prompt, text = 'Replacement text values (empty to delete it from a palette)')
-        info.pack(side = tk.TOP)
+        layout = tk.Frame(prompt)
+
+        category_var = tk.StringVar()
+        category_var.set(content.project.blocks[block]['category'])
+        category_label = tk.Label(layout, text = 'Category')
+        category_label.grid(row = 0, column = 0, sticky = 'ew')
+        category_menu = tk.OptionMenu(layout, category_var, *BLOCK_CATEGORIES.keys())
+        category_menu.grid(row = 1, column = 0)
+
+        kind_var = tk.StringVar()
+        kind_var.set(content.project.blocks[block]['kind'])
+        kind_label = tk.Label(layout, text = 'Kind')
+        kind_label.grid(row = 0, column = 1, sticky = 'ew')
+        kind_menu = tk.OptionMenu(layout, kind_var, *['command', 'reporter', 'hat'])
+        kind_menu.grid(row = 1, column = 1)
+
+        scale_var = tk.StringVar()
+        scale_var.set(str(content.project.blocks[block]['scale']))
+        scale_label = tk.Label(layout, text = 'Scale')
+        scale_label.grid(row = 0, column = 2, sticky = 'ew')
+        scale_menu = tk.Entry(layout, textvariable = scale_var, justify = 'center')
+        scale_menu.grid(row = 1, column = 2)
+
+        layout.rowconfigure([0, 1], weight = 1)
+        layout.columnconfigure([0, 1, 2], weight = 1, uniform = 'Silent_Creme')
+        layout.pack(side = tk.TOP, pady = (5, 20))
 
         editors = {}
         def do_save():
-            for kind in ['globals', 'stage', 'sprite']:
-                content.project.blocks[block][kind] = editors[kind].get('1.0', 'end-1c').strip()
+            try:
+                content.project.blocks[block]['scale'] = max(0.1, min(10, float(scale_var.get())))
+            except:
+                pass
+
+            content.project.blocks[block]['category'] = category_var.get()
+            content.project.blocks[block]['kind'] = kind_var.get()
+
+            for t in ['globals', 'stage', 'sprite', 'docs']:
+                content.project.blocks[block][t] = editors[t].get('1.0', 'end-1c').strip()
             prompt.destroy()
             content.project.on_tab_change()
         ok_btn = tk.Button(prompt, text = 'Save', command = do_save)
-        ok_btn.pack(side = tk.BOTTOM)
+        ok_btn.pack(side = tk.BOTTOM, pady = (10, 5))
 
-        layout = tk.Frame(prompt)
+        notebook = ttk.Notebook(prompt)
+        notebook.pack(fill = tk.BOTH, expand = True)
+
+        for t in ['globals', 'stage', 'sprite', 'docs']:
+            frame = tk.Frame(notebook)
+            l = tk.Label(frame, text = f'Replacement value in a {t} editor (empty to disable)' if t != 'docs' else 'Extra documentation info for users (empty to disable)')
+            l.pack(side = tk.TOP, pady = 5)
+            e = editors[t] = tk.Text(frame)
+            e.pack(fill = tk.BOTH, expand = True)
+            e.insert('1.0', content.project.blocks[block][t])
+            notebook.add(frame, text = t)
         layout.pack(fill = tk.BOTH, expand = True)
-        for i, kind in enumerate(['globals', 'stage', 'sprite']):
-            frame = tk.Frame(layout)
-            l = tk.Label(frame, text = kind)
-            l.pack(side = tk.TOP)
-            w = editors[kind] = tk.Text(frame)
-            w.pack(fill = tk.BOTH, expand = True)
-            w.insert('1.0', content.project.blocks[block][kind])
-            frame.grid(row = i, column = 0, sticky = tk.EW, pady = 10)
-            layout.rowconfigure(i, weight = 1)
-        layout.columnconfigure(0, weight = 1)
 
     def import_image(self):
         img = self.load_image_common(720 * 480)
