@@ -35,6 +35,7 @@ from netsblox import transform
 from netsblox import common
 from netsblox import rooms
 from netsblox import common
+from netsblox import sound as Sound
 
 NETSBLOX_PY_PATH = os.path.dirname(netsblox.__file__)
 
@@ -48,6 +49,7 @@ PROJECT_FILETYPES = [('PyBlox Project Files', xux('.json')), ('All Files', '.*')
 NB_PROJECT_FILETYPES = [('NetsBlox Project Files', xux('.xml')), ('All Files', '.*')]
 PYTHON_FILETYPES = [('Python Files', xux('.py')), ('All Files', '.*')]
 IMAGE_FILETYPES = [('Images', xux('.png .jpg .jpeg')), ('All Files', '.*')]
+SOUND_FILETYPES = [('Sounds', xux('.mp3 .ogg .wav')), ('All Files', '.*')]
 
 MIN_FONT_SIZE = 4
 MAX_FONT_SIZE = 40
@@ -343,7 +345,8 @@ def clean_logging_snapshot(super_proj):
     super_proj = copy.deepcopy(super_proj)
 
     for role in super_proj.get('roles', [super_proj]):
-        del role['images']
+        role.pop('images', None)
+        role.pop('sounds', None)
 
     return super_proj
 
@@ -848,27 +851,37 @@ class Imports:
             }
 
         self.images = {}
+        self.sounds = {}
 
         self.on_update = on_update
 
     def get_preamble_lines(self, *, is_export: bool, omit_media: bool) -> List[str]:
-        import_lines = []
+        lines = []
         for item in self.packages.values():
             if item['tkvar'].get():
-                import_lines.append(item['code'])
+                lines.append(item['code'])
+        lines.append('import gelidum as _gelidum')
 
-        image_lines = []
-        if len(self.images) != 0:
-            image_lines.append('import gelidum as _gelidum')
-            image_lines.append('class images:')
+        if len(lines) != 0:
+            lines.append('')
+
+        lines.append('class images:')
         for name, entry in self.images.items():
-            image_lines.append(f'    {name} = set_center(netsblox.common.decode_image(\'{"<<<OMITTED>>>" if omit_media else common.encode_image(entry["img"])}\').convert(\'RGBA\'), {tuple(entry["center"])})')
-        if len(self.images) != 0:
-            image_lines.append('images = images()')
-            image_lines.append('_gelidum.freeze(images, on_freeze = \'inplace\')')
+            lines.append(f'    {name} = set_center(netsblox.common.decode_image(\'{"<<<OMITTED>>>" if omit_media else common.encode_image(entry["img"])}\').convert(\'RGBA\'), {tuple(entry["center"])})')
+        if len(self.images) == 0:
+            lines.append('    pass')
+        lines.append('images = images()')
+        lines.append('_gelidum.freeze(images, on_freeze = \'inplace\')')
 
-        needs_sep = len(import_lines) != 0 and len(image_lines) != 0
-        return [*import_lines, *([''] if needs_sep else []), *image_lines]
+        lines.append('class sounds:')
+        for name, entry in self.sounds.items():
+            lines.append(f'    {name} = netsblox.common.decode_sound(\'{"<<<OMITTED>>>" if omit_media else common.encode_sound(entry["snd"])}\')')
+        if len(self.sounds) == 0:
+            lines.append('    pass')
+        lines.append('sounds = sounds()')
+        lines.append('_gelidum.freeze(sounds, on_freeze = \'inplace\')')
+
+        return lines
 
     def batch_update(self) -> None:
         lines = self.get_preamble_lines(is_export = False, omit_media = True)
@@ -900,6 +913,7 @@ class ProjectEditor(tk.Frame):
             for editor in self.editors:
                 editor.on_content_change()
             main_menu.update_images()
+            main_menu.update_sounds()
         self.imports = Imports(on_update = imports_update)
 
         self.notebook = ttk.Notebook(self)
@@ -1097,6 +1111,7 @@ class ProjectEditor(tk.Frame):
                 })
 
             role_res['images'] = { name: { 'img': common.encode_image(entry['img']), 'center': entry['center'][:] } for name, entry in self.imports.images.items() }
+            role_res['sounds'] = { name: { 'snd': common.encode_sound(entry['snd']) } for name, entry in self.imports.sounds.items() }
 
         return res
     def load(self, *, super_proj: Optional[dict] = None, active_role: Optional[int] = None, source: str) -> None:
@@ -1210,6 +1225,11 @@ class ProjectEditor(tk.Frame):
                 self.imports.images[name] = { 'img': common.decode_image(raw['img']), 'center': [float(raw['center'][0]), float(raw['center'][1])] }
             else: # legacy support
                 self.imports.images[name] = { 'img': common.decode_image(raw), 'center': [0.0, 0.0] }
+
+        self.imports.sounds.clear()
+        for name, raw in proj.get('sounds', {}).items():
+            assert name not in self.imports.sounds, f'a sound named \'{name}\' was defined multiple times'
+            self.imports.sounds[name] = { 'snd': common.decode_sound(raw['snd']) }
 
         self.imports.batch_update()
 
@@ -1920,9 +1940,11 @@ import time as _time
 def _yield_(x):
     _time.sleep(0)
     return x
+from netsblox import sound as Sound
+Sound.init()
 
 '''.lstrip()
-    BASE_PREFIX_LINES = 17
+    BASE_PREFIX_LINES = 19
 
     prefix_lines = BASE_PREFIX_LINES
 
@@ -2165,6 +2187,9 @@ class MainMenu(tk.Menu):
         self.images_dropdown = tk.Menu(self, **MENU_STYLE)
         self.add_cascade(label = 'Images', menu = self.images_dropdown)
 
+        self.sounds_dropdown = tk.Menu(self, **MENU_STYLE)
+        self.add_cascade(label = 'Sounds', menu = self.sounds_dropdown)
+
         self.run_menu_entries = {}
         self.run_menu_seps = 0
         self.run_menu = tk.Menu(self, **MENU_STYLE)
@@ -2322,6 +2347,18 @@ class MainMenu(tk.Menu):
             messagebox.showerror(title = 'Failed to load image', message = str(e))
             return None
 
+    def load_sound_common(self) -> Optional[Sound.Sound]:
+        p = filedialog.askopenfilename(filetypes = SOUND_FILETYPES)
+        if type(p) is not str or not p:
+            return None
+
+        try:
+            snd = Sound.Sound(p) # make sure we can load the image
+            return common.decode_sound(common.encode_sound(snd)) # make sure it can round-trip to b64 (also, this ensures any import format is converted to mp3)
+        except Exception as e:
+            messagebox.showerror(title = 'Failed to load sound', message = str(e))
+            return None
+
     def create_block(self):
         img = self.load_image_common(128 * 128)
         if img is None:
@@ -2428,14 +2465,34 @@ class MainMenu(tk.Menu):
             name = simpledialog.askstring(title = 'Name Image', prompt = 'Enter the name of the image, which is used to access it from code')
             if name is None: return
             if not is_valid_ident(name):
-                messagebox.showerror('Invalid name', message = f'"{name}" is not a valid python variable name')
+                messagebox.showerror('Invalid Name', message = f'"{name}" is not a valid python variable name')
                 continue
             if name in content.project.imports.images:
-                messagebox.showerror(title = 'Invalid name', message = f'An image named {name} already exists')
+                messagebox.showerror(title = 'Invalid Name', message = f'An image named "{name}" already exists')
                 continue
             break
 
         content.project.imports.images[name] = { 'img': img, 'center': [0.0, 0.0] }
+        content.project.imports.batch_update()
+
+    def import_sound(self):
+        snd = self.load_sound_common()
+        if snd is None:
+            return
+
+        name = None
+        while True:
+            name = simpledialog.askstring(title = 'Name Sound', prompt = 'Enter the name of the sound, which is used to access it from code')
+            if name is None: return
+            if not is_valid_ident(name):
+                messagebox.showerror('Invalid Name', message = f'"{name}" is not a valid python variable name')
+                continue
+            if name in content.project.imports.sounds:
+                messagebox.showerror(title = 'Invalid Name', message = f'A sound named "{name}" already exists')
+                continue
+            break
+
+        content.project.imports.sounds[name] = { 'snd': snd }
         content.project.imports.batch_update()
 
     def update_images(self):
@@ -2473,6 +2530,28 @@ class MainMenu(tk.Menu):
             submenu.add_command(label = 'Delete', command = get_deleter(name))
 
             self.images_dropdown.add_cascade(label = f'{name} ({entry["img"].width}x{entry["img"].height})', menu = submenu)
+
+    def update_sounds(self):
+        self.sounds_dropdown.delete(0, 'end')
+        self.sounds_dropdown.add_command(label = 'Import', command = self.import_sound)
+
+        if len(content.project.imports.sounds) != 0:
+            self.sounds_dropdown.add_separator()
+
+        for name, entry in content.project.imports.sounds.items():
+            submenu = tk.Menu(**MENU_STYLE)
+
+            def get_deleter(name):
+                def deleter():
+                    title = f'Delete sound {name}'
+                    msg = f'Are you sure you would like to delete sound {name}? This operation cannot be undone.'
+                    if messagebox.askyesno(title, msg, icon = 'warning', default = 'no'):
+                        del content.project.imports.sounds[name]
+                        content.project.imports.batch_update()
+                return deleter
+            submenu.add_command(label = 'Delete', command = get_deleter(name))
+
+            self.sounds_dropdown.add_cascade(label = name, menu = submenu)
 
     def update_roles(self):
         self.roles_dropdown.delete(0, 'end')
@@ -2631,6 +2710,8 @@ def log(msg: str) -> None:
 
 def main():
     global nb, root, main_menu, content, drag_widget, _logger_instance
+
+    Sound.init()
 
     parser = argparse.ArgumentParser()
     parser.add_argument('project', type = str, nargs = '?', default = None)

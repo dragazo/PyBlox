@@ -1,4 +1,5 @@
 import netsblox as _netsblox
+from netsblox import sound as _Sound
 
 import randomname as _randomname
 import threading as _threading
@@ -189,6 +190,12 @@ def encode_image(img: _Image.Image) -> str:
 def decode_image(img: str) -> _Image.Image:
     raw = _base64.decodebytes(img.encode('ascii'))
     return _Image.open(_io.BytesIO(raw))
+
+def encode_sound(snd: _Sound.Sound) -> str:
+    return _base64.b64encode(getattr(snd, '_Sound__raw', snd)).decode('ascii')
+def decode_sound(snd: str) -> _Sound.Sound:
+    raw = _base64.decodebytes(snd.encode('ascii'))
+    return _Sound.Sound(raw)
 
 def paginate_str(text: str, max_len: int) -> List[str]:
     res = ['']
