@@ -668,42 +668,43 @@ def _apply_transforms(img: Optional[Image.Image], scale: float, rot: float) -> I
     setattr(res, _SECRET_DELTA_FIELD_NAME, (-x * cos_t + y * sin_t, -y * cos_t - x * sin_t))
     return res
 
-class CostumeSet:
-    def __init__(self):
+class AssetSet:
+    def __init__(self, *, kind: type = object):
+        self.__kind = kind
         self.__ordered: List[str] = []
-        self.__unordered: Dict[str, Image.Image] = {}
+        self.__unordered: Dict[str, Any] = {}
 
     def clear(self):
         '''
-        Removes any defined costumes, effectively starting from scratch.
+        Removes any defined assets, effectively starting from scratch.
         '''
         self.__ordered.clear()
         self.__unordered.clear()
 
-    def add(self, name: str, value: Image.Image):
+    def add(self, name: str, value: Any):
         '''
-        Adds a single new costume to the collection of costumes.
-        `name` is the name of the costume and `value` is the actual image that should be used.
+        Adds a single new asset to the collection of assets.
+        `name` is the name of the asset and `value` is the actual asset that should be used.
         '''
         if not isinstance(name, str):
-            raise RuntimeError(f'costume name must be a string, got {type(name)}')
-        if not isinstance(value, Image.Image):
-            raise RuntimeError(f'costume value must be an image, got {type(value)}')
+            raise RuntimeError(f'asset name must be a string, got {type(name)}')
+        if not isinstance(value, self.__kind):
+            raise RuntimeError(f'asset value must be {self.__kind}, got {type(value)}')
         if name in self.__unordered:
-            raise RuntimeError(f'a costume with name \'{name}\' already exists')
+            raise RuntimeError(f'an asset with name \'{name}\' already exists')
 
         self.__unordered[name] = value
         self.__ordered.append(name)
 
-    def lookup(self, value: Union[int, str, Image.Image, None]) -> Optional[Image.Image]:
+    def lookup(self, value: Union[int, str, Any, None]) -> Optional[Any]:
         '''
-        Attempts to look up a costume from the collection of costumes.
+        Attempts to look up an asset from the collection of assets.
         The value can be specified as any of the following:
 
-         - The name of a previously-added costume (or empty string for no costume)
-         - The index of a previously-added costume
-         - An image, which is returned directly (i.e., no lookup needed)
-         - None, which is returned directly (i.e., no lookup needed) and represents no costume
+         - The name of a previously-added asset (or empty string for no asset)
+         - The index of a previously-added asset
+         - An asset, which is returned directly (i.e., no lookup needed)
+         - None, which is returned directly (i.e., no lookup needed) and represents no asset
         '''
 
         if value is None:
@@ -717,17 +718,17 @@ class CostumeSet:
                 return None
             if value in self.__unordered:
                 return self.__unordered[value]
-            raise RuntimeError(f'unknown costume \'{value}\'')
+            raise RuntimeError(f'unknown asset \'{value}\'')
 
-        if isinstance(value, Image.Image):
+        if isinstance(value, self.__kind):
             return value
 
-        raise RuntimeError(f'costumes must be either a string, int, or image - instead got \'{type(value)}\'')
+        raise RuntimeError(f'assets must be either a string, int, or asset object - instead got \'{type(value)}\'')
 
-    def index(self, value: Union[int, str, Image.Image, None], default: Optional[int] = None) -> Optional[int]:
+    def index(self, value: Union[int, str, Any, None], default: Optional[int] = None) -> Optional[int]:
         '''
-        Attempts to get the index of provided costume (after lookup).
-        If the costume is not found, the default value is returned (or None if not specified).
+        Attempts to get the index of provided asset (after lookup).
+        If the asset is not found, the default value is returned (or None if not specified).
         '''
         value = self.lookup(value)
         for i, v in enumerate(self.__ordered):
@@ -738,7 +739,7 @@ class CostumeSet:
     def __len__(self) -> int:
         return len(self.__ordered)
 
-    def __iter__(self) -> Sequence[Image.Image]:
+    def __iter__(self) -> Sequence[Any]:
         return (self.__unordered[x] for x in self.__ordered)
 
 class _Ref:
@@ -768,7 +769,8 @@ class StageBase(_Ref):
         except:
             self.__initialized = True
 
-        self.__costume_set = CostumeSet()
+        self.__costume_set = AssetSet(kind = Image.Image)
+        self.__sound_set = AssetSet(kind = Sound.Sound)
         self.__costume = None
 
         self.__proj = _get_proj_handle()
@@ -803,11 +805,41 @@ class StageBase(_Ref):
         self.__proj.invalidate()
 
     @property
-    def costumes(self) -> CostumeSet:
+    def costumes(self) -> AssetSet:
         '''
         The collection of costumes associated with the stage.
         '''
         return self.__costume_set
+
+    def play_sound(self, sound: Union[None, Sound.Sound, str, int], *, wait: bool = False) -> None:
+        '''
+        Begins playing the provided sound.
+        The value can be specified as any of the following:
+
+         - The name of a previously-added sound (or empty string for no sound)
+         - the index of a previously-added sound
+         - An existing sound object
+         - None, which represents no sound
+
+        By default, this function will return immediately and the sound will play in the background.
+        However, you can use the `wait` keyword argument to make this function wait for the sound to finish before resuming your code.
+
+        ```
+        self.play_sound(my_sound)
+        self.play_sound(2, wait = False)
+        elf.play_sound('hello', wait = True)
+        ```
+        '''
+        sound = self.__sound_set.lookup(sound)
+        if sound is not None:
+            sound.play(wait = wait)
+
+    @property
+    def sounds(self) -> AssetSet:
+        '''
+        The collection of sounds associated with the stage.
+        '''
+        return self.__sound_set
 
     @property
     def size(self) -> Tuple[int, int]:
@@ -1014,7 +1046,8 @@ class SpriteBase(_Ref):
         self.__degrees = 360.0
         self.__pen_size = 1.0
         self.__pen_color = (0, 0, 0) # [0,255] rgb (defaults to black)
-        self.__costume_set = CostumeSet()
+        self.__costume_set = AssetSet(kind = Image.Image)
+        self.__sound_set = AssetSet(kind = Sound.Sound)
         self.__costume = None
         self.__display_image = None # managed by costume transforms logic
         self.__say_img = None
@@ -1032,6 +1065,7 @@ class SpriteBase(_Ref):
         self.pen_color = src.pen_color
         self.scale = src.scale
         self.__costume_set = src.costumes
+        self.__sound_set = src.sounds
         self.costume = src.costume
 
     def __update_costume(self):
@@ -1093,8 +1127,8 @@ class SpriteBase(_Ref):
 
          - The name of a previously-added costume (or empty string for no costume)
          - The index of a previously-added costume
-         - An image, which is returned directly (i.e., no lookup needed)
-         - None, which is returned directly (i.e., no lookup needed) and represents no costume
+         - An existing image object
+         - None, which represents no costume
 
         ```
         self.costume = None
@@ -1114,11 +1148,41 @@ class SpriteBase(_Ref):
         self.__update_costume() # invalidates project internally
 
     @property
-    def costumes(self) -> CostumeSet:
+    def costumes(self) -> AssetSet:
         '''
         The collection of costumes associated with this sprite.
         '''
         return self.__costume_set
+
+    def play_sound(self, sound: Union[None, Sound.Sound, str, int], *, wait: bool = False) -> None:
+        '''
+        Begins playing the provided sound.
+        The value can be specified as any of the following:
+
+         - The name of a previously-added sound (or empty string for no sound)
+         - the index of a previously-added sound
+         - An existing sound object
+         - None, which represents no sound
+
+        By default, this function will return immediately and the sound will play in the background.
+        However, you can use the `wait` keyword argument to make this function wait for the sound to finish before resuming your code.
+
+        ```
+        self.play_sound(my_sound)
+        self.play_sound(2, wait = False)
+        elf.play_sound('hello', wait = True)
+        ```
+        '''
+        sound = self.__sound_set.lookup(sound)
+        if sound is not None:
+            sound.play(wait = wait)
+
+    @property
+    def sounds(self) -> AssetSet:
+        '''
+        The collection of sounds associated with this sprite.
+        '''
+        return self.__sound_set
 
     @property
     def scale(self) -> float:
