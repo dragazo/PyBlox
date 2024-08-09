@@ -2534,12 +2534,20 @@ class MainMenu(tk.Menu):
     def update_sounds(self):
         self.sounds_dropdown.delete(0, 'end')
         self.sounds_dropdown.add_command(label = 'Import', command = self.import_sound)
+        self.sounds_dropdown.add_command(label = 'Stop Sounds', command = Sound.stop)
 
         if len(content.project.imports.sounds) != 0:
             self.sounds_dropdown.add_separator()
 
         for name, entry in content.project.imports.sounds.items():
             submenu = tk.Menu(**MENU_STYLE)
+
+            def get_player(name):
+                def player():
+                    Sound.stop()
+                    content.project.imports.sounds[name]['snd'].play()
+                return player
+            submenu.add_command(label = 'Play', command = get_player(name))
 
             def get_deleter(name):
                 def deleter():
