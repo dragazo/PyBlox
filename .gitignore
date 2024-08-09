@@ -14,3 +14,12 @@ uuid.txt
 netsblox/__init__.py
 netsblox/dev.py
 netsblox/editor.py
+
+# dev files
+/*.json
+/*.png
+/*.jpg
+/*.jpeg
+/*.mp3
+/*.wav
+/*.ogg

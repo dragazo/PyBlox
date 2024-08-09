@@ -19,6 +19,7 @@ import netsblox.common as _common
 import netsblox.events as _events
 import netsblox.colors as _colors
 import netsblox.concurrency as _concurrency
+import netsblox.sound as Sound
 
 from typing import Any, Union, Tuple, Optional, List, Callable, Sequence, Dict
 
@@ -867,6 +868,27 @@ class StageBase(_Ref):
     @timer.setter
     def timer(self, value: float) -> None:
         self.__proj.timer = float(value)
+
+    def stop_sounds(self) -> None:
+        '''
+        Stops the playback of any currently-playing sounds.
+        This does not prevent future sounds from being played.
+        '''
+        Sound.stop()
+
+    @property
+    def sound_paused(self) -> bool:
+        '''
+        Get or set whether the playback of sounds is currently paused.
+        Any sounds that are played while paused will begin upon unpausing.
+        '''
+        return Sound.is_paused()
+    @sound_paused.setter
+    def sound_paused(self, v: bool) -> None:
+        if bool(v):
+            Sound.pause()
+        else:
+            Sound.unpause()
 
     @property
     def mouse_pos(self) -> Tuple[float, float]:

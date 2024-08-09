@@ -114,6 +114,7 @@
         "popleft",
         "proxying",
         "putalpha",
+        "pygame",
         "renamer",
         "sashwidth",
         "scrolllock",
