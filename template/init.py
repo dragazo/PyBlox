@@ -8,6 +8,7 @@ from . import graphical
 from . import concurrency
 from . import snap
 from . import rooms
+from . import sound
 
 from .common import get_location, get_error, nothrow, Namespace
 

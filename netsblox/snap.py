@@ -608,6 +608,8 @@ def is_sprite(value: Any) -> bool:
     return isinstance(value, _netsblox.graphical.SpriteBase)
 def is_costume(value: Any) -> bool:
     return isinstance(value, Image.Image)
+def is_sound(value: Any) -> bool:
+    return isinstance(value, _netsblox.sound.Sound)
 
 if __name__ == '__main__':
     assert is_wrapped(True)
