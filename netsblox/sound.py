@@ -92,6 +92,6 @@ class Sound:
     @property
     def duration(self) -> float:
         '''
-        The length of the sound in seconds.
+        The duration of the sound in seconds.
         '''
         return self.__raw.get_length()
