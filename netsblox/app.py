@@ -76,21 +76,19 @@ BLOCK_CATEGORIES = {
 }
 assert set(BLOCK_CATEGORIES.keys()) == set(BLOCK_CATEGORIES_ORDER)
 
-color_enabled = False
 try:
     # idle gives us syntax highlighting, but we don't require it otherwise
     import idlelib.colorizer as colorizer
     import idlelib.percolator as percolator
     color_enabled = True
 except:
-    pass
+    color_enabled = False
 
-force_enabled = False
 try:
     import jedi
     force_enabled = True
 except:
-    pass
+    force_enabled = False
 
 IS_DARK = darkdetect.isDark()
 COLOR_INFO = {
@@ -1569,25 +1567,27 @@ class CodeEditor(ScrolledText):
 
         self.text.bind(f'<{SYS_INFO["mod"]}-slash>', lambda e: self.do_autocomment())
 
-        self.text.bind('<Tab>', lambda e: self.do_tab())
+        self.text.bind('<Tab>',       lambda e: self.do_tab())
         self.text.bind('<BackSpace>', lambda e: self.do_backspace())
-        self.text.bind('<Delete>', lambda e: self.do_delete())
-        self.text.bind('<Return>', lambda e: self.do_newline())
+        self.text.bind('<Delete>',    lambda e: self.do_delete())
+        self.text.bind('<Return>',    lambda e: self.do_newline())
 
-        self.text.bind('<Alt-Up>', lambda e: self.do_line_swapping(-1))
+        self.text.bind('<Alt-Up>',   lambda e: self.do_line_swapping(-1))
         self.text.bind('<Alt-Down>', lambda e: self.do_line_swapping(1))
-        self.text.bind('<Shift-Up>', lambda e: self.do_arrowing(0))
+
+        self.text.bind('<Shift-Up>',   lambda e: self.do_arrowing(0))
         self.text.bind('<Shift-Down>', lambda e: self.do_arrowing(0))
-        self.text.bind('<Up>', lambda e: self.do_arrowing(-1))
-        self.text.bind('<Down>', lambda e: self.do_arrowing(1))
-        self.text.bind('<Left>', lambda e: self.do_arrowing(0))
-        self.text.bind('<Right>', lambda e: self.do_arrowing(0))
+        self.text.bind('<Up>',         lambda e: self.do_arrowing(-1))
+        self.text.bind('<Down>',       lambda e: self.do_arrowing(1))
+        self.text.bind('<Left>',       lambda e: self.do_arrowing(0))
+        self.text.bind('<Right>',      lambda e: self.do_arrowing(0))
 
         self.text.bind('<Home>',       lambda e: self.do_home(select_mode = False))
         self.text.bind('<Shift-Home>', lambda e: self.do_home(select_mode = True))
-        self.text.bind('<End>', lambda e: self.do_flush())
+
+        self.text.bind('<End>',   lambda e: self.do_flush())
         self.text.bind('<Prior>', lambda e: self.do_flush()) # page up
-        self.text.bind('<Next>', lambda e: self.do_flush()) # page down
+        self.text.bind('<Next>',  lambda e: self.do_flush()) # page down
 
         if color_enabled:
             # source: https://stackoverflow.com/questions/38594978/tkinter-syntax-highlighting-for-text-widget
