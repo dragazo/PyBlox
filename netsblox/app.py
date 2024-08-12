@@ -297,16 +297,20 @@ globals.my_var += 10
 }
 PROP_DOC_REMAPS = {}
 
-for T in [netsblox.graphical.StageBase, netsblox.graphical.SpriteBase]:
+PROPERTY_HOLDERS = [
+    netsblox.graphical.StageBase,
+    netsblox.graphical.SpriteBase,
+    netsblox.sound.Sound,
+]
+for T in PROPERTY_HOLDERS:
     for k in dir(T):
-        if k.startswith('_') or k.startswith('_'):
-            continue
-        field = getattr(T, k)
-        assert field.__doc__
-        if type(field) is property:
-            doc = normalize_strip(field.__doc__)
-            PROP_DOC_REMAPS[k] = doc
-            FULL_NAME_DOC_REMAPS[f'netsblox.graphical.{T.__name__}.{k}'] = doc
+        if not k.startswith('_'):
+            field = getattr(T, k)
+            assert field.__doc__
+            if type(field) is property:
+                doc = normalize_strip(field.__doc__)
+                PROP_DOC_REMAPS[k] = doc
+                FULL_NAME_DOC_REMAPS[f'{T.__module__}.{T.__name__}.{k}'] = doc
 
 INLINE_CODE_REGEX = re.compile(r'`([^`]+)`')
 def clean_docstring(content: str) -> str:
