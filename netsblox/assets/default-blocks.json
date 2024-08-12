@@ -527,6 +527,42 @@
         "sprite": "self.get_image()"
     },
     {
+        "url": "netsblox://assets/img/blocks/sound/play-sound.png",
+        "category": "sound",
+        "scale": 1,
+        "kind": "command",
+        "globals": "",
+        "stage": "self.play_sound(my_sound)",
+        "sprite": "self.play_sound(my_sound)"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sound/play-sound-wait.png",
+        "category": "sound",
+        "scale": 1,
+        "kind": "command",
+        "globals": "",
+        "stage": "self.play_sound(my_sound, wait = True)",
+        "sprite": "self.play_sound(my_sound, wait = True)"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sound/stop-sounds.png",
+        "category": "sound",
+        "scale": 1,
+        "kind": "command",
+        "globals": "",
+        "stage": "stage.stop_sounds()",
+        "sprite": "stage.stop_sounds()"
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sound/sound-duration.png",
+        "category": "sound",
+        "scale": 1,
+        "kind": "reporter",
+        "globals": "",
+        "stage": "my_sound.duration",
+        "sprite": "my_sound.duration"
+    },
+    {
         "url": "netsblox://assets/img/blocks/operators/add.png",
         "category": "operators",
         "scale": 1,
