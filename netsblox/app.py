@@ -336,7 +336,7 @@ def clean_docstring(content: str) -> str:
             paragraphs[-1] += line
         else:
             if paragraphs[-1]:
-                paragraphs[-1] += '\n' if line[0].isspace() else ' '
+                paragraphs[-1] += '\n' if line[0].isspace() or line[0] in ['-', '*'] else ' '
             paragraphs[-1] += line
 
     res = '\n\n'.join(paragraphs).strip()
