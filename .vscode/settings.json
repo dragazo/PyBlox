@@ -105,6 +105,7 @@
         "KEYSYM",
         "lineend",
         "linestart",
+        "lineswap",
         "maxundo",
         "meshgrid",
         "nesw",

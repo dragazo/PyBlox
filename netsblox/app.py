@@ -528,6 +528,17 @@ class KeyLogger:
             self.clear()
 key_logger = KeyLogger()
 
+class TextBatchEditGuard():
+    def __init__(self, target: tk.Text):
+        self.__target = target
+        self.__prev_auto = self.__target.cget('autoseparators')
+    def __enter__(self):
+        self.__target.config(autoseparators = False)
+        self.__target.edit_separator()
+    def __exit__(self, *args):
+        self.__target.edit_separator()
+        self.__target.config(autoseparators = self.__prev_auto)
+
 class Content(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
@@ -1563,6 +1574,8 @@ class CodeEditor(ScrolledText):
         self.text.bind('<Delete>', lambda e: self.do_delete())
         self.text.bind('<Return>', lambda e: self.do_newline())
 
+        self.text.bind('<Alt-Up>', lambda e: self.do_line_swapping(-1))
+        self.text.bind('<Alt-Down>', lambda e: self.do_line_swapping(1))
         self.text.bind('<Shift-Up>', lambda e: self.do_arrowing(0))
         self.text.bind('<Shift-Down>', lambda e: self.do_arrowing(0))
         self.text.bind('<Up>', lambda e: self.do_arrowing(-1))
@@ -1755,6 +1768,42 @@ class CodeEditor(ScrolledText):
         key_logger.watch(self) # just to be sure
         key_logger.flush()
 
+    def do_line_swapping(self, delta: int):
+        sel_start, sel_end = [self.text.index(x) for x in (('sel.first', 'sel.last') if self.text.tag_ranges('sel') else ('insert', 'insert'))]
+        start, end = (self.text.index(f'{sel_start} linestart'), self.text.index(f'{sel_end} lineend +1c'))
+
+        splitter = lambda x: [int(y) for y in x.split('.')]
+        sel_start_pos, sel_end_pos = (splitter(sel_start), splitter(sel_end))
+        insert_pos = splitter(self.text.index('insert'))
+
+        total_lines = splitter(self.text.index('end-1c'))[0]
+        if sel_start_pos[0] + delta < 1 or sel_end_pos[0] + delta > total_lines:
+            return 'break'
+
+        key_logger.watch(self) # just to be sure
+        key_logger.flush()
+
+        before = self.text.get('1.0', 'end-1c')
+        with TextBatchEditGuard(self.text):
+            t = self.text.get(start, end)
+            self.text.delete(start, end)
+            p = f'{start} {delta:+} lines'
+            at_end = self.text.compare(p, '>=', 'end')
+            if at_end:
+                self.text.insert('end', '\n') # if swapping to last line, we need more line space
+            self.text.insert(p, t)
+            if at_end:
+                self.text.delete('end-1c', 'end') # remove extra line space added above
+            self.text.tag_add('sel', f'{sel_start_pos[0] + delta}.{sel_start_pos[1]}', f'{sel_end_pos[0] + delta}.{sel_end_pos[1]}')
+            self.text.mark_set('insert', f'{insert_pos[0] + delta}.{insert_pos[1]}')
+        after = self.text.get('1.0', 'end-1c')
+
+        key_logger.clear()
+
+        log({ 'type': f'text::lineswap::{delta}', 'editor': self.name, 'diff': common.unified_diff(before, after) })
+
+        return 'break'
+
     def do_completion(self):
         # complete any pending update actions
         if self.update_timer is not None:
@@ -1785,28 +1834,29 @@ class CodeEditor(ScrolledText):
             self.help_popup = None
 
     def _do_batch_edit(self, mutator):
-        ins = self.text.index(tk.INSERT)
-        sel_start, sel_end = (self.text.index(tk.SEL_FIRST), self.text.index(tk.SEL_LAST)) if self.text.tag_ranges(tk.SEL) else (ins, ins)
-        sel_padded = f'{sel_start} linestart', f'{sel_end} lineend'
+        with TextBatchEditGuard(self.text):
+            ins = self.text.index(tk.INSERT)
+            sel_start, sel_end = (self.text.index(tk.SEL_FIRST), self.text.index(tk.SEL_LAST)) if self.text.tag_ranges(tk.SEL) else (ins, ins)
+            sel_padded = f'{sel_start} linestart', f'{sel_end} lineend'
 
-        ins_pieces = ins.split('.')
-        sel_start_pieces, sel_end_pieces = sel_start.split('.'), sel_end.split('.')
+            ins_pieces = ins.split('.')
+            sel_start_pieces, sel_end_pieces = sel_start.split('.'), sel_end.split('.')
 
-        content = self.text.get(*sel_padded)
-        mutated, line_deltas = mutator(content)
-        ins_delta = line_deltas[int(ins_pieces[0]) - int(sel_start_pieces[0])]
+            content = self.text.get(*sel_padded)
+            mutated, line_deltas = mutator(content)
+            ins_delta = line_deltas[int(ins_pieces[0]) - int(sel_start_pieces[0])]
 
-        self.text.edit_separator()
-        self.text.delete(*sel_padded)
-        self.text.insert(sel_padded[0], mutated)
-        self.text.edit_separator()
+            self.text.edit_separator()
+            self.text.delete(*sel_padded)
+            self.text.insert(sel_padded[0], mutated)
+            self.text.edit_separator()
 
-        new_sel_start = f'{sel_start_pieces[0]}.{max(0, int(sel_start_pieces[1]) + line_deltas[0])}'
-        new_sel_end = f'{sel_end_pieces[0]}.{max(0, int(sel_end_pieces[1]) + line_deltas[-1])}'
-        new_ins = f'{ins_pieces[0]}.{max(0, int(ins_pieces[1]) + ins_delta)}'
+            new_sel_start = f'{sel_start_pieces[0]}.{max(0, int(sel_start_pieces[1]) + line_deltas[0])}'
+            new_sel_end = f'{sel_end_pieces[0]}.{max(0, int(sel_end_pieces[1]) + line_deltas[-1])}'
+            new_ins = f'{ins_pieces[0]}.{max(0, int(ins_pieces[1]) + ins_delta)}'
 
-        self.text.tag_add(tk.SEL, new_sel_start, new_sel_end)
-        self.text.mark_set(tk.INSERT, new_ins)
+            self.text.tag_add(tk.SEL, new_sel_start, new_sel_end)
+            self.text.mark_set(tk.INSERT, new_ins)
 
     def do_newline(self):
         key_logger.watch(self) # just to be sure
