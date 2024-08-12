@@ -55,6 +55,7 @@ MIN_FONT_SIZE = 4
 MAX_FONT_SIZE = 40
 
 DRAG_BLOCK_FOLLOW_PADDING = 6
+CONTEXT_MENU_PADDING = 3
 
 class BlockCategory:
     def __init__(self, *, name: str, color: str):
@@ -1264,7 +1265,7 @@ class ContextMenu(tk.Menu):
     def __init__(self, parent, *, on_show = None, auto_bind = True):
         super().__init__(parent, tearoff = False)
         if auto_bind:
-            parent.bind(f'<{SYS_INFO["right-click"]}>', lambda e: self.show(e.x_root, e.y_root))
+            parent.bind(f'<{SYS_INFO["right-click"]}>', lambda e: self.show(e.x_root + CONTEXT_MENU_PADDING, e.y_root + CONTEXT_MENU_PADDING))
         self.bind('<FocusOut>', lambda e: self.hide())
         self.visible = False
         self.on_show = on_show
@@ -1398,24 +1399,6 @@ class ScrolledText(tk.Frame):
                     return 'break'
             self.text.bind('<Key>', check_ignore)
         else:
-            def do_undo(e):
-                key_logger.watch(self) # just to be sure
-                key_logger.flush()
-
-                before = self.text.get('1.0', 'end-1c')
-                self.text.edit_undo()
-                after = self.text.get('1.0', 'end-1c')
-
-                key_logger.clear()
-
-                log({ 'type': 'history::undo', 'editor': self.name, 'diff': common.unified_diff(before, after) })
-
-                return 'break'
-            for bind in SYS_INFO['undo-binds']:
-                self.text.bind(bind, do_undo)
-
-            # --------------------------------------------------
-
             def do_redo(e):
                 key_logger.watch(self) # just to be sure
                 key_logger.flush()
@@ -1431,6 +1414,24 @@ class ScrolledText(tk.Frame):
                 return 'break'
             for bind in SYS_INFO['redo-binds']:
                 self.text.bind(bind, do_redo)
+
+            # --------------------------------------------------
+
+            def do_undo(e):
+                key_logger.watch(self) # just to be sure
+                key_logger.flush()
+
+                before = self.text.get('1.0', 'end-1c')
+                self.text.edit_undo()
+                after = self.text.get('1.0', 'end-1c')
+
+                key_logger.clear()
+
+                log({ 'type': 'history::undo', 'editor': self.name, 'diff': common.unified_diff(before, after) })
+
+                return 'break'
+            for bind in SYS_INFO['undo-binds']:
+                self.text.bind(bind, do_undo)
 
             # --------------------------------------------------
 
@@ -1509,6 +1510,13 @@ class ScrolledText(tk.Frame):
             return 'break'
         self.text.bind(f'<{SYS_INFO["mod"]}-Key-c>', do_copy)
         self.text.bind(f'<{SYS_INFO["mod"]}-Key-C>', do_copy)
+
+        self.context_menu = ContextMenu(self.text, on_show = lambda x, y: self.text.focus())
+        if not readonly:
+            self.context_menu.add_command(label = 'Cut',  command = lambda: do_cut(None), accelerator = f'{SYS_INFO["mod-str"]}+X')
+        self.context_menu.add_command(label = 'Copy', command = lambda: do_copy(None), accelerator = f'{SYS_INFO["mod-str"]}+C')
+        if not readonly:
+            self.context_menu.add_command(label = 'Paste', command = lambda: do_paste(None), accelerator = f'{SYS_INFO["mod-str"]}+V')
 
         if linenumbers:
             self.linenumbers = TextLineNumbers(self, target = self.text)
