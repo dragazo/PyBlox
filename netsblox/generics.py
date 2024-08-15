@@ -1,4 +1,4 @@
-from typing import Any, Union, Optional, Sequence
+from typing import Any, Union, Optional, Sequence, List, Dict
 
 from PIL import Image
 from netsblox import sound as Sound
