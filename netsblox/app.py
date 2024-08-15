@@ -347,9 +347,11 @@ def clean_docstring(content: str) -> str:
 def clean_logging_snapshot(super_proj):
     super_proj = copy.deepcopy(super_proj)
 
-    for role in super_proj.get('roles', [super_proj]):
-        role.pop('images', None)
-        role.pop('sounds', None)
+    # remove big stuff from root and roles, wherever they might be (backwards/forwards compatibility)
+    for x in [super_proj] + super_proj.get('roles', []):
+        x.pop('logs', None)
+        x.pop('images', None)
+        x.pop('sounds', None)
 
     return super_proj
 
@@ -913,6 +915,8 @@ class ProjectEditor(tk.Frame):
         # it is not stored in project files or exports because conflicting ids would break messaging.
         self.project_id = common.generate_project_id()
 
+        self.logs: List[Any] = []
+
         self.roles: List[dict] = None
         self.active_role: int = None
 
@@ -1080,6 +1084,7 @@ class ProjectEditor(tk.Frame):
             'install_id': install_id(), # not used anywhere, just used to cross-ref with logging output after the fact
             'client_type': self.client_type,
             'roles': [],
+            'logs': self.logs[:],
         }
 
         for i, role in enumerate(self.roles):
@@ -1131,6 +1136,7 @@ class ProjectEditor(tk.Frame):
     def load(self, *, super_proj: Optional[dict] = None, active_role: Optional[int] = None, source: str) -> None:
         super_proj = copy.deepcopy(super_proj)
 
+        logs = self.logs if super_proj is None else super_proj.get('logs', [])
         roles = self.roles if super_proj is None else super_proj.get('roles', [super_proj])
 
         client_type = super_proj.get('client_type', None) if super_proj is not None else None
@@ -1199,10 +1205,9 @@ class ProjectEditor(tk.Frame):
         }, source = None)
 
         self.client_type = client_type
-
+        self.logs = logs
         self.roles = roles
         self.active_role = active_role
-
         self.blocks = new_blocks
         self.block_sources = new_sources
 
@@ -2291,33 +2296,32 @@ class MainMenu(tk.Menu):
     def project_name(self):
         return self._project_name
 
-    def save(self, save_dict = None) -> bool:
+    def save(self) -> bool:
         key_logger.flush()
 
         if self.project_path is not None:
             try:
-                if save_dict is None:
-                    save_dict = content.project.get_save_dict()
+                log({ 'type': 'ide::save' }) # must happen before getting save dict since this mutates project logs
+
+                save_dict = content.project.get_save_dict()
                 with open(self.project_path, 'w') as f:
                     json.dump(save_dict, f, separators = (', ', ': '), indent = 2)
                 self.saved_project_dict = save_dict
                 content.project.roles = save_dict['roles'] # sync the in-memory role content
-
-                log({ 'type': 'ide::save' })
 
                 return True
             except Exception as e:
                 messagebox.showerror('Failed to save project', str(e))
                 return False
         else:
-            return self.save_as(save_dict)
-    def save_as(self, save_dict = None) -> bool:
+            return self.save_as()
+    def save_as(self) -> bool:
         key_logger.flush()
 
         p = filedialog.asksaveasfilename(filetypes = PROJECT_FILETYPES, defaultextension = '.json')
         if type(p) is str and p: # despite the type hints, above returns empty tuple on cancel
             self.project_path = p
-            return self.save(save_dict)
+            return self.save()
         return False
 
     def export_as(self) -> None:
@@ -2391,7 +2395,7 @@ class MainMenu(tk.Menu):
         title = 'Save before closing'
         msg = 'Would you like to save your project before closing?'
         res = messagebox.askyesnocancel(title, msg)
-        return res == False or (res == True and self.save(save_dict))
+        return res == False or (res == True and self.save())
 
     def load_image_common(self, max_pixels: Optional[int]) -> Optional[Image.Image]:
         p = filedialog.askopenfilename(filetypes = IMAGE_FILETYPES)
@@ -2773,9 +2777,12 @@ class Logger:
             self.queue.append(payload)
             self.queue_cv.notify()
 _logger_instance = None
-def log(msg: str) -> None:
+def log(msg) -> None:
+    key_logger.flush() # flush any normal edits before we log the current event
+
+    content.project.logs.append({ 'install_id': install_id(), 'session_id': session_id(), 'time': time.asctime(), 'msg': msg })
+
     if _logger_instance is not None:
-        key_logger.flush() # flush any normal edits before we log the current event
         _logger_instance.log(msg)
 
 def main():
