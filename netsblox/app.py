@@ -1071,7 +1071,7 @@ class ProjectEditor(tk.Frame):
                 counts = def_counts(editor.text.get('1.0', 'end-1c'))
                 for k, v in counts.items():
                     if v >= 2:
-                        raise RuntimeError(f'Editor \'{editor.name}\' contains multiple ({v}) definitions of \'{k}\'. This would cause problems when running your code. Consider giving them different names.')
+                        raise RuntimeError(f'Editor \'{editor.name}\' contains multiple definitions of \'{k}\'. This would cause problems when running your code. Consider giving them different names.')
             scripts.append(editor.get_script(is_export = is_export, omit_media = omit_media))
             scripts.append('\n\n')
         scripts.append('start_project()')
