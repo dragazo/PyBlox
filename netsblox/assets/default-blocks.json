@@ -136,7 +136,8 @@
         "kind": "hat",
         "globals": "@onstart()\ndef my_onstart(): # functions need unique names\n    pass # replace with your code",
         "stage": "@onstart()\ndef my_onstart(self): # functions need unique names\n    pass # replace with your code",
-        "sprite": "@onstart()\ndef my_onstart(self): # functions need unique names\n    pass # replace with your code"
+        "sprite": "@onstart()\ndef my_onstart(self): # functions need unique names\n    pass # replace with your code",
+        "docs": "Any function with an @onstart() decorator will run once when the project starts."
     },
     {
         "url": "netsblox://assets/img/blocks/control/onkey.png",
@@ -145,7 +146,8 @@
         "kind": "hat",
         "globals": "@onkey('space')\ndef my_onkey(): # functions need unique names\n    pass # replace with your code",
         "stage": "@onkey('space')\ndef my_onkey(self): # functions need unique names\n    pass # replace with your code",
-        "sprite": "@onkey('space')\ndef my_onkey(self): # functions need unique names\n    pass # replace with your code"
+        "sprite": "@onkey('space')\ndef my_onkey(self): # functions need unique names\n    pass # replace with your code",
+        "docs": "Any function with an @onkey('space') decorator will run once each time the space key is pressed.\n\nYou can change the value in quotes to select a different key. For instance, @onkey('w') would run once each time the W key is pressed."
     },
     {
         "url": "netsblox://assets/img/blocks/control/onmouse.png",
@@ -154,7 +156,8 @@
         "kind": "hat",
         "globals": "@onmouse('up')\ndef my_onmouse(x, y): # functions need unique names\n    pass # replace with your code",
         "stage": "@onmouse('up')\ndef my_onmouse(self, x, y): # functions need unique names\n    pass # replace with your code",
-        "sprite": "@onmouse('up')\ndef my_onmouse(self, x, y): # functions need unique names\n    pass # replace with your code"
+        "sprite": "@onmouse('up')\ndef my_onmouse(self, x, y): # functions need unique names\n    pass # replace with your code",
+        "docs": "Any function with an @onmouse('up') decorator will run once each time you release the left mouse button on top of the sprite/stage."
     },
     {
         "url": "netsblox://assets/img/blocks/control/receive.png",
@@ -163,7 +166,8 @@
         "kind": "hat",
         "globals": "@nb.on_message('my message')\ndef my_on_message(): # functions need unique names\n    pass # replace with your code",
         "stage": "@nb.on_message('my message')\ndef my_on_message(self): # functions need unique names\n    pass # replace with your code",
-        "sprite": "@nb.on_message('my message')\ndef my_on_message(self): # functions need unique names\n    pass # replace with your code"
+        "sprite": "@nb.on_message('my message')\ndef my_on_message(self): # functions need unique names\n    pass # replace with your code",
+        "docs": "Any function with a @nb.on_message('my message') will run once each time the message type 'my message' is broadcast.\n\nYou can change the value in quotes to receive a different message type."
     },
     {
         "url": "netsblox://assets/img/blocks/control/broadcast.png",
@@ -172,7 +176,8 @@
         "kind": "command",
         "globals": "nb.send_message('my message')",
         "stage": "nb.send_message('my message')",
-        "sprite": "nb.send_message('my message')"
+        "sprite": "nb.send_message('my message')",
+        "docs": "Broadcasts a message of type 'my message' to any receivers in the project.\n\nYou can change the value in quotes to send a different message type."
     },
     {
         "url": "netsblox://assets/img/blocks/control/no-yield.png",
@@ -181,7 +186,8 @@
         "kind": "command",
         "globals": "with NoYield():\n    pass # replace with your code",
         "stage": "with NoYield():\n    pass # replace with your code",
-        "sprite": "with NoYield():\n    pass # replace with your code"
+        "sprite": "with NoYield():\n    pass # replace with your code",
+        "docs": "Any code you put in a NoYield block will run a bit faster by not \"yielding\" (pausing) at many of the normally designated points"
     },
     {
         "url": "netsblox://assets/img/blocks/control/sleep.png",
@@ -190,7 +196,8 @@
         "kind": "command",
         "globals": "time.sleep(1)",
         "stage": "time.sleep(1)",
-        "sprite": "time.sleep(1)"
+        "sprite": "time.sleep(1)",
+        "docs": "Pauses the current script for 1 second.\n\nYou can replace this number with any value to sleep for a different amount of time."
     },
     {
         "url": "netsblox://assets/img/blocks/control/loop-forever.png",
@@ -199,7 +206,8 @@
         "kind": "command",
         "globals": "while True:\n    pass # replace with your code",
         "stage": "while True:\n    pass # replace with your code",
-        "sprite": "while True:\n    pass # replace with your code"
+        "sprite": "while True:\n    pass # replace with your code",
+        "docs": "Repeatedly runs the inside code over and over again forever.\n\nIn Python, the while loop repeats over and over while the condition is True. Thus, by making the condition explicitly always True, we have an infinite loop."
     },
     {
         "url": "netsblox://assets/img/blocks/control/loop-repeat.png",
@@ -208,7 +216,8 @@
         "kind": "command",
         "globals": "for _ in range(10):\n    pass # replace with your code",
         "stage": "for _ in range(10):\n    pass # replace with your code",
-        "sprite": "for _ in range(10):\n    pass # replace with your code"
+        "sprite": "for _ in range(10):\n    pass # replace with your code",
+        "docs": "Repeatedly runs the inside code a certain number of times."
     },
     {
         "url": "netsblox://assets/img/blocks/control/loop-until.png",
@@ -217,7 +226,8 @@
         "kind": "command",
         "globals": "while not (condition): # replace with your condition\n    pass # replace with your code",
         "stage": "while not (condition): # replace with your condition\n    pass # replace with your code",
-        "sprite": "while not (condition): # replace with your condition\n    pass # replace with your code"
+        "sprite": "while not (condition): # replace with your condition\n    pass # replace with your code",
+        "docs": "Repeatedly runs the inside code over and over until the condition becomes True.\n\nIf you want to repeat code until the condition becomes False, you can remove the \"not\"."
     },
     {
         "url": "netsblox://assets/img/blocks/control/loop-for.png",
@@ -226,7 +236,8 @@
         "kind": "command",
         "globals": "for i in range(1, 11):\n    pass # replace with your code",
         "stage": "for i in range(1, 11):\n    pass # replace with your code",
-        "sprite": "for i in range(1, 11):\n    pass # replace with your code"
+        "sprite": "for i in range(1, 11):\n    pass # replace with your code",
+        "docs": "Repeatedly runs the inside code once for each value between 1 and 10.\n\nIn Python, the range function starts at the first number and goes up to but not including the second number. This is why 11 is used here instead of 10."
     },
     {
         "url": "netsblox://assets/img/blocks/control/if.png",
@@ -235,7 +246,8 @@
         "kind": "command",
         "globals": "if condition: # replace with your condition\n    pass # replace with your code",
         "stage": "if condition: # replace with your condition\n    pass # replace with your code",
-        "sprite": "if condition: # replace with your condition\n    pass # replace with your code"
+        "sprite": "if condition: # replace with your condition\n    pass # replace with your code",
+        "docs": "Runs the inside code if the condition is True."
     },
     {
         "url": "netsblox://assets/img/blocks/control/if-else.png",
@@ -244,7 +256,8 @@
         "kind": "command",
         "globals": "if condition: # replace with your condition\n    pass # replace with your code\nelse:\n    pass # replace with your code",
         "stage": "if condition: # replace with your condition\n    pass # replace with your code\nelse:\n    pass # replace with your code",
-        "sprite": "if condition: # replace with your condition\n    pass # replace with your code\nelse:\n    pass # replace with your code"
+        "sprite": "if condition: # replace with your condition\n    pass # replace with your code\nelse:\n    pass # replace with your code",
+        "docs": "Runs the top inside code if the condition is True. Otherwise, runs the bottom inside code."
     },
     {
         "url": "netsblox://assets/img/blocks/control/if-else-expr.png",
@@ -253,7 +266,8 @@
         "kind": "reporter",
         "globals": "'abc' if condition else 'xyz'",
         "stage": "'abc' if condition else 'xyz'",
-        "sprite": "'abc' if condition else 'xyz'"
+        "sprite": "'abc' if condition else 'xyz'",
+        "docs": "This expression evaluates to the first value ('abc') if the condition is True. Otherwise, it evaluates to the second value ('xyz')\n\nOften, it is easier to read and write code that uses normal if-else statements than using this single-line solution."
     },
     {
         "url": "netsblox://assets/img/blocks/control/return.png",
@@ -262,7 +276,8 @@
         "kind": "command",
         "globals": "return 10",
         "stage": "return 10",
-        "sprite": "return 10"
+        "sprite": "return 10",
+        "docs": "Inside a custom block (function), report (return) the value 10.\n\nYou can change this number to return a different value, which does not need to be a number (i.e., you could return a string, list, dictionary, etc.)."
     },
     {
         "url": "netsblox://assets/img/blocks/control/try.png",
@@ -271,7 +286,8 @@
         "kind": "command",
         "globals": "try:\n    pass # replace with your code\nexcept Exception as err:\n    pass # replace with your code",
         "stage": "try:\n    pass # replace with your code\nexcept Exception as err:\n    pass # replace with your code",
-        "sprite": "try:\n    pass # replace with your code\nexcept Exception as err:\n    pass # replace with your code"
+        "sprite": "try:\n    pass # replace with your code\nexcept Exception as err:\n    pass # replace with your code",
+        "docs": "Attempts to run the top inside code, but if there are any errors, the bottom inside code is executed instead of crashing (as would ordinarily happen without try/except)."
     },
     {
         "url": "netsblox://assets/img/blocks/control/throw.png",
@@ -280,7 +296,8 @@
         "kind": "command",
         "globals": "raise RuntimeError('uhoh!')",
         "stage": "raise RuntimeError('uhoh!')",
-        "sprite": "raise RuntimeError('uhoh!')"
+        "sprite": "raise RuntimeError('uhoh!')",
+        "docs": "Explicitly generates an error with the provided error message. This is intended to be \"caught\" by a try/catch block."
     },
     {
         "url": "netsblox://assets/img/blocks/control/onstart-clone.png",
@@ -289,7 +306,8 @@
         "kind": "hat",
         "globals": "",
         "stage": "",
-        "sprite": "@onstart('clone')\ndef my_onstart_clone(self): # functions need unique names\n    pass # replace with your code"
+        "sprite": "@onstart('clone')\ndef my_onstart_clone(self): # functions need unique names\n    pass # replace with your code",
+        "docs": "Any function with an @onstart('clone') decorator will run once on each fresh clone of this sprite.\n\nNotably, this will not run for the original sprite, for which you need a plain @onstart() decorator."
     },
     {
         "url": "netsblox://assets/img/blocks/control/clone-stmt.png",
@@ -298,7 +316,8 @@
         "kind": "command",
         "globals": "",
         "stage": "",
-        "sprite": "self.clone()"
+        "sprite": "self.clone()",
+        "docs": "Creates a new, fresh clone of the current sprite."
     },
     {
         "url": "netsblox://assets/img/blocks/control/clone-expr.png",
@@ -307,7 +326,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "",
-        "sprite": "self.clone()"
+        "sprite": "self.clone()",
+        "docs": "Creates a new, fresh clone of the current sprite and returns a reference to the created clone."
     },
     {
         "url": "netsblox://assets/img/blocks/looks/set-costume.png",
@@ -316,7 +336,8 @@
         "kind": "command",
         "globals": "",
         "stage": "self.costume = costume # replace with your costume",
-        "sprite": "self.costume = costume # replace with your costume"
+        "sprite": "self.costume = costume # replace with your costume",
+        "docs": "Changes the current sprite costume.\n\nThe assigned value can either be an image or the name/index of an image previously registered as a costume."
     },
     {
         "url": "netsblox://assets/img/blocks/looks/get-costume-num.png",
@@ -325,7 +346,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "self.costumes.index(self.costume, -1)",
-        "sprite": "self.costumes.index(self.costume, -1)"
+        "sprite": "self.costumes.index(self.costume, -1)",
+        "docs": "Gets the current active costume number (starting at zero), or -1 if the sprite is currently not wearing once of its pre-defined costumes."
     },
     {
         "url": "netsblox://assets/img/blocks/looks/say-duration.png",
@@ -334,7 +356,8 @@
         "kind": "command",
         "globals": "",
         "stage": "",
-        "sprite": "self.say('Hello!', duration = 2)"
+        "sprite": "self.say('Hello!', duration = 2)",
+        "docs": "Shows a dialog bubble with the designated message and shows it for 2 seconds before disappearing and resuming your code.\n\nYou can change the value in quotes to say a different message or change the duration number to wait for a different amount of time."
     },
     {
         "url": "netsblox://assets/img/blocks/looks/say.png",
@@ -343,7 +366,8 @@
         "kind": "command",
         "globals": "",
         "stage": "",
-        "sprite": "self.say('Hello!')"
+        "sprite": "self.say('Hello!')",
+        "docs": "Shows a dialog bubble with the designated message. To hide this bubble, you can simple say an empty message like self.say('') or simply self.say()"
     },
     {
         "url": "netsblox://assets/img/blocks/looks/change-scale.png",
@@ -352,7 +376,8 @@
         "kind": "command",
         "globals": "",
         "stage": "",
-        "sprite": "self.scale += 0.1 # base scale is 1"
+        "sprite": "self.scale += 0.1 # base scale is 1",
+        "docs": "Increases the scale (size) of the sprite by 10%, expressed as a ratio (10% = 0.1)."
     },
     {
         "url": "netsblox://assets/img/blocks/looks/set-scale.png",
@@ -361,7 +386,8 @@
         "kind": "command",
         "globals": "",
         "stage": "",
-        "sprite": "self.scale = 1 # base scale is 1"
+        "sprite": "self.scale = 1 # base scale is 1",
+        "docs": "Sets the scale (size) of the sprite to the default value of 100%, expressed as a ratio (100% = 1.0)."
     },
     {
         "url": "netsblox://assets/img/blocks/looks/get-scale.png",
@@ -370,7 +396,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "",
-        "sprite": "self.scale"
+        "sprite": "self.scale",
+        "docs": "Gets the current scale (size) of the sprite, expressed as a ratio (100% = 1.0)."
     },
     {
         "url": "netsblox://assets/img/blocks/looks/set-visible-true.png",
@@ -379,7 +406,8 @@
         "kind": "command",
         "globals": "",
         "stage": "",
-        "sprite": "self.visible = True"
+        "sprite": "self.visible = True",
+        "docs": "Makes the current sprite visible."
     },
     {
         "url": "netsblox://assets/img/blocks/looks/set-visible-false.png",
@@ -388,7 +416,8 @@
         "kind": "command",
         "globals": "",
         "stage": "",
-        "sprite": "self.visible = False"
+        "sprite": "self.visible = False",
+        "docs": "Makes the current sprite invisible."
     },
     {
         "url": "netsblox://assets/img/blocks/looks/get-visible.png",
@@ -397,7 +426,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "",
-        "sprite": "self.visible"
+        "sprite": "self.visible",
+        "docs": "Checks if the current sprite is visible (True) or invisible (False)."
     },
     {
         "url": "netsblox://assets/img/blocks/sensing/get-touching.png",
@@ -406,7 +436,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "",
-        "sprite": "self.is_touching(sprite) # replace with your (other) sprite"
+        "sprite": "self.is_touching(other_sprite) # replace with your other sprite",
+        "docs": "Checks if the current sprite is touching another sprite, returning either True or False."
     },
     {
         "url": "netsblox://assets/img/blocks/sensing/ask.png",
@@ -415,7 +446,8 @@
         "kind": "command",
         "globals": "answer = input(\"what's your name?\")",
         "stage": "answer = input(\"what's your name?\")",
-        "sprite": "answer = input(\"what's your name?\")"
+        "sprite": "answer = input(\"what's your name?\")",
+        "docs": "Asks the user a question, waits for their response, and saves the response in a variable called answer."
     },
     {
         "url": "netsblox://assets/img/blocks/sensing/answer.png",
@@ -424,7 +456,8 @@
         "kind": "reporter",
         "globals": "answer",
         "stage": "answer",
-        "sprite": "answer"
+        "sprite": "answer",
+        "docs": "Gets the answer to the last question asked to the user.\n\nNote that this requires a previous ask block (input) in your script in order to work."
     },
     {
         "url": "netsblox://assets/img/blocks/sensing/get-mouse-x.png",
@@ -433,7 +466,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "stage.mouse_pos[0]",
-        "sprite": "stage.mouse_pos[0]"
+        "sprite": "stage.mouse_pos[0]",
+        "docs": "Gets the current x coordinate of the mouse pointer.\n\nThe mouse position is retrieved as a pair [x, y], so we grab index 0 to have only the x coordinate."
     },
     {
         "url": "netsblox://assets/img/blocks/sensing/get-mouse-y.png",
@@ -442,7 +476,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "stage.mouse_pos[1]",
-        "sprite": "stage.mouse_pos[1]"
+        "sprite": "stage.mouse_pos[1]",
+        "docs": "Gets the current y coordinate of the mouse pointer.\n\nThe mouse position is retrieved as a pair [x, y], so we grab index 1 to have only the y coordinate."
     },
     {
         "url": "netsblox://assets/img/blocks/sensing/get-key-down.png",
@@ -451,7 +486,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "stage.is_key_down('space')",
-        "sprite": "stage.is_key_down('space')"
+        "sprite": "stage.is_key_down('space')",
+        "docs": "Checks if the space key is currently held down, returning either True or False.\n\nYou can change the value in quotes to check a different key. For instance, stage.is_key_down('w') would check if the W key is currently held down."
     },
     {
         "url": "netsblox://assets/img/blocks/sensing/timer-reset.png",
@@ -470,7 +506,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "stage.timer",
-        "sprite": "stage.timer"
+        "sprite": "stage.timer",
+        "docs": "Gets the current value of the timer, which measures time in seconds.\n\nYou can assign a value to this variable to \"reset\" the timer to a different value."
     },
     {
         "url": "netsblox://assets/img/blocks/sensing/get-latitude.png",
@@ -479,7 +516,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "stage.gps_location[0]",
-        "sprite": "stage.gps_location[0]"
+        "sprite": "stage.gps_location[0]",
+        "docs": "Gets the current approximated latitude of the current computer.\n\nThe gps location is retrieved as a pair [latitude, longitude], so we grab index 0 to have only the latitude."
     },
     {
         "url": "netsblox://assets/img/blocks/sensing/get-longitude.png",
@@ -488,7 +526,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "stage.gps_location[1]",
-        "sprite": "stage.gps_location[1]"
+        "sprite": "stage.gps_location[1]",
+        "docs": "Gets the current approximated longitude of the current computer.\n\nThe gps location is retrieved as a pair [latitude, longitude], so we grab index 0 to have only the longitude."
     },
     {
         "url": "netsblox://assets/img/blocks/sensing/get-stage-width.png",
@@ -497,7 +536,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "stage.width",
-        "sprite": "stage.width"
+        "sprite": "stage.width",
+        "docs": "Gets the width of the stage in pixels.\n\nNote that making the window bigger does not change the value that is reported."
     },
     {
         "url": "netsblox://assets/img/blocks/sensing/get-stage-height.png",
@@ -506,7 +546,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "stage.height",
-        "sprite": "stage.height"
+        "sprite": "stage.height",
+        "docs": "Gets the height of the stage in pixels.\n\nNote that making the window bigger does not change the value that is reported."
     },
     {
         "url": "netsblox://assets/img/blocks/sensing/get-image-stage.png",
@@ -515,7 +556,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "stage.get_image()",
-        "sprite": "stage.get_image()"
+        "sprite": "stage.get_image()",
+        "docs": "Takes a screenshot of the current stage and all sprites, which is returned as an image.\n\nYou could then, for instance, use this as a costume or send it to any NetsBlox RPC that accepts images."
     },
     {
         "url": "netsblox://assets/img/blocks/sensing/get-image-self.png",
@@ -524,7 +566,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "self.get_image()",
-        "sprite": "self.get_image()"
+        "sprite": "self.get_image()",
+        "docs": "Takes a screenshot of the current sprite, which is returned as an image.\n\nYou could then, for instance, use this as a costume or send it to any NetsBlox RPC that accepts images."
     },
     {
         "url": "netsblox://assets/img/blocks/sound/play-sound.png",
