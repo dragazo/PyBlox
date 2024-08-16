@@ -1879,6 +1879,8 @@ class CodeEditor(ScrolledText):
         key_logger.watch(self) # just to be sure
         key_logger.flush()
 
+        self.text.edit_separator() # so we don't remove multiple lines in one undo
+
         line = self.text.get('insert linestart', 'insert')
         code, _ = transform.split_code_comment(line)
         white = code[:len(code) - len(code.lstrip())]
