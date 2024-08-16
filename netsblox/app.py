@@ -2543,6 +2543,8 @@ class MainMenu(tk.Menu):
         content.project.imports.images[name] = { 'img': img, 'center': [0.0, 0.0] }
         content.project.imports.batch_update()
 
+        log({ 'type': 'image::import', 'name': name, 'width': img.width, 'height': img.height })
+
     def import_sound(self):
         snd = self.load_sound_common()
         if snd is None:
@@ -2563,6 +2565,8 @@ class MainMenu(tk.Menu):
         content.project.imports.sounds[name] = { 'snd': snd }
         content.project.imports.batch_update()
 
+        log({ 'type': 'sound::import', 'name': name, 'duration': snd.duration })
+
     def update_images(self):
         self.images_dropdown.delete(0, 'end')
         self.images_dropdown.add_command(label = 'Import', command = self.import_image)
@@ -2573,9 +2577,13 @@ class MainMenu(tk.Menu):
         for name, entry in content.project.imports.images.items():
             submenu = tk.Menu(**MENU_STYLE)
 
-            def get_viewer(entry):
-                return lambda: entry['img'].show()
-            submenu.add_command(label = 'View', command = get_viewer(entry))
+            def get_viewer(name):
+                def viewer():
+                    content.project.imports.images[name]['img'].show()
+
+                    log({ 'type': 'image::preview', 'name': name })
+                return viewer
+            submenu.add_command(label = 'View', command = get_viewer(name))
 
             def get_center_changer(name):
                 def center_changer():
@@ -2584,6 +2592,8 @@ class MainMenu(tk.Menu):
                     if new_center is not None:
                         content.project.imports.images[name]['center'] = [float(new_center[0]), float(new_center[1])]
                         content.project.imports.batch_update()
+
+                        log({ 'type': 'image::set-center', 'name': name })
                 return center_changer
             submenu.add_command(label = f'Set Center ({round(entry["center"][0])}x{round(entry["center"][1])})', command = get_center_changer(name))
 
@@ -2594,6 +2604,8 @@ class MainMenu(tk.Menu):
                     if messagebox.askyesno(title, msg, icon = 'warning', default = 'no'):
                         del content.project.imports.images[name]
                         content.project.imports.batch_update()
+
+                        log({ 'type': 'image::delete', 'name': name })
                 return deleter
             submenu.add_command(label = 'Delete', command = get_deleter(name))
 
@@ -2614,6 +2626,8 @@ class MainMenu(tk.Menu):
                 def player():
                     Sound.stop()
                     content.project.imports.sounds[name]['snd'].play()
+
+                    log({ 'type': 'sound::preview', 'name': name })
                 return player
             submenu.add_command(label = 'Play', command = get_player(name))
 
@@ -2624,10 +2638,12 @@ class MainMenu(tk.Menu):
                     if messagebox.askyesno(title, msg, icon = 'warning', default = 'no'):
                         del content.project.imports.sounds[name]
                         content.project.imports.batch_update()
+
+                        log({ 'type': 'sound::delete', 'name': name })
                 return deleter
             submenu.add_command(label = 'Delete', command = get_deleter(name))
 
-            self.sounds_dropdown.add_cascade(label = name, menu = submenu)
+            self.sounds_dropdown.add_cascade(label = f'{name} ({entry["snd"].duration:.1f} sec)', menu = submenu)
 
     def update_roles(self):
         self.roles_dropdown.delete(0, 'end')
