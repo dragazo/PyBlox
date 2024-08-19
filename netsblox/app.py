@@ -1516,7 +1516,7 @@ class ScrolledText(tk.Frame):
         self.text.bind(f'<{SYS_INFO["mod"]}-Key-c>', do_copy)
         self.text.bind(f'<{SYS_INFO["mod"]}-Key-C>', do_copy)
 
-        self.context_menu = ContextMenu(self.text, on_show = lambda x, y: self.text.focus())
+        self.context_menu = ContextMenu(self.text)
         if not readonly:
             self.context_menu.add_command(label = 'Cut',  command = lambda: do_cut(None), accelerator = f'{SYS_INFO["mod-str"]}+X')
         self.context_menu.add_command(label = 'Copy', command = lambda: do_copy(None), accelerator = f'{SYS_INFO["mod-str"]}+C')
