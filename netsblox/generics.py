@@ -90,7 +90,7 @@ class CostumeSet(AssetSet):
          - An asset, which is returned directly (i.e., no lookup needed)
          - None, which is returned directly (i.e., no lookup needed) and represents no asset
         '''
-        return super().lookup(value = value)
+        return super().lookup(value)
 
 class SoundSet(AssetSet):
     def __init__(self):
@@ -105,4 +105,4 @@ class SoundSet(AssetSet):
          - An asset, which is returned directly (i.e., no lookup needed)
          - None, which is returned directly (i.e., no lookup needed) and represents no asset
         '''
-        return super().lookup(value = value)
+        return super().lookup(value)

@@ -696,8 +696,8 @@ class StageBase(_Ref):
         except:
             self.__initialized = True
 
-        self.__costume_set = _generics.CostumeSet
-        self.__sound_set = _generics.SoundSet
+        self.__costume_set = _generics.CostumeSet()
+        self.__sound_set = _generics.SoundSet()
         self.__costume = None
 
         self.__proj = _get_proj_handle()
@@ -973,8 +973,8 @@ class SpriteBase(_Ref):
         self.__degrees = 360.0
         self.__pen_size = 1.0
         self.__pen_color = (0, 0, 0) # [0,255] rgb (defaults to black)
-        self.__costume_set = _generics.CostumeSet
-        self.__sound_set = _generics.SoundSet
+        self.__costume_set = _generics.CostumeSet()
+        self.__sound_set = _generics.SoundSet()
         self.__costume = None
         self.__display_image = None # managed by costume transforms logic
         self.__say_img = None
