@@ -1404,94 +1404,17 @@ class ScrolledText(tk.Frame):
                     return 'break'
             self.text.bind('<Key>', check_ignore)
         else:
-            def do_redo(e):
-                key_logger.watch(self) # just to be sure
-                key_logger.flush()
-
-                before = self.text.get('1.0', 'end-1c')
-                self.text.edit_redo()
-                after = self.text.get('1.0', 'end-1c')
-
-                key_logger.clear()
-
-                log({ 'type': 'history::redo', 'editor': self.name, 'diff': common.unified_diff(before, after) })
-
-                return 'break'
             for bind in SYS_INFO['redo-binds']:
-                self.text.bind(bind, do_redo)
+                self.text.bind(bind, lambda e: self.do_redo())
 
-            # --------------------------------------------------
-
-            def do_undo(e):
-                key_logger.watch(self) # just to be sure
-                key_logger.flush()
-
-                before = self.text.get('1.0', 'end-1c')
-                self.text.edit_undo()
-                after = self.text.get('1.0', 'end-1c')
-
-                key_logger.clear()
-
-                log({ 'type': 'history::undo', 'editor': self.name, 'diff': common.unified_diff(before, after) })
-
-                return 'break'
             for bind in SYS_INFO['undo-binds']:
-                self.text.bind(bind, do_undo)
+                self.text.bind(bind, lambda e: self.do_undo())
 
-            # --------------------------------------------------
+            self.text.bind(f'<{SYS_INFO["mod"]}-Key-x>', lambda e: self.do_cut())
+            self.text.bind(f'<{SYS_INFO["mod"]}-Key-X>', lambda e: self.do_cut())
 
-            # default cut has a crashing exception if no text is selected, so override - we also need to add our logging anyway
-            def do_cut(e):
-                key_logger.watch(self) # just to be sure
-                key_logger.flush()
-
-                before = self.text.get('1.0', 'end-1c')
-                self.clipboard_clear()
-                if self.text.tag_ranges(tk.SEL):
-                    self.clipboard_append(self.text.get(tk.SEL_FIRST, tk.SEL_LAST))
-                    self.text.delete(tk.SEL_FIRST, tk.SEL_LAST)
-                else: # if no selection, cut the current line
-                    self.clipboard_append(self.text.get('insert linestart', 'insert lineend'))
-                    self.text.delete('insert linestart', 'insert lineend')
-                after = self.text.get('1.0', 'end-1c')
-
-                key_logger.clear()
-
-                log({ 'type': 'text::cut', 'editor': self.name, 'diff': common.unified_diff(before, after) })
-
-                return 'break'
-            self.text.bind(f'<{SYS_INFO["mod"]}-Key-x>', do_cut)
-            self.text.bind(f'<{SYS_INFO["mod"]}-Key-X>', do_cut)
-
-            # --------------------------------------------------
-
-            # default paste behavior doesn't delete selection first - also some versions of tcl/tk on mac are broken and crash here, so impl manually by overriding the default behavior
-            def do_paste(e):
-                content = ''
-                try:
-                    content = self.clipboard_get()
-                except:
-                    pass
-                if content == '':
-                    return 'break'
-
-                key_logger.watch(self) # just to be sure
-                key_logger.flush()
-
-                before = self.text.get('1.0', 'end-1c')
-                if self.text.tag_ranges(tk.SEL):
-                    self.text.delete(tk.SEL_FIRST, tk.SEL_LAST)
-                self.text.insert(tk.INSERT, content)
-                self.text.see(tk.INSERT)
-                after = self.text.get('1.0', 'end-1c')
-
-                key_logger.clear()
-
-                log({ 'type': 'text::paste', 'editor': self.name, 'diff': common.unified_diff(before, after) })
-
-                return 'break'
-            self.text.bind(f'<{SYS_INFO["mod"]}-Key-v>', do_paste)
-            self.text.bind(f'<{SYS_INFO["mod"]}-Key-V>', do_paste)
+            self.text.bind(f'<{SYS_INFO["mod"]}-Key-v>', lambda e: self.do_paste())
+            self.text.bind(f'<{SYS_INFO["mod"]}-Key-V>', lambda e: self.do_paste())
 
             # --------------------------------------------------
 
@@ -1502,26 +1425,15 @@ class ScrolledText(tk.Frame):
             self.text.bind('<FocusOut>', do_keylogger_flush)
             self.text.bind('<Button-1>', do_keylogger_flush)
 
-        # custom copy behavior - (also in readonly case above, catching all keys means we can't copy without override anyway)
-        def do_copy(e):
-            self.clipboard_clear()
-            if self.text.tag_ranges(tk.SEL):
-                self.clipboard_append(self.text.get(tk.SEL_FIRST, tk.SEL_LAST))
-            else: # if no selection, copy the current line
-                self.clipboard_append(self.text.get('insert linestart', 'insert lineend'))
-
-            log({ 'type': 'text::copy', 'editor': self.name, 'content': self.clipboard_get() })
-
-            return 'break'
-        self.text.bind(f'<{SYS_INFO["mod"]}-Key-c>', do_copy)
-        self.text.bind(f'<{SYS_INFO["mod"]}-Key-C>', do_copy)
+        self.text.bind(f'<{SYS_INFO["mod"]}-Key-c>', lambda e: self.do_copy())
+        self.text.bind(f'<{SYS_INFO["mod"]}-Key-C>', lambda e: self.do_copy())
 
         self.context_menu = ContextMenu(self.text)
         if not readonly:
-            self.context_menu.add_command(label = 'Cut',  command = lambda: do_cut(None), accelerator = f'{SYS_INFO["mod-str"]}+X')
-        self.context_menu.add_command(label = 'Copy', command = lambda: do_copy(None), accelerator = f'{SYS_INFO["mod-str"]}+C')
+            self.context_menu.add_command(label = 'Cut',  command = lambda: self.do_cut(), accelerator = f'{SYS_INFO["mod-str"]}+X')
+        self.context_menu.add_command(label = 'Copy', command = lambda: self.do_copy(), accelerator = f'{SYS_INFO["mod-str"]}+C')
         if not readonly:
-            self.context_menu.add_command(label = 'Paste', command = lambda: do_paste(None), accelerator = f'{SYS_INFO["mod-str"]}+V')
+            self.context_menu.add_command(label = 'Paste', command = lambda: self.do_paste(), accelerator = f'{SYS_INFO["mod-str"]}+V')
 
         if linenumbers:
             self.linenumbers = TextLineNumbers(self, target = self.text)
@@ -1541,6 +1453,93 @@ class ScrolledText(tk.Frame):
 
         self.columnconfigure(col_off, weight = 1)
         self.rowconfigure(0, weight = 1)
+
+    def do_redo(self):
+        key_logger.watch(self) # just to be sure
+        key_logger.flush()
+
+        before = self.text.get('1.0', 'end-1c')
+        self.text.edit_redo()
+        after = self.text.get('1.0', 'end-1c')
+
+        key_logger.clear()
+
+        log({ 'type': 'history::redo', 'editor': self.name, 'diff': common.unified_diff(before, after) })
+
+        return 'break'
+
+    def do_undo(self):
+        key_logger.watch(self) # just to be sure
+        key_logger.flush()
+
+        before = self.text.get('1.0', 'end-1c')
+        self.text.edit_undo()
+        after = self.text.get('1.0', 'end-1c')
+
+        key_logger.clear()
+
+        log({ 'type': 'history::undo', 'editor': self.name, 'diff': common.unified_diff(before, after) })
+
+        return 'break'
+
+    # default cut has a crashing exception if no text is selected, so override - we also need to add our logging anyway
+    def do_cut(self):
+        key_logger.watch(self) # just to be sure
+        key_logger.flush()
+
+        before = self.text.get('1.0', 'end-1c')
+        self.clipboard_clear()
+        if self.text.tag_ranges(tk.SEL):
+            self.clipboard_append(self.text.get(tk.SEL_FIRST, tk.SEL_LAST))
+            self.text.delete(tk.SEL_FIRST, tk.SEL_LAST)
+        else: # if no selection, cut the current line
+            self.clipboard_append(self.text.get('insert linestart', 'insert lineend'))
+            self.text.delete('insert linestart', 'insert lineend')
+        after = self.text.get('1.0', 'end-1c')
+
+        key_logger.clear()
+
+        log({ 'type': 'text::cut', 'editor': self.name, 'diff': common.unified_diff(before, after) })
+
+        return 'break'
+
+    # custom copy behavior - (also in readonly case above, catching all keys means we can't copy without override anyway)
+    def do_copy(self):
+        self.clipboard_clear()
+        if self.text.tag_ranges(tk.SEL):
+            self.clipboard_append(self.text.get(tk.SEL_FIRST, tk.SEL_LAST))
+        else: # if no selection, copy the current line
+            self.clipboard_append(self.text.get('insert linestart', 'insert lineend'))
+
+        log({ 'type': 'text::copy', 'editor': self.name, 'content': self.clipboard_get() })
+
+        return 'break'
+
+    # default paste behavior doesn't delete selection first - also some versions of tcl/tk on mac are broken and crash here, so impl manually by overriding the default behavior
+    def do_paste(self):
+        content = ''
+        try:
+            content = self.clipboard_get()
+        except:
+            pass
+        if content == '':
+            return 'break'
+
+        key_logger.watch(self) # just to be sure
+        key_logger.flush()
+
+        before = self.text.get('1.0', 'end-1c')
+        if self.text.tag_ranges(tk.SEL):
+            self.text.delete(tk.SEL_FIRST, tk.SEL_LAST)
+        self.text.insert(tk.INSERT, content)
+        self.text.see(tk.INSERT)
+        after = self.text.get('1.0', 'end-1c')
+
+        key_logger.clear()
+
+        log({ 'type': 'text::paste', 'editor': self.name, 'diff': common.unified_diff(before, after) })
+
+        return 'break'
 
     def on_content_change(self, *, cause: str = 'unknown'):
         for handler in self.custom_on_change:
@@ -1605,6 +1604,17 @@ class CodeEditor(ScrolledText):
         self.text.bind('<End>',   lambda e: self.do_flush())
         self.text.bind('<Prior>', lambda e: self.do_flush()) # page up
         self.text.bind('<Next>',  lambda e: self.do_flush()) # page down
+
+        self.context_menu.add_separator()
+        self.context_menu.add_command(label = 'Toggle Comment', command = lambda: self.do_autocomment(), accelerator = f'{SYS_INFO["mod-str"]}+/')
+
+        self.context_menu.add_separator()
+        self.context_menu.add_command(label = 'Indent', command = lambda: self.do_tab(), accelerator = 'Tab')
+        self.context_menu.add_command(label = 'Un-Indent', command = lambda: self.do_untab(), accelerator = 'Shift+Tab')
+
+        self.context_menu.add_separator()
+        self.context_menu.add_command(label = 'Move Up', command = lambda: self.do_line_swapping(-1), accelerator = 'Alt+Up')
+        self.context_menu.add_command(label = 'Move Down', command = lambda: self.do_line_swapping(1), accelerator = 'Alt+Down')
 
         if color_enabled:
             # source: https://stackoverflow.com/questions/38594978/tkinter-syntax-highlighting-for-text-widget
