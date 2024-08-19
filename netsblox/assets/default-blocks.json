@@ -576,7 +576,8 @@
         "kind": "command",
         "globals": "",
         "stage": "self.play_sound(my_sound)",
-        "sprite": "self.play_sound(my_sound)"
+        "sprite": "self.play_sound(my_sound)",
+        "docs": "Makes this sprite play a sound in the background.\n\nIf you would instead like to have the sprite wait until the sound is done before continuing its code, you can use the `wait` keyword argument:\n\nself.play_sound(my_sound, wait = True)"
     },
     {
         "url": "netsblox://assets/img/blocks/sound/play-sound-wait.png",
@@ -585,7 +586,8 @@
         "kind": "command",
         "globals": "",
         "stage": "self.play_sound(my_sound, wait = True)",
-        "sprite": "self.play_sound(my_sound, wait = True)"
+        "sprite": "self.play_sound(my_sound, wait = True)",
+        "docs": "Makes this sprite play a sound and wait for its completion.\n\nIf you would instead like to have the sprite play the sound in the background (and not wait), you can set the `wait` value to `False` or simply remove it:\n\nself.play_sound(my_sound, wait = False)\nself.play_sound(my_sound)"
     },
     {
         "url": "netsblox://assets/img/blocks/sound/stop-sounds.png",
@@ -594,7 +596,8 @@
         "kind": "command",
         "globals": "",
         "stage": "stage.stop_sounds()",
-        "sprite": "stage.stop_sounds()"
+        "sprite": "stage.stop_sounds()",
+        "docs": "Stops all currently-playing sounds."
     },
     {
         "url": "netsblox://assets/img/blocks/sound/sound-duration.png",
@@ -603,7 +606,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "my_sound.duration",
-        "sprite": "my_sound.duration"
+        "sprite": "my_sound.duration",
+        "docs": "Gets the duration of a sound clip in seconds.\n\nThis only works for sound objects. If you want to get the duration of a sound by name (which was previously added to your sprite's sound set, you need to do a sound lookup first:\n\nself.sound_set.lookup('my sound name').duration"
     },
     {
         "url": "netsblox://assets/img/blocks/operators/add.png",
@@ -612,7 +616,8 @@
         "kind": "reporter",
         "globals": "7 + 3",
         "stage": "7 + 3",
-        "sprite": "7 + 3"
+        "sprite": "7 + 3",
+        "docs": "Addition."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/sub.png",
@@ -621,7 +626,8 @@
         "kind": "reporter",
         "globals": "7 - 3",
         "stage": "7 - 3",
-        "sprite": "7 - 3"
+        "sprite": "7 - 3",
+        "docs": "Subtraction."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/mul.png",
@@ -630,7 +636,8 @@
         "kind": "reporter",
         "globals": "7 * 3",
         "stage": "7 * 3",
-        "sprite": "7 * 3"
+        "sprite": "7 * 3",
+        "docs": "Multiplication."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/div.png",
@@ -639,7 +646,8 @@
         "kind": "reporter",
         "globals": "7 / 3",
         "stage": "7 / 3",
-        "sprite": "7 / 3"
+        "sprite": "7 / 3",
+        "docs": "Division."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/pow.png",
@@ -648,7 +656,8 @@
         "kind": "reporter",
         "globals": "7 ** 3",
         "stage": "7 ** 3",
-        "sprite": "7 ** 3"
+        "sprite": "7 ** 3",
+        "docs": "Exponentiation."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/mod.png",
@@ -657,7 +666,8 @@
         "kind": "reporter",
         "globals": "7 % 3",
         "stage": "7 % 3",
-        "sprite": "7 % 3"
+        "sprite": "7 % 3",
+        "docs": "Modulus (aka Remainder)."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/round.png",
@@ -666,7 +676,8 @@
         "kind": "reporter",
         "globals": "round(3.14)",
         "stage": "round(3.14)",
-        "sprite": "round(3.14)"
+        "sprite": "round(3.14)",
+        "docs": "Round to the nearest integer (whole number)"
     },
     {
         "url": "netsblox://assets/img/blocks/operators/sqrt.png",
@@ -675,7 +686,8 @@
         "kind": "reporter",
         "globals": "math.sqrt(10)",
         "stage": "math.sqrt(10)",
-        "sprite": "math.sqrt(10)"
+        "sprite": "math.sqrt(10)",
+        "docs": "Square root."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/randrange.png",
@@ -684,7 +696,8 @@
         "kind": "reporter",
         "globals": "random.randrange(1, 11)",
         "stage": "random.randrange(1, 11)",
-        "sprite": "random.randrange(1, 11)"
+        "sprite": "random.randrange(1, 11)",
+        "docs": "Selects a random number starting at the first integer (whole number) and going up to but not including the second integer.\n\nFor example, to get a number between 1 and 10 you would use:\n\nrandom.randrange(1, 11)"
     },
     {
         "url": "netsblox://assets/img/blocks/operators/less.png",
@@ -693,7 +706,8 @@
         "kind": "reporter",
         "globals": "7 < 3",
         "stage": "7 < 3",
-        "sprite": "7 < 3"
+        "sprite": "7 < 3",
+        "docs": "Less-Than comparison."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/less-eq.png",
@@ -702,7 +716,8 @@
         "kind": "reporter",
         "globals": "7 <= 3",
         "stage": "7 <= 3",
-        "sprite": "7 <= 3"
+        "sprite": "7 <= 3",
+        "docs": "Less-Than-Or-Equal comparison."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/eq.png",
@@ -711,7 +726,8 @@
         "kind": "reporter",
         "globals": "7 == 3",
         "stage": "7 == 3",
-        "sprite": "7 == 3"
+        "sprite": "7 == 3",
+        "docs": "Checks two values for equality, returning either True or False."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/neq.png",
@@ -720,7 +736,8 @@
         "kind": "reporter",
         "globals": "7 != 3",
         "stage": "7 != 3",
-        "sprite": "7 != 3"
+        "sprite": "7 != 3",
+        "docs": "Check two values for non-equality, returning either True or False."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/great-eq.png",
@@ -729,7 +746,8 @@
         "kind": "reporter",
         "globals": "7 >= 3",
         "stage": "7 >= 3",
-        "sprite": "7 >= 3"
+        "sprite": "7 >= 3",
+        "docs": "Greater-Than-Or-Equal comparison."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/great.png",
@@ -738,7 +756,8 @@
         "kind": "reporter",
         "globals": "7 > 3",
         "stage": "7 > 3",
-        "sprite": "7 > 3"
+        "sprite": "7 > 3",
+        "docs": "Greater-Than comparison."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/and.png",
@@ -747,7 +766,8 @@
         "kind": "reporter",
         "globals": "a and b",
         "stage": "a and b",
-        "sprite": "a and b"
+        "sprite": "a and b",
+        "docs": "The logical AND of two True/False values is True when both sides are True."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/or.png",
@@ -756,7 +776,8 @@
         "kind": "reporter",
         "globals": "a or b",
         "stage": "a or b",
-        "sprite": "a or b"
+        "sprite": "a or b",
+        "docs": "The logical OR of two True/False values is True when either or both sides are True."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/not.png",
@@ -765,7 +786,8 @@
         "kind": "reporter",
         "globals": "not x",
         "stage": "not x",
-        "sprite": "not x"
+        "sprite": "not x",
+        "docs": "The logical NOT of a True/False value flips the value (True -> False, False -> True)."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/true.png",
@@ -774,7 +796,8 @@
         "kind": "reporter",
         "globals": "True",
         "stage": "True",
-        "sprite": "True"
+        "sprite": "True",
+        "docs": "The constant True value.\n\nNote that Python uses a capital letter for True and False."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/false.png",
@@ -783,7 +806,8 @@
         "kind": "reporter",
         "globals": "False",
         "stage": "False",
-        "sprite": "False"
+        "sprite": "False",
+        "docs": "The constant False value.\n\nNote that Python uses a capital letter for True and False."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/join.png",
@@ -792,7 +816,8 @@
         "kind": "reporter",
         "globals": "''.join(['hello ', 'world'])",
         "stage": "''.join(['hello ', 'world'])",
-        "sprite": "''.join(['hello ', 'world'])"
+        "sprite": "''.join(['hello ', 'world'])",
+        "docs": "Combines multiple text values into a single piece of text.\n\nThe `join` function can be used on a string to put together several pieces of text using said string as the separator. You can change the separator by changing the first string before the `.join`. For example:\n\n''.join(['a', 'b', 'c']) # 'abc'\n' '.join(['a', 'b', 'c']) # 'a b c'\n','.join(['a', 'b', 'c']) # 'a,b,c'"
     },
     {
         "url": "netsblox://assets/img/blocks/operators/split-space.png",
@@ -801,7 +826,8 @@
         "kind": "reporter",
         "globals": "'hello world'.split(' ')",
         "stage": "'hello world'.split(' ')",
-        "sprite": "'hello world'.split(' ')"
+        "sprite": "'hello world'.split(' ')",
+        "docs": "The split function on a string splits a large piece of text into several smaller pieces separated by the value you provide.\n\nYou can change the separator by changing the string inside the parenthesis."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/str-index-first.png",
@@ -810,7 +836,8 @@
         "kind": "reporter",
         "globals": "'world'[0]",
         "stage": "'world'[0]",
-        "sprite": "'world'[0]"
+        "sprite": "'world'[0]",
+        "docs": "Lists can be indexed with square brackets.\n\nNote that Python starts list indices at zero! Thus index zero gets the first value from the list."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/str-index-last.png",
@@ -819,7 +846,8 @@
         "kind": "reporter",
         "globals": "'world'[-1]",
         "stage": "'world'[-1]",
-        "sprite": "'world'[-1]"
+        "sprite": "'world'[-1]",
+        "docs": "Lists can be indexed with square brackets.\n\nNegative indices count backwards from the end of the list. Thus, index -1 gets the last item in the list."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/str-index-rand.png",
@@ -828,7 +856,8 @@
         "kind": "reporter",
         "globals": "random.choice('world')",
         "stage": "random.choice('world')",
-        "sprite": "random.choice('world')"
+        "sprite": "random.choice('world')",
+        "docs": "random.choice allows you to get a random value from a string (or list)."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/str-len.png",
@@ -837,7 +866,8 @@
         "kind": "reporter",
         "globals": "len('world')",
         "stage": "len('world')",
-        "sprite": "len('world')"
+        "sprite": "len('world')",
+        "docs": "Gets the length of a string (or list)"
     },
     {
         "url": "netsblox://assets/img/blocks/operators/str-ord.png",
@@ -846,7 +876,8 @@
         "kind": "reporter",
         "globals": "ord('a')",
         "stage": "ord('a')",
-        "sprite": "ord('a')"
+        "sprite": "ord('a')",
+        "docs": "Gets the unicode codepoint (binary representation) of a character."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/str-chr.png",
@@ -855,7 +886,8 @@
         "kind": "reporter",
         "globals": "chr(97)",
         "stage": "chr(97)",
-        "sprite": "chr(97)"
+        "sprite": "chr(97)",
+        "docs": "Gets the string/text form of a unicode codepoint (binary representation of a character."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/isinstance-list.png",
@@ -864,7 +896,8 @@
         "kind": "reporter",
         "globals": "isinstance(5, list)",
         "stage": "isinstance(5, list)",
-        "sprite": "isinstance(5, list)"
+        "sprite": "isinstance(5, list)",
+        "docs": "Checks if a value is a list."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/isinstance-str.png",
@@ -873,7 +906,8 @@
         "kind": "reporter",
         "globals": "isinstance(5, str)",
         "stage": "isinstance(5, str)",
-        "sprite": "isinstance(5, str)"
+        "sprite": "isinstance(5, str)",
+        "docs": "Checks if a value is a string (text)."
     },
     {
         "url": "netsblox://assets/img/blocks/pen/clear.png",
