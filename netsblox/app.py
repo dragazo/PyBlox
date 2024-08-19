@@ -39,7 +39,7 @@ from netsblox import sound as Sound
 
 NETSBLOX_PY_PATH = os.path.dirname(netsblox.__file__)
 
-SUGGESTION_UPDATE_INTERVAL = 200
+SUGGESTION_UPDATE_INTERVAL = 500
 PANED_WINDOW_OPTS = {
     'sashwidth': 5,
 }
@@ -1649,7 +1649,7 @@ class CodeEditor(ScrolledText):
                 self.update_timer = self.after(SUGGESTION_UPDATE_INTERVAL, trigger)
             self.custom_on_change.append(delayed_show_full_help)
 
-            # this one really should be ctrl+space on all platforms (not mod+space)
+            # this binding is intentionally ctrl+space on all platforms (not mod+space)
             self.text.bind('<Control-Key-space>', lambda e: self.show_suggestion())
 
     def line_count(self):
