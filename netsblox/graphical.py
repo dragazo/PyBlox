@@ -752,9 +752,9 @@ class StageBase(_Ref):
         However, you can use the `wait` keyword argument to make this function wait for the sound to finish before resuming your code.
 
         ```
-        self.play_sound(my_sound)
-        self.play_sound(2, wait = False)
-        elf.play_sound('hello', wait = True)
+        stage.play_sound(my_sound)
+        stage.play_sound(2, wait = False)
+        stage.play_sound('hello', wait = True)
         ```
         '''
         sound = self.__sound_set.lookup(sound)
@@ -856,7 +856,7 @@ class StageBase(_Ref):
         Note that the mouse is not tracked outside of the stage window.
 
         ```
-        x, y = self.mouse_pos
+        x, y = stage.mouse_pos
         ```
         '''
         return self.__proj.mouse_pos
@@ -869,7 +869,7 @@ class StageBase(_Ref):
         consider using the `@onkey` decorator.
 
         ```
-        is_sneaking = self.is_key_down('shift')
+        is_sneaking = stage.is_key_down('shift')
         ```
         '''
         return self.__proj.is_key_down(key)
@@ -881,7 +881,7 @@ class StageBase(_Ref):
         Returns a tuple of `(latitude, longitude)`.
 
         ```
-        lat, long = self.gps_location
+        lat, long = stage.gps_location
         ```
         '''
         return _common.get_location()
@@ -910,7 +910,7 @@ class StageBase(_Ref):
         This is effectively a snapshot of the entire graphical environment.
 
         ```
-        img = self.get_image()
+        img = stage.get_image()
         ```
         '''
         return self.__proj.get_image()
@@ -921,7 +921,7 @@ class StageBase(_Ref):
         The returned image has a transparent background.
 
         ```
-        img = self.get_drawings()
+        img = stage.get_drawings()
         ```
         '''
         return self.__proj.get_drawings()
@@ -931,7 +931,7 @@ class StageBase(_Ref):
         Clears (erases) all of the drawings on the stage.
 
         ```
-        self.clear()
+        stage.clear()
         ```
         '''
         self.__proj.clear_drawings() # invalidates project internally
