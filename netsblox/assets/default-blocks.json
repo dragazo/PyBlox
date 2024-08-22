@@ -916,7 +916,8 @@
         "kind": "command",
         "globals": "",
         "stage": "stage.clear_drawings()",
-        "sprite": "stage.clear_drawings()"
+        "sprite": "stage.clear_drawings()",
+        "docs": "Erases all drawings that have been made on the stage."
     },
     {
         "url": "netsblox://assets/img/blocks/pen/set-drawing-true.png",
@@ -925,7 +926,8 @@
         "kind": "command",
         "globals": "",
         "stage": "",
-        "sprite": "self.drawing = True"
+        "sprite": "self.drawing = True",
+        "docs": "Enable drawing mode so that movement causes this sprite to trace its path."
     },
     {
         "url": "netsblox://assets/img/blocks/pen/set-drawing-false.png",
@@ -934,7 +936,8 @@
         "kind": "command",
         "globals": "",
         "stage": "",
-        "sprite": "self.drawing = False"
+        "sprite": "self.drawing = False",
+        "docs": "Disable drawing mode."
     },
     {
         "url": "netsblox://assets/img/blocks/pen/get-drawing.png",
@@ -943,7 +946,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "",
-        "sprite": "self.drawing"
+        "sprite": "self.drawing",
+        "docs": "Check if this sprite is currently in drawing mode (tracing its movement)."
     },
     {
         "url": "netsblox://assets/img/blocks/pen/set-pen-color.png",
@@ -952,7 +956,8 @@
         "kind": "command",
         "globals": "",
         "stage": "",
-        "sprite": "self.pen_color = 'red'"
+        "sprite": "self.pen_color = 'red'",
+        "docs": "Sets the pen color of this sprite.\n\nThis can be expressed as:\n- a string denoting the name of a color (like \"red\", \"green\", or \"blue\")\n- a string representing a hex color code (like \"#4467ad\")- a list of three numbers representing the amounts of red, green, and blue, each between 0 and 255 (like [68, 103, 173])"
     },
     {
         "url": "netsblox://assets/img/blocks/pen/get-pen-color.png",
@@ -961,7 +966,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "",
-        "sprite": "self.pen_color"
+        "sprite": "self.pen_color",
+        "docs": "Gets the current pen color of this sprite, expressed as a list of three numbers [r, g, b] between 0 and 255 representing the amount of red, green, and blue."
     },
     {
         "url": "netsblox://assets/img/blocks/pen/get-pen-size.png",
@@ -970,7 +976,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "",
-        "sprite": "self.pen_size"
+        "sprite": "self.pen_size",
+        "docs": "Gets the current pen size for this sprite."
     },
     {
         "url": "netsblox://assets/img/blocks/pen/change-pen-size.png",
@@ -979,7 +986,8 @@
         "kind": "command",
         "globals": "",
         "stage": "",
-        "sprite": "self.pen_size += 1"
+        "sprite": "self.pen_size += 1",
+        "docs": "Increases this sprite's current pen size by some amount."
     },
     {
         "url": "netsblox://assets/img/blocks/pen/set-pen-size.png",
@@ -988,7 +996,8 @@
         "kind": "command",
         "globals": "",
         "stage": "",
-        "sprite": "self.pen_size = 1"
+        "sprite": "self.pen_size = 1",
+        "docs": "Decreases this sprite's current pen size by some amount."
     },
     {
         "url": "netsblox://assets/img/blocks/pen/stamp.png",
@@ -997,7 +1006,8 @@
         "kind": "command",
         "globals": "",
         "stage": "",
-        "sprite": "self.stamp()"
+        "sprite": "self.stamp()",
+        "docs": "Stamps an imprint of this sprite onto the stage as a drawing."
     },
     {
         "url": "netsblox://assets/img/blocks/pen/write.png",
@@ -1006,7 +1016,8 @@
         "kind": "command",
         "globals": "",
         "stage": "",
-        "sprite": "self.write('Hello!', size = 12)"
+        "sprite": "self.write('Hello!', size = 12)",
+        "docs": "Writes a piece of text onto the stage as a drawing.\n\nClick on the \"write\" function in your code for more details."
     },
     {
         "url": "netsblox://assets/img/blocks/pen/get-drawings.png",
@@ -1015,7 +1026,8 @@
         "kind": "reporter",
         "globals": "",
         "stage": "stage.get_drawings()",
-        "sprite": "stage.get_drawings()"
+        "sprite": "stage.get_drawings()",
+        "docs": "Gets a screenshot of all current drawings on the stage and returns it as an image/costume."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/var-local.png",
@@ -1024,7 +1036,8 @@
         "kind": "command",
         "globals": "a = 0",
         "stage": "a = 0",
-        "sprite": "a = 0"
+        "sprite": "a = 0",
+        "docs": "Sets the value of a variable, or creates one if it does not yet exist.\n\nNote that the simple notation a = 0 is used to create a (script) \"local\" variable inside your code.\n\nTo set the value of a global variable you can use globals.a = 0.\n\nTo set the value of a sprite-local variable you can use self.a = 0."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list.png",
@@ -1033,16 +1046,18 @@
         "kind": "reporter",
         "globals": "['hello', 'world']",
         "stage": "['hello', 'world']",
-        "sprite": "['hello', 'world']"
+        "sprite": "['hello', 'world']",
+        "docs": "Creates a new list with the specified values.\n\nYou can put any values you want in a list, each separated by a comma.\n\nYou can use [] to create an empty list."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-range.png",
         "category": "variables",
         "scale": 1,
         "kind": "reporter",
-        "globals": "[*range(1, 11)]",
-        "stage": "[*range(1, 11)]",
-        "sprite": "[*range(1, 11)]"
+        "globals": "list(range(1, 11)])",
+        "stage": "list(range(1, 11)])",
+        "sprite": "list(range(1, 11)])",
+        "docs": "Creates a new list holding the numbers starting at the first value and going up to but not including the second value.\n\nThus, to get the numbers from 1 to 10, you can use list(range(1, 11))."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-cons.png",
@@ -1051,7 +1066,8 @@
         "kind": "reporter",
         "globals": "[123, *my_list]",
         "stage": "[123, *my_list]",
-        "sprite": "[123, *my_list]"
+        "sprite": "[123, *my_list]",
+        "docs": "Creates a new list that starts with a value and is followed by the contents of another list.\n\nThe *my_list notation means that we unfold the list as if its contents were all comma-separated values.\nThat is, if a = [1, 2, 3], then [0, *a] is equivalent to [0, 1, 2, 3]."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-index-first.png",
@@ -1060,7 +1076,8 @@
         "kind": "reporter",
         "globals": "my_list[0]",
         "stage": "my_list[0]",
-        "sprite": "my_list[0]"
+        "sprite": "my_list[0]",
+        "docs": "Gets the first item of a list.\n\nPython starts list indices (item positions) at zero, hence the first item is at position 0."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-index-last.png",
@@ -1069,7 +1086,8 @@
         "kind": "reporter",
         "globals": "my_list[-1]",
         "stage": "my_list[-1]",
-        "sprite": "my_list[-1]"
+        "sprite": "my_list[-1]",
+        "docs": "Gets the last item of a list.\n\nPython allows you to give negative indices (item positions), which measure backwards from the end of the list. Hence -1 is the last item, -2 is the second-to-last item, and so on."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-index-rand.png",
@@ -1078,7 +1096,8 @@
         "kind": "reporter",
         "globals": "random.choice(my_list)",
         "stage": "random.choice(my_list)",
-        "sprite": "random.choice(my_list)"
+        "sprite": "random.choice(my_list)",
+        "docs": "Gets a random item from the list."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-cdr.png",
@@ -1087,7 +1106,8 @@
         "kind": "reporter",
         "globals": "my_list[1:]",
         "stage": "my_list[1:]",
-        "sprite": "my_list[1:]"
+        "sprite": "my_list[1:]",
+        "docs": "Gets a new list containing all the values of the list except the first one.\n\nTo omit the first 2 items you can use my_list[2:], and so on."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-len.png",
@@ -1096,7 +1116,8 @@
         "kind": "reporter",
         "globals": "len(my_list)",
         "stage": "len(my_list)",
-        "sprite": "len(my_list)"
+        "sprite": "len(my_list)",
+        "docs": "Gets the length of a list, which is the number of items it contains."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-rev.png",
@@ -1105,7 +1126,8 @@
         "kind": "reporter",
         "globals": "my_list[::-1]",
         "stage": "my_list[::-1]",
-        "sprite": "my_list[::-1]"
+        "sprite": "my_list[::-1]",
+        "docs": "Gets a new list that contains all the same values but in reverse order.\n\nFor those who are interested: the Python \"slicing\" syntax my_list[a:b:c] means to get all the values at indices starting at a, up to but not including b, and stepping the index by c each time. Thus, my_list[::-1] means to take the whole list (by omitting a and b), but step the index by -1 each time instead of the usual 1, which gives us reverse ordering. Similarly, my_list[::-2] would get every other item in reverse order."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-in.png",
@@ -1114,7 +1136,8 @@
         "kind": "reporter",
         "globals": "'thing' in my_list",
         "stage": "'thing' in my_list",
-        "sprite": "'thing' in my_list"
+        "sprite": "'thing' in my_list",
+        "docs": "Checks if a value is contained in a list, returning either True or False."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-empty.png",
@@ -1123,7 +1146,8 @@
         "kind": "reporter",
         "globals": "len(my_list) == 0",
         "stage": "len(my_list) == 0",
-        "sprite": "len(my_list) == 0"
+        "sprite": "len(my_list) == 0",
+        "docs": "Checks if a list is empty, in this case by checking if the length is zero."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-map.png",
@@ -1132,7 +1156,8 @@
         "kind": "reporter",
         "globals": "[2 * x for x in my_list]",
         "stage": "[2 * x for x in my_list]",
-        "sprite": "[2 * x for x in my_list]"
+        "sprite": "[2 * x for x in my_list]",
+        "docs": "The map block in NetsBlox is most similar to \"list comprehension\" in Python, which allows you to create a new list by transforming the items of an existing list.\n\nThe above example creates a new list by doubling the values of an existing list, hence the \"2 * x\" part. You can replace this expression with anything you like."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-filter.png",
@@ -1141,7 +1166,8 @@
         "kind": "reporter",
         "globals": "[x for x in my_list if x > 0]",
         "stage": "[x for x in my_list if x > 0]",
-        "sprite": "[x for x in my_list if x > 0]"
+        "sprite": "[x for x in my_list if x > 0]",
+        "docs": "Creates a new list containing each item (x) from my_list which satisfies x > 0. Thus, if my_list = [4, -2, 0, 1, -1, 7], then this would result in [4, 1, 7].\n\nYou can replace the filtering condition with any expression you want.\n\nSee the map block above for details about list comprehensions."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/loop-foreach.png",
@@ -1150,7 +1176,8 @@
         "kind": "command",
         "globals": "for item in my_list: # replace with your list\n    pass # replace with your code",
         "stage": "for item in my_list: # replace with your list\n    pass # replace with your code",
-        "sprite": "for item in my_list: # replace with your list\n    pass # replace with your code"
+        "sprite": "for item in my_list: # replace with your list\n    pass # replace with your code",
+        "docs": "Repeats a piece of code for each item in a list.\n\nYou can use the item variable in said code; for instance, you could print out each value by doing:\n\nfor item in my_list:\n    self.say(item, duration = 1)"
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-push.png",
@@ -1159,7 +1186,8 @@
         "kind": "command",
         "globals": "my_list.append('thing')",
         "stage": "my_list.append('thing')",
-        "sprite": "my_list.append('thing')"
+        "sprite": "my_list.append('thing')",
+        "docs": "Adds/appends a new value to the end of a list."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-remove-first.png",
@@ -1168,7 +1196,8 @@
         "kind": "command",
         "globals": "del my_list[0]",
         "stage": "del my_list[0]",
-        "sprite": "del my_list[0]"
+        "sprite": "del my_list[0]",
+        "docs": "Deletes the first item of a list.\n\nPython lists start at position zero, hence del my_list[0] removes the first item, del my_list[1] removes the second item, and so on."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-remove-last.png",
@@ -1177,7 +1206,8 @@
         "kind": "command",
         "globals": "del my_list[-1]",
         "stage": "del my_list[-1]",
-        "sprite": "del my_list[-1]"
+        "sprite": "del my_list[-1]",
+        "docs": "Deletes the last item of a list.\n\nPython lists allow negative positions, which measure backwards from the end of the list.\n\nThus, del my_list[-1] deletes the last item, del my_list[-2] deletes the second-to-last item, and so on."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-remove-all.png",
@@ -1186,7 +1216,8 @@
         "kind": "command",
         "globals": "my_list.clear()",
         "stage": "my_list.clear()",
-        "sprite": "my_list.clear()"
+        "sprite": "my_list.clear()",
+        "docs": "Removes all items from a list."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-insert-first.png",
@@ -1195,7 +1226,8 @@
         "kind": "command",
         "globals": "my_list.insert(0, 'thing')",
         "stage": "my_list.insert(0, 'thing')",
-        "sprite": "my_list.insert(0, 'thing')"
+        "sprite": "my_list.insert(0, 'thing')",
+        "docs": "Inserts a new value at the specified position.\n\nPython list positions start at zero, so my_list.insert(0, 'thing') would insert 'thing' at the front of the list (position zero)."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-insert-last.png",
@@ -1204,7 +1236,8 @@
         "kind": "command",
         "globals": "my_list.append('thing')",
         "stage": "my_list.append('thing')",
-        "sprite": "my_list.append('thing')"
+        "sprite": "my_list.append('thing')",
+        "docs": "Inserts/appends a new value at the end of a list."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-replace-first.png",
@@ -1213,7 +1246,8 @@
         "kind": "command",
         "globals": "my_list[0] = 'thing'",
         "stage": "my_list[0] = 'thing'",
-        "sprite": "my_list[0] = 'thing'"
+        "sprite": "my_list[0] = 'thing'",
+        "docs": "Replaces the first item of a list with a new value.\n\nPython list positions start at zero, so my_list[0] = 'thing' replaces the first item, my_list[1] = 'thing' replaces the second item, and so on."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-replace-last.png",
@@ -1222,7 +1256,8 @@
         "kind": "command",
         "globals": "my_list[-1] = 'thing'",
         "stage": "my_list[-1] = 'thing'",
-        "sprite": "my_list[-1] = 'thing'"
+        "sprite": "my_list[-1] = 'thing'",
+        "docs": "Replaces the last item of a list with a new value.\n\nPython lists allow negative positions, which measure backwards from the end of the list. Thus, my_list[-1] = 'thing' replaces the last item, my_list[-2] = 'thing' replaces the second-to-last item, and so on."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-cat.png",
@@ -1231,7 +1266,8 @@
         "kind": "reporter",
         "globals": "[*list_1, *list_2]",
         "stage": "[*list_1, *list_2]",
-        "sprite": "[*list_1, *list_2]"
+        "sprite": "[*list_1, *list_2]",
+        "docs": "Creates a new list with all the values of list_1 followed by all the values of list_2.\n\nThe *list_1 notation is shorthand for writing out each value of list_1 as comma-separated values. Thus, if list_1 = [1, 2, 3] and list_2 = [7, 8, 9], then [*list_1, *list_2] = [1, 2, 3, *list_2] = [1, 2, 3, 7, 8, 9]."
     },
     {
         "url": "netsblox://assets/img/blocks/variables/list-sort.png",
@@ -1240,7 +1276,8 @@
         "kind": "reporter",
         "globals": "sorted(my_list)",
         "stage": "sorted(my_list)",
-        "sprite": "sorted(my_list)"
+        "sprite": "sorted(my_list)",
+        "docs": "Creates a new list with all the values of my_list, but in sorted order."
     },
     {
         "url": "netsblox://assets/img/blocks/network/receive.png",
@@ -1249,7 +1286,8 @@
         "kind": "hat",
         "globals": "@nb.on_message('message') # replace with your message type\ndef my_on_message(msg): # replace with your message fields + functions need unique names\n    pass # replace with your code",
         "stage": "@nb.on_message('message') # replace with your message type\ndef my_on_message(self, msg): # replace with your message fields + functions need unique names\n    pass # replace with your code",
-        "sprite": "@nb.on_message('message') # replace with your message type\ndef my_on_message(self, msg): # replace with your message fields + functions need unique names\n    pass # replace with your code"
+        "sprite": "@nb.on_message('message') # replace with your message type\ndef my_on_message(self, msg): # replace with your message fields + functions need unique names\n    pass # replace with your code",
+        "docs": "Runs a piece of code every time a NetsBlox message of type 'message' is received over the network.\n\nYou can replace the message type with anything you like and adjust the message fields accordingly (order does not matter)."
     },
     {
         "url": "netsblox://assets/img/blocks/network/send.png",
@@ -1258,7 +1296,8 @@
         "kind": "command",
         "globals": "nb.send_message('message', target, msg = 'Hello!') # replace with your message type, target, and message fields",
         "stage": "nb.send_message('message', target, msg = 'Hello!') # replace with your message type, target, and message fields",
-        "sprite": "nb.send_message('message', target, msg = 'Hello!') # replace with your message type, target, and message fields"
+        "sprite": "nb.send_message('message', target, msg = 'Hello!') # replace with your message type, target, and message fields",
+        "docs": "Sends a NetsBlox message of type 'message' to the target, including any following message fields (like msg = 'Hello!' above).\n\nYou can replace the message type with anything you like and adjust the message fields accordingly (order does not matter)."
     },
     {
         "url": "netsblox://assets/img/blocks/network/rpc-call.png",
@@ -1267,7 +1306,8 @@
         "kind": "reporter",
         "globals": "nb.air_quality.quality_index(34, -87)",
         "stage": "nb.air_quality.quality_index(34, -87)",
-        "sprite": "nb.air_quality.quality_index(34, -87)"
+        "sprite": "nb.air_quality.quality_index(34, -87)",
+        "docs": "Calls a NetsBlox RPC and returns the result.\n\nnb holds any and all NetsBlox RPCs. The first item after the dot (in this case air_quality) represents the service to use, and the second item after the dot (in this case quality_index) represents the specific RPC to invoke.\n\nClick on the service/rpc name to see more detailed info."
     },
     {
         "url": "netsblox://assets/img/blocks/network/rpc-run.png",
@@ -1276,6 +1316,7 @@
         "kind": "command",
         "globals": "nb.air_quality.quality_index(34, -87)",
         "stage": "nb.air_quality.quality_index(34, -87)",
-        "sprite": "nb.air_quality.quality_index(34, -87)"
+        "sprite": "nb.air_quality.quality_index(34, -87)",
+        "docs": "Calls a NetsBlox RPC and discards the result.\n\nnb holds any and all NetsBlox RPCs. The first item after the dot (in this case air_quality) represents the service to use, and the second item after the dot (in this case quality_index) represents the specific RPC to invoke.\n\nClick on the service/rpc name to see more detailed info."
     }
 ]
