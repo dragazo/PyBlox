@@ -7,7 +7,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.forward(10)",
-        "docs": "Distances are measured in pixels."
+        "docs": "Moves the sprite forward by the given distance (in pixels)."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/turn-right.png",
@@ -17,7 +17,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.turn_right(15)",
-        "docs": "Angles are measured in degrees.\n\nThis is equivalent to directly changing the sprite's heading:\n\nself.heading += 15"
+        "docs": "Turns the sprite to the right by a given angle (in degrees).\n\nThis is equivalent to directly changing the sprite's heading:\n\nself.heading += 15"
     },
     {
         "url": "netsblox://assets/img/blocks/motion/turn-left.png",
@@ -27,7 +27,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.turn_left(15)",
-        "docs": "Angles are measured in degrees.\n\nThis is equivalent to directly changing the sprite's heading:\n\nself.heading -= 15"
+        "docs": "Turns the sprite to the left by a given angle (in degrees).\n\nThis is equivalent to directly changing the sprite's heading:\n\nself.heading -= 15"
     },
     {
         "url": "netsblox://assets/img/blocks/motion/set-heading.png",
@@ -37,7 +37,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.heading = 90",
-        "docs": "Angles are measured in degrees."
+        "docs": "Sets the sprite's heading to the given angle (in degrees).\n\nHeadings are measured clockwise from North (up)."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/set-pos.png",
@@ -47,7 +47,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.pos = (0, 0)",
-        "docs": "Positions are measured in pixels, where (0, 0) represents the center of the stage."
+        "docs": "Sets the sprite's position to the given x and y values (in pixels).\n\nPosition (0, 0) represents the center of the stage."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/change-pos-x.png",
@@ -57,7 +57,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.x_pos += 10",
-        "docs": "Distances are measured in pixels."
+        "docs": "Moves the sprite in the x direction by the given distance (in pixels).\n\nPositive values move to the right, while negative values move to the left."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/set-pos-x.png",
@@ -67,7 +67,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.x_pos = 0",
-        "docs": "Positions are measured in pixels, where 0 represents the center of the stage."
+        "docs": "Sets the sprite's x position to the given value (in pixels).\n\nX position 0 represents the left/right center of the stage."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/change-pos-y.png",
@@ -77,7 +77,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.y_pos += 10",
-        "docs": "Distances are measured in pixels."
+        "docs": "Moves the sprite in the y direction by the given distance (in pixels).\n\nPositive values move up, while negative values move down."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/set-pos-y.png",
@@ -87,7 +87,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.y_pos = 0",
-        "docs": "Positions are measured in pixels, where 0 represents the center of the stage."
+        "docs": "Sets the sprite's y position to the given value (in pixels).\n\nY position 0 represents the up/down center of the stage."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/edge-bounce.png",
@@ -97,7 +97,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.keep_on_stage(bounce = True)",
-        "docs": "The bounce value can be set to False to keep the sprite on the screen without rotating it."
+        "docs": "Moves the sprite back on-stage if it has gone off-stage. You need to call this after each move for it to be effective.\n\nWhen the bounce value is set to True, the sprite will bounce off of walls by rotating.\n\nWhen the bounce value is set to False, the sprite will still stay on-stage, but will not be rotated."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/get-pos-x.png",
@@ -107,7 +107,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.x_pos",
-        "docs": "Positions are measured in pixels, where 0 represents the center of the stage.\n\nIf you need both the x and y position, you may use self.pos"
+        "docs": "Gets the current x position of this sprite (in pixels).\n\nX position 0 represents the left/right center of the stage.\n\nIf you need both the x and y position, you may use self.pos, which returns an (x, y) pair."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/get-pos-y.png",
@@ -117,7 +117,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.y_pos",
-        "docs": "Positions are measured in pixels, where 0 represents the center of the stage.\n\nIf you need both the x and y position, you may use self.pos"
+        "docs": "Gets the current y position of this sprite (in pixels).\n\nY position 0 represents the up/down center of the stage.\n\nIf you need both the x and y position, you may use self.pos, which returns an (x, y) pair."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/get-heading.png",
@@ -127,7 +127,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.heading",
-        "docs": "Angles are measured in degrees."
+        "docs": "Gets the current heading of this sprite (in degrees).\n\nHeadings are measured clockwise from North (up)."
     },
     {
         "url": "netsblox://assets/img/blocks/control/onstart.png",
