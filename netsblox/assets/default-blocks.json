@@ -97,7 +97,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.keep_on_stage(bounce = True)",
-        "docs": "Moves the sprite back on-stage if it has gone off-stage. You need to call this after each move for it to be effective.\n\nWhen the bounce value is set to True, the sprite will bounce off of walls by rotating.\n\nWhen the bounce value is set to False, the sprite will still stay on-stage, but will not be rotated."
+        "docs": "Moves the sprite back on-stage if it has gone off-stage. You need to call this after each move for it to be effective.\n\nThe bounce input controls whether or not the sprite should be rotated to simulate bouncing off the stage walls."
     },
     {
         "url": "netsblox://assets/img/blocks/motion/get-pos-x.png",
@@ -577,7 +577,7 @@
         "globals": "",
         "stage": "self.play_sound(my_sound)",
         "sprite": "self.play_sound(my_sound)",
-        "docs": "Makes this sprite play a sound in the background.\n\nIf you would instead like to have the sprite wait until the sound is done before continuing its code, you can use the `wait` keyword argument:\n\nself.play_sound(my_sound, wait = True)"
+        "docs": "Makes this sprite play a sound.\n\nThe sound can either be a sound object or the name/index of a sound previously added to self.sounds."
     },
     {
         "url": "netsblox://assets/img/blocks/sound/play-sound-wait.png",
@@ -587,7 +587,7 @@
         "globals": "",
         "stage": "self.play_sound(my_sound, wait = True)",
         "sprite": "self.play_sound(my_sound, wait = True)",
-        "docs": "Makes this sprite play a sound and wait for its completion.\n\nIf you would instead like to have the sprite play the sound in the background (and not wait), you can set the `wait` value to `False` or simply remove it:\n\nself.play_sound(my_sound, wait = False)\nself.play_sound(my_sound)"
+        "docs": "Makes this sprite play a sound and wait for its completion.\n\nThe sound can either be a sound object or the name/index of a sound previously added to self.sounds."
     },
     {
         "url": "netsblox://assets/img/blocks/sound/stop-sounds.png",
@@ -605,9 +605,9 @@
         "scale": 1,
         "kind": "reporter",
         "globals": "",
-        "stage": "my_sound.duration",
-        "sprite": "my_sound.duration",
-        "docs": "Gets the duration of a sound clip in seconds.\n\nThis only works for sound objects. If you want to get the duration of a sound by name (which was previously added to your sprite's sound set, you need to do a sound lookup first:\n\nself.sound_set.lookup('my sound name').duration"
+        "stage": "self.sounds.lookup(my_sound).duration",
+        "sprite": "self.sounds.lookup(my_sound).duration",
+        "docs": "Gets the duration of a sound in seconds.\n\nThe sound can either be a sound object or the name/index of a sound previously added to self.sounds.\n\nIf my_sound is a sound object, you can simply use: my_sound.duration"
     },
     {
         "url": "netsblox://assets/img/blocks/operators/add.png",
