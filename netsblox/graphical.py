@@ -1404,7 +1404,7 @@ class SpriteBase(_Ref):
 
     def write(self, text: str, *, size: float = 12, move = True):
         '''
-        Draws text onto the background.
+        Draws text onto the stage.
         The `size` argument sets the font size of the drawn text.
         The `move` argument specifies if the sprite should move to the end of the text after drawing.
 

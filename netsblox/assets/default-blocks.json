@@ -947,7 +947,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.drawing",
-        "docs": "Check if this sprite is currently in drawing mode (tracing its movement)."
+        "docs": "Checks if this sprite is currently in drawing mode, returning either True or False."
     },
     {
         "url": "netsblox://assets/img/blocks/pen/set-pen-color.png",
@@ -957,7 +957,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.pen_color = 'red'",
-        "docs": "Sets the pen color of this sprite.\n\nThis can be expressed as:\n- a string denoting the name of a color (like \"red\", \"green\", or \"blue\")\n- a string representing a hex color code (like \"#4467ad\")- a list of three numbers representing the amounts of red, green, and blue, each between 0 and 255 (like [68, 103, 173])"
+        "docs": "Sets the pen color of this sprite.\n\nThis can be expressed as:\n- a string denoting the name of a color (like \"red\", \"green\", or \"blue\")\n- a string representing a hex color code (like \"#4467ad\")\n- a list of three numbers for the amounts of red, green, and blue, each between 0 and 255 (like [68, 103, 173])"
     },
     {
         "url": "netsblox://assets/img/blocks/pen/get-pen-color.png",
@@ -967,7 +967,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.pen_color",
-        "docs": "Gets the current pen color of this sprite, expressed as a list of three numbers [r, g, b] between 0 and 255 representing the amount of red, green, and blue."
+        "docs": "Gets the current pen color of this sprite, expressed as a list of three numbers [r, g, b] representing the amount of red, green, and blue."
     },
     {
         "url": "netsblox://assets/img/blocks/pen/get-pen-size.png",
@@ -977,7 +977,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.pen_size",
-        "docs": "Gets the current pen size for this sprite."
+        "docs": "Gets the current pen size for this sprite (in pixels)."
     },
     {
         "url": "netsblox://assets/img/blocks/pen/change-pen-size.png",
@@ -987,7 +987,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.pen_size += 1",
-        "docs": "Increases this sprite's current pen size by some amount."
+        "docs": "Increases this sprite's current pen size by some amount (in pixels)."
     },
     {
         "url": "netsblox://assets/img/blocks/pen/set-pen-size.png",
@@ -997,7 +997,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.pen_size = 1",
-        "docs": "Decreases this sprite's current pen size by some amount."
+        "docs": "Decreases this sprite's current pen size by some amount (in pixels)."
     },
     {
         "url": "netsblox://assets/img/blocks/pen/stamp.png",
