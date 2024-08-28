@@ -62,7 +62,7 @@ class AssetSet:
 
     def index(self, value: Union[int, str, Any, None], default: Optional[int] = None) -> Optional[int]:
         '''
-        Attempts to get the index of provided asset (after lookup).
+        Attempts to get the index of the provided asset (after lookup).
         If the asset is not found, the default value is returned (or None if not specified).
         '''
         value = self.lookup(value)

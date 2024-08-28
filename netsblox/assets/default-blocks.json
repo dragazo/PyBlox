@@ -335,9 +335,9 @@
         "scale": 1,
         "kind": "command",
         "globals": "",
-        "stage": "self.costume = costume # replace with your costume",
-        "sprite": "self.costume = costume # replace with your costume",
-        "docs": "Changes the current sprite costume.\n\nThe assigned value can either be an image or the name/index of an image previously registered as a costume."
+        "stage": "self.costume = costume",
+        "sprite": "self.costume = costume",
+        "docs": "Sets the current sprite/stage costume to the given value.\n\nThis value can either be an image or the name/index of an image previously added to self.costumes."
     },
     {
         "url": "netsblox://assets/img/blocks/looks/get-costume-num.png",
@@ -347,7 +347,7 @@
         "globals": "",
         "stage": "self.costumes.index(self.costume, -1)",
         "sprite": "self.costumes.index(self.costume, -1)",
-        "docs": "Gets the current active costume number (starting at zero), or -1 if the sprite is currently not wearing once of its pre-defined costumes."
+        "docs": "Gets the current active costume number (starting at zero like Python lists), or -1 if the sprite is currently not wearing one of its pre-defined costumes.\n\nIf needed, you can change the -1 default value by changing the second input."
     },
     {
         "url": "netsblox://assets/img/blocks/looks/say-duration.png",
@@ -357,7 +357,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.say('Hello!', duration = 2)",
-        "docs": "Shows a dialog bubble with the designated message and shows it for 2 seconds before disappearing and resuming your code.\n\nYou can change the value in quotes to say a different message or change the duration number to wait for a different amount of time."
+        "docs": "Shows a dialog bubble with the given text and waits 2 seconds before disappearing and resuming your code.\n\nYou can change the value in quotes to say a different message or change the duration value to wait for a different amount of time."
     },
     {
         "url": "netsblox://assets/img/blocks/looks/say.png",
@@ -367,7 +367,7 @@
         "globals": "",
         "stage": "",
         "sprite": "self.say('Hello!')",
-        "docs": "Shows a dialog bubble with the designated message. To hide this bubble, you can simple say an empty message like self.say('') or simply self.say()"
+        "docs": "Shows a dialog bubble with the given text.\n\nTo hide this bubble later, you can simply say an empty message:\n\nself.say()"
     },
     {
         "url": "netsblox://assets/img/blocks/looks/change-scale.png",
