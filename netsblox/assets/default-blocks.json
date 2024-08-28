@@ -134,9 +134,9 @@
         "category": "control",
         "scale": 1,
         "kind": "hat",
-        "globals": "@onstart()\ndef my_onstart(): # functions need unique names\n    pass # replace with your code",
-        "stage": "@onstart()\ndef my_onstart(self): # functions need unique names\n    pass # replace with your code",
-        "sprite": "@onstart()\ndef my_onstart(self): # functions need unique names\n    pass # replace with your code",
+        "globals": "@onstart()\ndef my_onstart():\n    pass # replace with your code",
+        "stage": "@onstart()\ndef my_onstart(self):\n    pass # replace with your code",
+        "sprite": "@onstart()\ndef my_onstart(self):\n    pass # replace with your code",
         "docs": "Any function with an @onstart() decorator will run once when the project starts."
     },
     {
@@ -144,9 +144,9 @@
         "category": "control",
         "scale": 1,
         "kind": "hat",
-        "globals": "@onkey('space')\ndef my_onkey(): # functions need unique names\n    pass # replace with your code",
-        "stage": "@onkey('space')\ndef my_onkey(self): # functions need unique names\n    pass # replace with your code",
-        "sprite": "@onkey('space')\ndef my_onkey(self): # functions need unique names\n    pass # replace with your code",
+        "globals": "@onkey('space')\ndef my_onkey():\n    pass # replace with your code",
+        "stage": "@onkey('space')\ndef my_onkey(self):\n    pass # replace with your code",
+        "sprite": "@onkey('space')\ndef my_onkey(self):\n    pass # replace with your code",
         "docs": "Any function with an @onkey('space') decorator will run once each time the space key is pressed.\n\nYou can change the value in quotes to select a different key. For instance, @onkey('w') would run once each time the W key is pressed."
     },
     {
@@ -154,9 +154,9 @@
         "category": "control",
         "scale": 1,
         "kind": "hat",
-        "globals": "@onmouse('up')\ndef my_onmouse(x, y): # functions need unique names\n    pass # replace with your code",
-        "stage": "@onmouse('up')\ndef my_onmouse(self, x, y): # functions need unique names\n    pass # replace with your code",
-        "sprite": "@onmouse('up')\ndef my_onmouse(self, x, y): # functions need unique names\n    pass # replace with your code",
+        "globals": "@onmouse('up')\ndef my_onmouse(x, y):\n    pass # replace with your code",
+        "stage": "@onmouse('up')\ndef my_onmouse(self, x, y):\n    pass # replace with your code",
+        "sprite": "@onmouse('up')\ndef my_onmouse(self, x, y):\n    pass # replace with your code",
         "docs": "Any function with an @onmouse('up') decorator will run once each time you release the left mouse button on top of the sprite/stage."
     },
     {
@@ -164,10 +164,10 @@
         "category": "control",
         "scale": 1,
         "kind": "hat",
-        "globals": "@nb.on_message('my message')\ndef my_on_message(): # functions need unique names\n    pass # replace with your code",
-        "stage": "@nb.on_message('my message')\ndef my_on_message(self): # functions need unique names\n    pass # replace with your code",
-        "sprite": "@nb.on_message('my message')\ndef my_on_message(self): # functions need unique names\n    pass # replace with your code",
-        "docs": "Any function with a @nb.on_message('my message') will run once each time the message type 'my message' is broadcast.\n\nYou can change the value in quotes to receive a different message type."
+        "globals": "@nb.on_message('my message')\ndef my_on_message():\n    pass # replace with your code",
+        "stage": "@nb.on_message('my message')\ndef my_on_message(self):\n    pass # replace with your code",
+        "sprite": "@nb.on_message('my message')\ndef my_on_message(self):\n    pass # replace with your code",
+        "docs": "Any function with an @nb.on_message('my message') will run once each time the message type 'my message' is broadcast.\n\nYou can change the value in quotes to receive a different message type."
     },
     {
         "url": "netsblox://assets/img/blocks/control/broadcast.png",
@@ -306,7 +306,7 @@
         "kind": "hat",
         "globals": "",
         "stage": "",
-        "sprite": "@onstart('clone')\ndef my_onstart_clone(self): # functions need unique names\n    pass # replace with your code",
+        "sprite": "@onstart('clone')\ndef my_onstart_clone(self):\n    pass # replace with your code",
         "docs": "Any function with an @onstart('clone') decorator will run once on each fresh clone of this sprite.\n\nNotably, this will not run for the original sprite, for which you need a plain @onstart() decorator."
     },
     {
@@ -1284,9 +1284,9 @@
         "category": "network",
         "scale": 1,
         "kind": "hat",
-        "globals": "@nb.on_message('message') # replace with your message type\ndef my_on_message(msg): # replace with your message fields + functions need unique names\n    pass # replace with your code",
-        "stage": "@nb.on_message('message') # replace with your message type\ndef my_on_message(self, msg): # replace with your message fields + functions need unique names\n    pass # replace with your code",
-        "sprite": "@nb.on_message('message') # replace with your message type\ndef my_on_message(self, msg): # replace with your message fields + functions need unique names\n    pass # replace with your code",
+        "globals": "@nb.on_message('message') # replace with your message type\ndef my_on_message(msg): # replace with your message fields\n    pass # replace with your code",
+        "stage": "@nb.on_message('message') # replace with your message type\ndef my_on_message(self, msg): # replace with your message fields\n    pass # replace with your code",
+        "sprite": "@nb.on_message('message') # replace with your message type\ndef my_on_message(self, msg): # replace with your message fields\n    pass # replace with your code",
         "docs": "Runs a piece of code every time a NetsBlox message of type 'message' is received over the network.\n\nYou can replace the message type with anything you like and adjust the message fields accordingly (order does not matter)."
     },
     {
