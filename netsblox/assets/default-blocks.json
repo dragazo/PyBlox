@@ -164,20 +164,20 @@
         "category": "control",
         "scale": 1,
         "kind": "hat",
-        "globals": "@nb.on_message('my message')\ndef my_on_message():\n    pass # replace with your code",
-        "stage": "@nb.on_message('my message')\ndef my_on_message(self):\n    pass # replace with your code",
-        "sprite": "@nb.on_message('my message')\ndef my_on_message(self):\n    pass # replace with your code",
-        "docs": "Any function with an @nb.on_message('my message') will run once each time the message type 'my message' is broadcast.\n\nYou can change the value in quotes to receive a different message type."
+        "globals": "@nb.on_message('message')\ndef my_on_message():\n    pass # replace with your code",
+        "stage": "@nb.on_message('message')\ndef my_on_message(self):\n    pass # replace with your code",
+        "sprite": "@nb.on_message('message')\ndef my_on_message(self):\n    pass # replace with your code",
+        "docs": "Any function with an @nb.on_message('message') will run once each time the message type 'message' is broadcast.\n\nYou can change the value in quotes to receive a different message type."
     },
     {
         "url": "netsblox://assets/img/blocks/control/broadcast.png",
         "category": "control",
         "scale": 1,
         "kind": "command",
-        "globals": "nb.send_message('my message')",
-        "stage": "nb.send_message('my message')",
-        "sprite": "nb.send_message('my message')",
-        "docs": "Broadcasts a message of type 'my message' to any receivers in the project.\n\nYou can change the value in quotes to send a different message type."
+        "globals": "nb.send_message('message')",
+        "stage": "nb.send_message('message')",
+        "sprite": "nb.send_message('message')",
+        "docs": "Broadcasts a message of type 'message' to any receivers in the project.\n\nYou can change the value in quotes to send a different message type."
     },
     {
         "url": "netsblox://assets/img/blocks/control/no-yield.png",
@@ -187,7 +187,7 @@
         "globals": "with NoYield():\n    pass # replace with your code",
         "stage": "with NoYield():\n    pass # replace with your code",
         "sprite": "with NoYield():\n    pass # replace with your code",
-        "docs": "Any code you put in a NoYield block will run a bit faster by not \"yielding\" (pausing) at many of the normally designated points"
+        "docs": "Any code you put in a NoYield block will run a bit faster by not \"yielding\" (pausing) at many of the normally designated points."
     },
     {
         "url": "netsblox://assets/img/blocks/control/sleep.png",
@@ -497,7 +497,7 @@
         "globals": "",
         "stage": "stage.timer = 0",
         "sprite": "stage.timer = 0",
-        "docs": "The timer can be set to any starting point. The reset timer block in NetsBlox is equivalent to setting the timer to zero."
+        "docs": "Resets the timer to zero.\n\nIf needed, the timer can be reset to any starting value."
     },
     {
         "url": "netsblox://assets/img/blocks/sensing/timer-get.png",
@@ -507,7 +507,7 @@
         "globals": "",
         "stage": "stage.timer",
         "sprite": "stage.timer",
-        "docs": "Gets the current value of the timer, which measures time in seconds.\n\nYou can assign a value to this variable to \"reset\" the timer to a different value."
+        "docs": "Gets the current value of the timer, which measures time in seconds."
     },
     {
         "url": "netsblox://assets/img/blocks/sensing/get-latitude.png",
@@ -557,7 +557,7 @@
         "globals": "",
         "stage": "stage.get_image()",
         "sprite": "stage.get_image()",
-        "docs": "Takes a screenshot of the current stage and all sprites, which is returned as an image.\n\nYou could then, for instance, use this as a costume or send it to any NetsBlox RPC that accepts images."
+        "docs": "Takes a screenshot of the current stage and all sprites, which is returned as an image/costume."
     },
     {
         "url": "netsblox://assets/img/blocks/sensing/get-image-self.png",
@@ -567,7 +567,7 @@
         "globals": "",
         "stage": "self.get_image()",
         "sprite": "self.get_image()",
-        "docs": "Takes a screenshot of the current sprite, which is returned as an image.\n\nYou could then, for instance, use this as a costume or send it to any NetsBlox RPC that accepts images."
+        "docs": "Takes a screenshot of the current sprite, which is returned as an image/costume."
     },
     {
         "url": "netsblox://assets/img/blocks/sound/play-sound.png",
@@ -1287,7 +1287,7 @@
         "globals": "@nb.on_message('message') # replace with your message type\ndef my_on_message(msg): # replace with your message fields\n    pass # replace with your code",
         "stage": "@nb.on_message('message') # replace with your message type\ndef my_on_message(self, msg): # replace with your message fields\n    pass # replace with your code",
         "sprite": "@nb.on_message('message') # replace with your message type\ndef my_on_message(self, msg): # replace with your message fields\n    pass # replace with your code",
-        "docs": "Runs a piece of code every time a NetsBlox message of type 'message' is received over the network.\n\nYou can replace the message type with anything you like and adjust the message fields accordingly (order does not matter)."
+        "docs": "Any function with an @nb.on_message('message') decorator will run every time a NetsBlox message of type 'message' is received over the network.\n\nYou can replace the message type with anything you like and adjust the message fields accordingly (order does not matter)."
     },
     {
         "url": "netsblox://assets/img/blocks/network/send.png",
