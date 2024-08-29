@@ -707,7 +707,7 @@
         "globals": "7 < 3",
         "stage": "7 < 3",
         "sprite": "7 < 3",
-        "docs": "Less-Than comparison."
+        "docs": "Less-Than comparison.\n\nReturns either True or False."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/less-eq.png",
@@ -717,7 +717,7 @@
         "globals": "7 <= 3",
         "stage": "7 <= 3",
         "sprite": "7 <= 3",
-        "docs": "Less-Than-Or-Equal comparison."
+        "docs": "Less-Than-Or-Equal comparison.\n\nReturns either True or False."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/eq.png",
@@ -727,7 +727,7 @@
         "globals": "7 == 3",
         "stage": "7 == 3",
         "sprite": "7 == 3",
-        "docs": "Checks two values for equality, returning either True or False."
+        "docs": "Equals comparison.\n\nReturns either True or False."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/neq.png",
@@ -737,7 +737,7 @@
         "globals": "7 != 3",
         "stage": "7 != 3",
         "sprite": "7 != 3",
-        "docs": "Check two values for non-equality, returning either True or False."
+        "docs": "Not-Equals comparison.\n\nReturns either True or False."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/great-eq.png",
@@ -747,7 +747,7 @@
         "globals": "7 >= 3",
         "stage": "7 >= 3",
         "sprite": "7 >= 3",
-        "docs": "Greater-Than-Or-Equal comparison."
+        "docs": "Greater-Than-Or-Equal comparison.\n\nReturns either True or False."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/great.png",
@@ -757,7 +757,7 @@
         "globals": "7 > 3",
         "stage": "7 > 3",
         "sprite": "7 > 3",
-        "docs": "Greater-Than comparison."
+        "docs": "Greater-Than comparison.\n\nReturns either True or False."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/and.png",
@@ -817,7 +817,7 @@
         "globals": "''.join(['hello ', 'world'])",
         "stage": "''.join(['hello ', 'world'])",
         "sprite": "''.join(['hello ', 'world'])",
-        "docs": "Combines multiple text values into a single piece of text.\n\nThe `join` function can be used on a string to put together several pieces of text using said string as the separator. You can change the separator by changing the first string before the `.join`. For example:\n\n''.join(['a', 'b', 'c']) # 'abc'\n' '.join(['a', 'b', 'c']) # 'a b c'\n','.join(['a', 'b', 'c']) # 'a,b,c'"
+        "docs": "Combines multiple string/text values into a single piece of text separated by the string before the dot.\n\n''.join(['a', 'b', 'c']) # 'abc'\n' '.join(['a', 'b', 'c']) # 'a b c'\n','.join(['a', 'b', 'c']) # 'a,b,c'"
     },
     {
         "url": "netsblox://assets/img/blocks/operators/split-space.png",
@@ -827,7 +827,7 @@
         "globals": "'hello world'.split(' ')",
         "stage": "'hello world'.split(' ')",
         "sprite": "'hello world'.split(' ')",
-        "docs": "The split function on a string splits a large piece of text into several smaller pieces separated by the value you provide.\n\nYou can change the separator by changing the string inside the parenthesis."
+        "docs": "Splits a single string/text into a list of several smaller pieces separated by the value you provide.\n\nYou can change the separator by changing the string inside the parenthesis."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/str-index-first.png",
@@ -837,7 +837,7 @@
         "globals": "'world'[0]",
         "stage": "'world'[0]",
         "sprite": "'world'[0]",
-        "docs": "Lists can be indexed with square brackets.\n\nNote that Python starts list indices at zero! Thus index zero gets the first value from the list."
+        "docs": "Gets the first letter of a string/text.\n\nPython starts indices at zero. Thus, index zero gets the first letter."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/str-index-last.png",
@@ -847,7 +847,7 @@
         "globals": "'world'[-1]",
         "stage": "'world'[-1]",
         "sprite": "'world'[-1]",
-        "docs": "Lists can be indexed with square brackets.\n\nNegative indices count backwards from the end of the list. Thus, index -1 gets the last item in the list."
+        "docs": "Gets the last letter of a string/text.\n\nIn Python, negative indices count backwards from the end. Thus, index -1 gets the last letter."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/str-index-rand.png",
@@ -857,7 +857,7 @@
         "globals": "random.choice('world')",
         "stage": "random.choice('world')",
         "sprite": "random.choice('world')",
-        "docs": "random.choice allows you to get a random value from a string (or list)."
+        "docs": "Gets a random letter from a string/text."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/str-len.png",
@@ -867,7 +867,7 @@
         "globals": "len('world')",
         "stage": "len('world')",
         "sprite": "len('world')",
-        "docs": "Gets the length of a string (or list)"
+        "docs": "Gets the length of a string/text (in characters/letters)."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/str-ord.png",
@@ -877,7 +877,7 @@
         "globals": "ord('a')",
         "stage": "ord('a')",
         "sprite": "ord('a')",
-        "docs": "Gets the unicode codepoint (binary representation) of a character."
+        "docs": "Gets the numeric representation of a character/letter."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/str-chr.png",
@@ -887,7 +887,7 @@
         "globals": "chr(97)",
         "stage": "chr(97)",
         "sprite": "chr(97)",
-        "docs": "Gets the string/text form of a unicode codepoint (binary representation of a character."
+        "docs": "Gets the string/text value from the numeric representation of a character/letter."
     },
     {
         "url": "netsblox://assets/img/blocks/operators/isinstance-list.png",
