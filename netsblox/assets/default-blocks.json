@@ -40,6 +40,26 @@
         "docs": "Sets the sprite's heading to the given angle (in degrees).\n\nHeadings are measured clockwise from North (up)."
     },
     {
+        "url": "netsblox://assets/img/blocks/motion/turn-to-mouse.png",
+        "category": "motion",
+        "scale": 1,
+        "kind": "command",
+        "globals": "",
+        "stage": "",
+        "sprite": "self.turn_to(stage.mouse_pos)",
+        "docs": "Turns the sprite to face towards the mouse pointer.\n\nYou could replace this position with any other (x, y) pair."
+    },
+    {
+        "url": "netsblox://assets/img/blocks/motion/turn-to-center.png",
+        "category": "motion",
+        "scale": 1,
+        "kind": "command",
+        "globals": "",
+        "stage": "",
+        "sprite": "self.turn_to([0, 0])",
+        "docs": "Turns the sprite to face towards the center of the stage.\n\nYou could replace this position with any other (x, y) pair."
+    },
+    {
         "url": "netsblox://assets/img/blocks/motion/set-pos.png",
         "category": "motion",
         "scale": 1,

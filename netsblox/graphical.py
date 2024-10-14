@@ -1344,6 +1344,22 @@ class SpriteBase(_Ref):
         ```
         '''
         self.heading += float(angle) if angle is not None else self.__degrees / 4 # invalidates project internally
+    def turn_to(self, target: Union[Tuple[float, float], 'SpriteBase']) -> None:
+        '''
+        Turn the sprite to point at a specific target.
+        The target can either be a location as an (x, y) pair, or a sprite.
+
+        ```
+        self.turn_to(stage.mouse_pos)
+        ```
+        '''
+        if isinstance(target, SpriteBase):
+            target = target.pos
+        x, y = [float(x) for x in target]
+        px, py = self.pos
+        dx, dy = x - px, y - py
+        if dx != 0 or dy != 0:
+            self.heading = _math.atan2(dx, dy) * self.__degrees / (2 * _math.pi)
 
     def keep_on_stage(self, *, bounce: bool = False) -> None:
         '''

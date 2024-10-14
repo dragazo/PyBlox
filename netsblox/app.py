@@ -1679,11 +1679,12 @@ class CodeEditor(ScrolledText):
         script = jedi.Script(code)
         self.update_highlighting(script)
 
+        is_ident_char = lambda ch: (ch >= 'a' and ch <= 'z') or (ch >= 'A' and ch <= 'Z') or (ch >= '0' and ch <= '9') or ch == '_'
         should_show = (
             self.text.get('insert -1c', 'insert') == '.' or
             self.text.get('insert -1c wordstart -1c', 'insert').startswith('.')
         ) and (
-            self.text.get('insert', 'insert +1c').isspace()
+            not is_ident_char(self.text.get('insert', 'insert +1c'))
         )
 
         self.show_docs(script)
