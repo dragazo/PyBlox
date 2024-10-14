@@ -510,6 +510,26 @@
         "docs": "Checks if the space key is currently held down, returning either True or False.\n\nYou can change the value in quotes to check a different key. For instance, stage.is_key_down('w') would check if the W key is currently held down."
     },
     {
+        "url": "netsblox://assets/img/blocks/sensing/distance-to-mouse.png",
+        "category": "sensing",
+        "scale": 1,
+        "kind": "reporter",
+        "globals": "",
+        "stage": "",
+        "sprite": "self.distance_to(stage.mouse_pos)",
+        "docs": "Measures the distance from the sprite's current position to the mouse pointer's position.\n\nYou could replace this position with any other (x, y) pair."
+    },
+    {
+        "url": "netsblox://assets/img/blocks/sensing/distance-to-center.png",
+        "category": "sensing",
+        "scale": 1,
+        "kind": "reporter",
+        "globals": "",
+        "stage": "",
+        "sprite": "self.distance_to([0, 0])",
+        "docs": "Measures the distance from the sprite's current position to the center of the stage.\n\nYou could replace this position with any other (x, y) pair."
+    },
+    {
         "url": "netsblox://assets/img/blocks/sensing/timer-reset.png",
         "category": "sensing",
         "scale": 1,

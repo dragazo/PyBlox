@@ -1355,11 +1355,27 @@ class SpriteBase(_Ref):
         '''
         if isinstance(target, SpriteBase):
             target = target.pos
-        x, y = [float(x) for x in target]
+        x, y = [float(v) for v in target]
         px, py = self.pos
         dx, dy = x - px, y - py
         if dx != 0 or dy != 0:
             self.heading = _math.atan2(dx, dy) * self.__degrees / (2 * _math.pi)
+
+    def distance_to(self, target: Union[Tuple[float, float], 'SpriteBase']) -> float:
+        '''
+        Measures the distance from this sprite's current position to the specified target.
+        The target can either be a location as an (x, y) pair, or a sprite.
+
+        ```
+        if self.distance_to(stage.mouse_pos) > 20:
+            self.pos = stage.mouse_pos
+        ```
+        '''
+        if isinstance(target, SpriteBase):
+            target = target.pos
+        x, y = [float(v) for v in target]
+        px, py = self.pos
+        return _math.sqrt((x - px)**2 + (y - py)**2)
 
     def keep_on_stage(self, *, bounce: bool = False) -> None:
         '''
