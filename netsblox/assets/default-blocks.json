@@ -170,14 +170,24 @@
         "docs": "Any function with an @onkey('space') decorator will run once each time the space key is pressed.\n\nYou can change the value in quotes to select a different key. For instance, @onkey('w') would run once each time the W key is pressed."
     },
     {
-        "url": "netsblox://assets/img/blocks/control/onmouse.png",
+        "url": "netsblox://assets/img/blocks/control/onmouse-up.png",
         "category": "control",
         "scale": 1,
         "kind": "hat",
         "globals": "@onmouse('up')\ndef my_onmouse(x, y):\n    pass # replace with your code",
         "stage": "@onmouse('up')\ndef my_onmouse(self, x, y):\n    pass # replace with your code",
         "sprite": "@onmouse('up')\ndef my_onmouse(self, x, y):\n    pass # replace with your code",
-        "docs": "Any function with an @onmouse('up') decorator will run once each time you release the left mouse button on top of the sprite/stage."
+        "docs": "Any function with an @onmouse('up') decorator will run once each time you release the left mouse button on top of the sprite/stage (depending on usage)."
+    },
+    {
+        "url": "netsblox://assets/img/blocks/control/onmouse-scroll-up.png",
+        "category": "control",
+        "scale": 1,
+        "kind": "hat",
+        "globals": "@onmouse('scroll-up')\ndef my_onmouse(x, y):\n    pass # replace with your code",
+        "stage": "@onmouse('scroll-up')\ndef my_onmouse(self, x, y):\n    pass # replace with your code",
+        "sprite": "@onmouse('scroll-up')\ndef my_onmouse(self, x, y):\n    pass # replace with your code",
+        "docs": "Any function with an @onmouse('scroll-up') decorator will run once each time you hold the mouse over sprite/stage (depending on usage) and scroll up."
     },
     {
         "url": "netsblox://assets/img/blocks/control/receive.png",
