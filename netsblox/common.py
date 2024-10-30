@@ -175,7 +175,7 @@ def get_location() -> Tuple[float, float]:
 
     Note that an internet connection is required for this to work.
     '''
-    res = _requests.post('https://reallyfreegeoip.org/json/', headers = { 'Content-Type': 'application/json' })
+    res = _requests.get('https://reallyfreegeoip.org/json/', headers = { 'Content-Type': 'application/json' })
 
     if res.status_code == 200:
         parsed = _json.loads(res.text)
