@@ -175,13 +175,15 @@ def get_location() -> Tuple[float, float]:
 
     Note that an internet connection is required for this to work.
     '''
-    res = _requests.get('https://reallyfreegeoip.org/json/', headers = { 'Content-Type': 'application/json' })
-
-    if res.status_code == 200:
-        parsed = _json.loads(res.text)
-        return parsed['latitude'], parsed['longitude']
-    else:
-        raise Exception(f'Failed to get location: {res.status_code}\n{res.text}')
+    try:
+        res = _requests.get('https://reallyfreegeoip.org/json/', headers = { 'Content-Type': 'application/json' })
+        if res.status_code == 200:
+            parsed = _json.loads(res.text)
+            return parsed['latitude'], parsed['longitude']
+        else:
+            raise Exception(f'Failed to get location: {res.status_code}\n{res.text}')
+    except:
+        return (0.0, 0.0) # instead of hard failing, just give an obvious invalid value
 
 def encode_image(img: _Image.Image) -> str:
     res = _io.BytesIO()
