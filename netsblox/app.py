@@ -1575,11 +1575,15 @@ class CodeEditor(ScrolledText):
                 self.linenumbers.line_num_offset = total
         self.custom_on_change.append(on_change)
 
-        try:
-            # they decided to make linux a special case for no apparent reason
-            self.text.bind('<Shift-ISO_Left_Tab>', lambda e: self.do_untab())
+        try: # for some reason these can fail depending on the platform
+            self.text.bind('<Shift-ISO_Left_Tab>', lambda e: self.do_untab()) # they decided to make linux a special case for no apparent reason
         except:
+            pass
+
+        try: # for some reason these can fail depending on the platform
             self.text.bind('<Shift-Tab>', lambda e: self.do_untab())
+        except:
+            pass
 
         self.text.bind(f'<{SYS_INFO["mod"]}-slash>', lambda e: self.do_autocomment())
 
