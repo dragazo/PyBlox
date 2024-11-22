@@ -1666,6 +1666,10 @@ class CodeEditor(ScrolledText):
             # this binding is intentionally ctrl+space on all platforms (not mod+space)
             self.text.bind('<Control-Key-space>', lambda e: self.show_suggestion())
 
+    def destroy(self):
+        self.hide_suggestion()
+        super().destroy()
+
     def line_count(self):
         if self.__line_count:
             return self.__line_count

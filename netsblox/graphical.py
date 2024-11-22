@@ -14,6 +14,7 @@ import time as _time
 import sys as _sys
 
 import numpy as _np
+import gelidum as _gelidum
 
 import netsblox.common as _common
 import netsblox.events as _events
@@ -162,6 +163,120 @@ def _start_signal_wrapped(f):
 
 _KEY_DEBOUNCE_TIME = 0.1 # seconds after key up (with no intervening key down) to register as a true key up event
 
+class keys:
+    any = 'any'
+
+    escape = 'escape'
+    f1 = 'f1'
+    f2 = 'f2'
+    f3 = 'f3'
+    f4 = 'f4'
+    f5 = 'f5'
+    f6 = 'f6'
+    f7 = 'f7'
+    f8 = 'f8'
+    f9 = 'f9'
+    f10 = 'f10'
+    f11 = 'f11'
+    f12 = 'f12'
+    scroll_lock = 'scroll lock'
+    num_lock = 'num_lock'
+
+    backtick = '`'
+    tilde = '~'
+    num_1 = '1'
+    exclamation_point = '!'
+    num_2 = '2'
+    at = '@'
+    num_3 = '3'
+    hashtag = '#'
+    num_4 = '4'
+    dollar_sign = '$'
+    num_5 = '5'
+    percent = '%'
+    num_6 = '6'
+    caret = '^'
+    num_7 = '7'
+    ampersand = '&'
+    num_8 = '8'
+    star = '*'
+    num_9 = '9'
+    paren_left = '('
+    num_0 = '0'
+    paren_right = ')'
+    minus = 'minus'
+    underscore = '_'
+    equals = '='
+    plus = 'plus'
+    backspace = 'backspace'
+
+    tab = 'tab'
+    q = 'q'
+    w = 'w'
+    e = 'e'
+    r = 'r'
+    t = 't'
+    y = 'y'
+    u = 'u'
+    i = 'i'
+    o = 'o'
+    p = 'p'
+    bracket_left = '['
+    brace_left = '{'
+    bracket_right = ']'
+    brace_right = '}'
+    backslash = '\\'
+    pipe = '|'
+
+    caps_lock = 'caps lock'
+    a = 'a'
+    s = 's'
+    d = 'd'
+    f = 'f'
+    g = 'g'
+    h = 'h'
+    j = 'j'
+    k = 'k'
+    l = 'l'
+    semicolon = ';'
+    colon = ':'
+    quote_single = "'"
+    quote_double = '"'
+    enter = 'enter'
+
+    shift = 'shift'
+    z = 'z'
+    x = 'x'
+    c = 'c'
+    v = 'v'
+    b = 'b'
+    n = 'n'
+    m = 'm'
+    comma = ','
+    less_than = '<'
+    period = '.'
+    greater_than = '>'
+    slash = '/'
+    question_mark = '?'
+
+    control = 'control'
+    alt = 'alt'
+    space = 'space'
+
+    insert = 'insert'
+    delete = 'delete'
+    home = 'home'
+    end = 'end'
+    page_up = 'page_up'
+    page_down = 'page_down'
+
+    up = 'up'
+    left = 'left'
+    down = 'down'
+    right = 'right'
+keys = keys()
+_gelidum.freeze(keys, on_freeze = 'inplace')
+
 _KEYSYM_MAPS = { # anything not listed here passes through as-is (lower case)
     'up arrow': ['up'],
     'arrow up': ['up'],
@@ -191,18 +306,26 @@ _KEYSYM_MAPS = { # anything not listed here passes through as-is (lower case)
 
     'alt': ['alt_l', 'alt_r'],
     'left alt': ['alt_l'],
+    'alt left': ['alt_l'],
     'right alt': ['alt_r'],
+    'alt right': ['alt_r'],
 
     'shift': ['shift_l', 'shift_r'],
     'left shift': ['shift_l'],
+    'shift left': ['shift_l'],
     'right shift': ['shift_r'],
+    'shift right': ['shift_r'],
 
     'control': ['control_l', 'control_r'],
     'ctrl': ['control_l', 'control_r'],
     'left control': ['control_l'],
     'left ctrl': ['control_l'],
+    'control left': ['control_l'],
+    'ctrl left': ['control_l'],
     'right control': ['control_r'],
     'right ctrl': ['control_r'],
+    'control right': ['control_r'],
+    'ctrl right': ['control_r'],
 
     'esc': ['escape'],
     ' ': ['space'],
@@ -1687,11 +1810,11 @@ def onkey(*keys: str, when: Union[str, List[str]] = ['down', 'hold']):
     For instance, the default is `when = ['down', 'hold']`.
 
     ```
-    @onkey('space')
+    @onkey(keys.space)
     def space_key_pressed():
         stop_project()
 
-    @onkey('w', 'up arrow')
+    @onkey(keys.w, keys.up)
     def w_or_up_arrow_pressed(self):
         self.forward(50)
     ```
