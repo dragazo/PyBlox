@@ -7,6 +7,7 @@ import json as _json
 import time as _time
 import sys as _sys
 import io as _io
+import re as _re
 
 from deprecation import deprecated
 
@@ -25,6 +26,8 @@ import netsblox.events as _events
 import netsblox.rooms as _rooms
 
 _websocket.enableTrace(False) # disable auto-outputting of socket events
+
+_SNAP_IMAGE_REGEX = _re.compile(r'^<costume\b.*\bimage\s*=\s*"data:image/\w+;base64,(\S+)".*/>$$')
 
 class $client_name:
     '''
@@ -307,7 +310,7 @@ $service_instances
             return f
         return wrapper
 
-    def call(self, service: str, rpc: str, **kwargs):
+    def call(self, service: str, rpc: str, **kwargs) -> Any:
         '''
         Directly calls the specified NetsBlox RPC based on its name.
         This is needed to access unofficial or dynamically-generated (like create-a-service) services.
@@ -344,6 +347,9 @@ $service_instances
                     ty = res.headers['Content-Type']
                     if ty.startswith('image/'):
                         return Image.open(_io.BytesIO(res.content)).convert('RGBA')
+                m = _SNAP_IMAGE_REGEX.match(res.text)
+                if m is not None:
+                    return _common.decode_image(m[1]).convert('RGBA')
                 return _json.loads(res.text)
             except:
                 return res.text # strings are returned unquoted, so they'll fail to parse as json
