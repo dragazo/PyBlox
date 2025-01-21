@@ -2,6 +2,7 @@ import aiohttp
 import asyncio
 import certifi
 import ssl
+import sys
 import re
 
 import meta
@@ -31,17 +32,14 @@ def clean_fn_name(name: str) -> str:
     name = re.sub('[^\w]+', '', name) # remove characters that make symbols invalid
 
     pieces = ['']
-    chars = [None, *name, None]
+    chars = [None, *name, None, None]
     for i in range(len(name)):
-        prev_ch, curr_ch, next_ch = chars[i:i+3]
-
-        if not curr_ch.isdigit():
-            ch_upper = curr_ch.isupper()
-            boundary = any([
-                ch_upper and prev_ch is not None and prev_ch.islower(),
-                ch_upper and next_ch is not None and next_ch.islower(),
-            ])
-            if boundary: pieces.append('')
+        prev_ch, curr_ch, next_ch, next_next_ch = chars[i:i+4]
+        boundary = curr_ch.isupper() and (
+            (prev_ch is not None and prev_ch.islower()) or
+            (next_ch is not None and next_ch.islower() and next_next_ch is not None and next_next_ch.islower())
+        )
+        if boundary: pieces.append('')
         pieces[-1] += curr_ch
     name = '_'.join(x.lower() for x in pieces)
 
@@ -54,16 +52,25 @@ def clean_class_name(name: str) -> str:
     return name
 
 tests = [
+    ('PhoneID', 'phone_id'),
+    ('PhoneIDs', 'phone_ids'),
     ('PhoneIoT', 'phone_iot'),
+    ('getMediaURLs', 'get_media_urls'),
+    ('movieCastPersonIDs', 'movie_cast_person_ids'),
     ('getSensors', 'get_sensors'), ('ThisXDoesNotExist', 'this_x_does_not_exist'),
     ('getCO2Data', 'get_co2_data'), ('getCO*2*Data', 'get_co2_data'),
     ('city*', 'city'), ('_city*_', 'city'), ('__city*__', 'city'), ('___city*___', 'city'),
     ('HelloKitty2021', 'hello_kitty2021'), ('C6H5O6', 'c6h5o6'), ('P2PNetwork', 'p2p_network'),
     ('getXFromLongitude', 'get_x_from_longitude'), ('getYFromLatitude', 'get_y_from_latitude'),
 ]
+failed_tests = 0
 for a, b in tests:
     res = clean_fn_name(a)
-    if res != b: raise RuntimeError(f'clean_fn_name error: {a} -> {res} (expected {b})')
+    if res != b:
+        print(f'clean_fn_name error: {a} -> {res} (expected {b})', file = sys.stderr)
+        failed_tests += 1
+if failed_tests != 0:
+    raise RuntimeError(f'failed {failed_tests} fn rename tests!')
 
 tests = [
     ('Merp', 'Merp'), ('_Me*rp*_', 'Merp'), ('__*Me*rp__', 'Merp'),
