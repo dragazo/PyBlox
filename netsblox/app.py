@@ -1592,6 +1592,8 @@ class CodeEditor(ScrolledText):
         self.text.bind('<Delete>',    lambda e: self.do_delete())
         self.text.bind('<Return>',    lambda e: self.do_newline())
 
+        self.text.bind('<Shift-Delete>', lambda e: 'break') # default behavior crashes for shift+delete at end of document - for now just disable this keybind
+
         self.text.bind('<Alt-Up>',   lambda e: self.do_line_swapping(-1))
         self.text.bind('<Alt-Down>', lambda e: self.do_line_swapping(1))
 
