@@ -2848,6 +2848,16 @@ def main():
     logo = common.load_tkimage(f'netsblox://assets/img/logo/logo-256.png')
     root.iconphoto(True, logo)
 
+    # weird hack to not show hidden files in file dialogs
+    # src: https://stackoverflow.com/questions/53220711/how-to-avoid-hidden-files-in-file-picker-using-tkinter-filedialog-askopenfilenam
+    try:
+        try: root.tk.call('tk_getOpenFile', '-foobarbaz')
+        except tk.TclError: pass
+        root.tk.call('set', '::tk::dialog::file::showHiddenBtn', '0') # this could distract students, so hide it
+        root.tk.call('set', '::tk::dialog::file::showHiddenVar', '0')
+    except:
+        pass
+
     content = Content(root)
     main_menu = MainMenu(root)
     drag_widget = tk.Label(root)
