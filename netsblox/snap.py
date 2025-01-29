@@ -56,7 +56,9 @@ def _parse_index(idx: Any) -> Union['List', int, str, slice]:
     if type(idx) is List or type(idx) is slice: return idx
 
     try:
-        idx = +idx
+        x = +idx
+        if isinstance(x, int) or (isinstance(x, float) and not math.isnan(x)):
+            idx = x
     except:
         pass
 
@@ -69,6 +71,12 @@ def _float_div(a: Any, b: Any) -> 'Float':
     return Float(math.inf if a > 0 else -math.inf)
 
 class Float(float):
+    def __new__(cls, v: Any):
+        try:
+            return float.__new__(cls, v)
+        except:
+            return float.__new__(cls, math.nan)
+
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, str): return wrap(float(self) == float(other))
         return wrap(float(self) == other)
@@ -594,8 +602,8 @@ def split_json(src: Any) -> List:
 def is_number(value: Any) -> bool:
     if isinstance(value, bool): return False
     try:
-        +wrap(value)
-        return True
+        x = +wrap(value)
+        return isinstance(x, int) or (isinstance(x, float) and not math.isnan(x))
     except:
         return False
 def is_text(value: Any) -> bool:
@@ -882,7 +890,7 @@ if __name__ == '__main__':
     assert wrap('z') == wrap('Z') and wrap('aBc') == 'Abc' and 'abC' == wrap('ABC')
     assert wrap({}) == [] and wrap({'a': 5}) == [['a', 5]]
 
-    assert is_number('5') and is_number('-5.8') and is_number(wrap('5')) and is_number(5) and is_number(5.6) and is_number(wrap(5)) and not is_number('hello') and not is_number(wrap('hello')) and not is_number(True) and not is_number([]) and not is_number({})
+    assert is_number('5') and is_number('-5.8') and is_number(wrap('5')) and is_number(5) and is_number(5.6) and is_number(wrap(5)) and not is_number('hello') and not is_number(wrap('hello')) and not is_number(True) and not is_number([]) and not is_number({}) and not is_number('{}') and not is_number(math.nan)
     assert is_text('hello') and is_text(wrap('hello')) and not is_text(5) and not is_text('5') and not is_text([]) and not is_text(True) and not is_text({})
     assert is_bool(True) and is_bool(False) and is_bool(wrap(True)) and is_bool(wrap(False)) and not is_bool(12) and not is_bool('56') and not is_bool('hello') and not is_bool([]) and not is_bool({})
     assert is_list([]) and is_list({}) and is_list(wrap([])) and is_list(wrap({})) and not is_list('hello') and not is_list(wrap('hello')) and not is_list(45) and not is_list(wrap(45)) and not is_list(True) and not is_list(False) and is_list(())
@@ -1037,5 +1045,7 @@ if __name__ == '__main__':
 
     assert wrap([]).last == '' and is_wrapped(wrap([]).last)
     assert wrap([]).rand == '' and is_wrapped(wrap([]).rand)
+
+    assert math.isnan(+wrap('{}'))
 
     print('passed all snap wrapper tests')
