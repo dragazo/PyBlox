@@ -131,6 +131,12 @@ main_menu = None
 content = None
 drag_widget = None
 
+def get_nb():
+    global nb
+    if nb is None:
+        nb = netsblox.Client()
+    return nb
+
 _print_queue = mproc.Queue(maxsize = 256)
 _print_batchsize = 256
 _print_targets = []
@@ -2243,7 +2249,7 @@ class MainMenu(tk.Menu):
         root.bind_all(f'<{SYS_INFO["mod"]}-equal>', lambda e: do_zoom(1)) # plus without needing shift
         root.bind_all(f'<{SYS_INFO["mod"]}-minus>', lambda e: do_zoom(-1))
 
-        self.room_manager = rooms.EditorRoomManager(client = nb)
+        self.room_manager = rooms.EditorRoomManager(get_client = get_nb)
 
         self.roles_dropdown = tk.Menu(self, **MENU_STYLE)
         self.add_cascade(label = 'Roles', menu = self.roles_dropdown)
@@ -2825,7 +2831,7 @@ def log(msg) -> None:
         _logger_instance.log(msg)
 
 def main():
-    global nb, root, main_menu, content, drag_widget, _logger_instance
+    global root, main_menu, content, drag_widget, _logger_instance
 
     Sound.init()
 
@@ -2835,8 +2841,6 @@ def main():
     args = parser.parse_args()
 
     _logger_instance = Logger(target = args.log_to)
-
-    nb = netsblox.Client()
 
     root = tk.Tk()
     root.geometry('1200x600')

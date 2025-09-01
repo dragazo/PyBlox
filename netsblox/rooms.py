@@ -107,8 +107,8 @@ class RcRoomHandle:
         self.__cached = None
 
 class EditorRoomManager:
-    def __init__(self, *, client: Any):
-        self.__client = client
+    def __init__(self, *, get_client: Any):
+        self.__get_client = get_client
         self.__handle = None
         self.__room_name = None
         self.__room_password = None
@@ -117,7 +117,7 @@ class EditorRoomManager:
         if self.__handle is not None:
             self.__handle.destroy()
 
-        self.__client = None
+        self.__get_client = None
         self.__handle = None
         self.__room_name = None
         self.__room_password = None
@@ -137,7 +137,7 @@ class EditorRoomManager:
 
     def create_room(self, password: Optional[str] = None) -> None:
         room_name = randomname.get_name()
-        new_handle = RcRoomHandle(self.__client, format_room_id(room_name), password, mode = 'create')
+        new_handle = RcRoomHandle(self.__get_client(), format_room_id(room_name), password, mode = 'create')
 
         if self.__handle is not None:
             self.__handle.destroy()
@@ -147,7 +147,7 @@ class EditorRoomManager:
         self.__room_password = password
 
     def join_room(self, room_name: str, password: Optional[str] = None) -> None:
-        new_handle = RcRoomHandle(self.__client, format_room_id(room_name), password, mode = 'join')
+        new_handle = RcRoomHandle(self.__get_client(), format_room_id(room_name), password, mode = 'join')
 
         if self.__handle is not None:
             self.__handle.destroy()
