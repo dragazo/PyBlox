@@ -310,12 +310,12 @@ $service_instances
             return f
         return wrapper
 
-    def call(self, service: str, rpc: str, **kwargs) -> Any:
+    def call(self, netsblox_service: str, rpc: str, **kwargs) -> Any:
         '''
         Directly calls the specified NetsBlox RPC based on its name.
         This is needed to access unofficial or dynamically-generated (like create-a-service) services.
 
-        Note that the `service` and `rpc` names must match those in NetsBlox,
+        Note that the `netsblox_service` and `rpc` names must match those in NetsBlox,
         rather than the renamed versions used in the Python wrappers here.
 
         The keyword arguments are the values to send to the RPC.
@@ -336,7 +336,7 @@ $service_instances
         arguments = { k: _common.prep_send(v) for k, v in kwargs.items() }
 
         time = round(_time.time() * 1000)
-        url = f'{self._services_url}/{service}/{rpc}?clientId={self._client_id}&t={time}'
+        url = f'{self._services_url}/{netsblox_service}/{rpc}?clientId={self._client_id}&t={time}'
         res = _requests.post(url,
             _common.small_json(arguments), # if the json has unnecessary white space, request on the server will hang for some reason
             headers = { 'Content-Type': 'application/json' })
