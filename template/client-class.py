@@ -310,7 +310,7 @@ $service_instances
             return f
         return wrapper
 
-    def call(self, service: str, rpc: str, **kwargs) -> Any:
+    def call(self, service: str, rpc: str, /, **kwargs) -> Any:
         '''
         Directly calls the specified NetsBlox RPC based on its name.
         This is needed to access unofficial or dynamically-generated (like create-a-service) services.
