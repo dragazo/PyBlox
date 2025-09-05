@@ -20,6 +20,7 @@ with open('template/client-class.py', 'r') as f:
 
 FN_NAME_SPECIAL_RULES = { # truly special cases go here
     'PhoneIoT': 'phone_iot',
+    'IoTScape': 'iot_scape',
 }
 FN_NAME_KEYWORD_FIXES = { # in case we run into a reserved word
     'from': '_from',
@@ -55,6 +56,7 @@ tests = [
     ('PhoneID', 'phone_id'),
     ('PhoneIDs', 'phone_ids'),
     ('PhoneIoT', 'phone_iot'),
+    ('IoTScape', 'iot_scape'),
     ('getMediaURLs', 'get_media_urls'),
     ('movieCastPersonIDs', 'movie_cast_person_ids'),
     ('getSensors', 'get_sensors'), ('ThisXDoesNotExist', 'this_x_does_not_exist'),
@@ -200,7 +202,7 @@ async def main():
 
     args = [
         ('https://cloud.netsblox.org', 'Client', 'netsblox/editor.py'),
-        ('https://cloud.dev.netsblox.org', 'Client', 'netsblox/dev.py'),
+        # ('https://cloud.dev.netsblox.org', 'Client', 'netsblox/dev.py'),
     ]
     await asyncio.gather(*[asyncio.ensure_future(generate_client_save(*x)) for x in args])
 
