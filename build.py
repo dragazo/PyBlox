@@ -30,7 +30,7 @@ def clean_fn_name(name: str) -> str:
     if name in FN_NAME_SPECIAL_RULES:
         return FN_NAME_SPECIAL_RULES[name]
 
-    name = re.sub('[^\w]+', '', name) # remove characters that make symbols invalid
+    name = re.sub(r'[^\w]+', '', name) # remove characters that make symbols invalid
 
     pieces = ['']
     chars = [None, *name, None, None]
@@ -48,7 +48,7 @@ def clean_fn_name(name: str) -> str:
     name = FN_NAME_KEYWORD_FIXES.get(name) or name
     return name
 def clean_class_name(name: str) -> str:
-    name = re.sub('[^\w]+', '', name) # remove characters that make symbols invalid
+    name = re.sub(r'[^\w]+', '', name) # remove characters that make symbols invalid
     name = re.sub(r'^_+|_+$', '', name) # remove lead/tail underscores
     return name
 
