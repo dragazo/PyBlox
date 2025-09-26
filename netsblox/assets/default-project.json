@@ -15,17 +15,28 @@
                 {
                     "type": "globals",
                     "name": "globals",
-                    "value": ""
+                    "value": [
+                        ""
+                    ]
                 },
                 {
                     "type": "stage",
                     "name": "stage",
-                    "value": ""
+                    "value": [
+                        ""
+                    ]
                 },
                 {
                     "type": "sprite",
                     "name": "sprite",
-                    "value": "@onstart()\ndef my_onstart(self):\n    for i in range(120): # repeat code 120 times\n        self.forward(4)\n        self.turn_right(3)\n"
+                    "value": [
+                        "@onstart()",
+                        "def my_onstart(self):",
+                        "    for i in range(120): # repeat code 120 times",
+                        "        self.forward(4)",
+                        "        self.turn_right(3)",
+                        ""
+                    ]
                 }
             ],
             "images": {},
