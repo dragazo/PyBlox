@@ -24,7 +24,7 @@ import io
 import re
 import os
 
-from PIL import Image
+from PIL import Image, ImageTk
 
 from typing import List, Tuple, Any, Optional, Dict, Union
 
@@ -36,6 +36,7 @@ from netsblox import common
 from netsblox import rooms
 from netsblox import common
 from netsblox import sound as Sound
+from netsblox import graphical
 
 NETSBLOX_PY_PATH = os.path.dirname(netsblox.__file__)
 
@@ -259,6 +260,21 @@ def prompt_role_name(*, title: str, prompt: str) -> Optional[str]:
             messagebox.showerror(title = 'Invalid name', message = f'A role named {name} already exists.')
             continue
         return name
+
+REPORTER_BLOCKS = {}
+def render_reporter_cached(*args, kind: str, globals: Optional[str] = None, stage: Optional[str] = None, sprite: Optional[str] = None, docs: Optional[str] = None):
+    if args in REPORTER_BLOCKS: return REPORTER_BLOCKS[args]
+    img = ImageTk.PhotoImage(graphical.render_reporter(*args))
+    REPORTER_BLOCKS[args] = {
+        'uuid': str(uuid.uuid4()),
+        'img': img,
+        'kind': kind,
+        'globals': globals,
+        'stage': stage,
+        'sprite': sprite,
+        'docs': docs,
+    }
+    return REPORTER_BLOCKS[args]
 
 MIN_CANV_SIZE = (64, 64)
 MAX_CANV_SIZE = (8192, 8192)
@@ -820,16 +836,21 @@ class BlocksList(tk.Frame):
             self.imgs.clear()
 
             selected_category = self.category_selector.selected
-            for block in content.project.blocks:
-                if block['category'] != selected_category:
-                    continue
 
+            dynamic_blocks = []
+            if selected_category == 'looks':
+                for name in sorted(list(content.project.imports.images.keys())):
+                    replace = f'images.{name}'
+                    docs = f'The {name} image you imported.'
+                    dynamic_blocks.append(render_reporter_cached(f'image {name}', (143, 86, 227), (255, 255, 255), 0.65, kind = 'reporter', globals = replace, stage = replace, sprite = replace, docs = docs))
+
+            for block in dynamic_blocks + [block for block in content.project.blocks if block['category'] == selected_category]:
                 replace = block[blocks_type]
                 if not replace:
                     continue
 
                 id = block['uuid']
-                img = common.load_tkimage(block['url'], scale = block['scale'])
+                img = block['img'] if 'img' in block else common.load_tkimage(block['url'], scale = block['scale'])
                 label = tk.Label(self.text, image = img, bg = COLOR_INFO['text-background-disabled'])
 
                 def make_block_menu_shower(id):
@@ -979,7 +1000,7 @@ class ProjectEditor(tk.Frame):
 
         self.notebook.bind('<<NotebookTabChanged>>', lambda e: self.on_tab_change())
 
-    def on_tab_change(self):
+    def on_tab_change(self, /, log_event: bool = True):
         key_logger.flush()
 
         for editor in self.editors:
@@ -995,7 +1016,8 @@ class ProjectEditor(tk.Frame):
         assert len(editors) == 1
         editors[0].on_content_change(cause = 'tab-change')
 
-        log({ 'type': 'ide::switch-editor', 'editor': tab })
+        if log_event:
+            log({ 'type': 'ide::switch-editor', 'editor': tab })
 
     def delete_tab(self, idx) -> None:
         key_logger.flush()
@@ -2572,6 +2594,7 @@ class MainMenu(tk.Menu):
 
         content.project.imports.images[name] = { 'img': img, 'center': [0.0, 0.0] }
         content.project.imports.batch_update()
+        content.project.on_tab_change(log_event = False)
 
         log({ 'type': 'image::import', 'name': name, 'width': img.width, 'height': img.height })
 
@@ -2634,6 +2657,7 @@ class MainMenu(tk.Menu):
                     if messagebox.askyesno(title, msg, icon = 'warning', default = 'no'):
                         del content.project.imports.images[name]
                         content.project.imports.batch_update()
+                        content.project.on_tab_change(log_event = False)
 
                         log({ 'type': 'image::delete', 'name': name })
                 return deleter

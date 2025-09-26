@@ -365,8 +365,8 @@
         "scale": 1,
         "kind": "command",
         "globals": "",
-        "stage": "self.costume = costume",
-        "sprite": "self.costume = costume",
+        "stage": "self.costume = image",
+        "sprite": "self.costume = image",
         "docs": "Sets the current sprite/stage costume to the given value.\n\nThis value can either be an image or the name/index of an image previously added to self.costumes."
     },
     {
