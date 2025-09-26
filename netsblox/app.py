@@ -26,7 +26,7 @@ import os
 
 from PIL import Image
 
-from typing import List, Tuple, Any, Optional, Dict
+from typing import List, Tuple, Any, Optional, Dict, Union
 
 import nb2pb
 
@@ -188,6 +188,9 @@ def undent_info(txt: str) -> Tuple[str, int, int]:
     if len(undents) == 0:
         return txt, 0, 0
     return '\n'.join([ x[0] for x in undents ]), [ -x[1] for x in undents ]
+
+def content_string(txt: Union[str, List[str]]) -> str:
+    return txt if type(txt) is str else common.lossless_join(txt, '\n')
 
 def smart_comment_uncomment(txt: str) -> Tuple[str, int]:
     line_parts = [ get_white_nonwhite(x) for x in txt.splitlines() ]
@@ -1061,7 +1064,7 @@ class ProjectEditor(tk.Frame):
             name = f'{base_name}{name_counter}'
 
         assert self.is_unique_name(name) and is_valid_ident(name) # sanity check
-        value = value or ProjectEditor.DEFAULT_PROJECT['roles'][0]['editors'][2]['value']
+        value = content_string(value or ProjectEditor.DEFAULT_PROJECT['roles'][0]['editors'][2]['value'])
         editor = SpriteEditor(self.notebook, name = name, value = value)
         self.notebook.add(editor, text = name)
         self.editors.append(editor)
@@ -1132,7 +1135,7 @@ class ProjectEditor(tk.Frame):
                 role_res['editors'].append({
                     'type': ty,
                     'name': editor.name,
-                    'value': editor.text.get('1.0', 'end-1c'),
+                    'value': common.lossless_split(editor.text.get('1.0', 'end-1c'), '\n'),
                 })
 
             role_res['images'] = { name: { 'img': common.encode_image(entry['img']), 'center': entry['center'][:] } for name, entry in self.imports.images.items() }
@@ -1226,7 +1229,7 @@ class ProjectEditor(tk.Frame):
         for info in proj['editors']:
             ty = info['type']
             name = info['name']
-            value = info['value']
+            value = content_string(info['value'])
 
             editor = None
             if ty == 'globals' or ty == 'global':  editor = GlobalEditor(self.notebook, name = name, value = value)

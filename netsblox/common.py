@@ -217,10 +217,9 @@ def paginate_str(text: str, max_len: int) -> List[str]:
         word = text[pos:end]
         pos = end
 
-        # if len(res[-1]) == 0: res[-1] = word
         if len(res[-1]) + len(word) <= max_len: res[-1] += word
         else: res.append(word)
-    return [x.strip() for x in res]
+    return [x for x in [x.strip() for x in res] if x != '']
 
 class PointerSet:
     def __init__(self):
@@ -268,6 +267,11 @@ class Namespace:
             raise AttributeError(name)
         del src[name]
 
+def lossless_split(src: str, delim: str) -> List[str]:
+    return src.split(delim)
+def lossless_join(src: List[str], delim: str) -> str:
+    return delim.join(src)
+
 if __name__ == '__main__':
     import sys
     failures = [0]
@@ -280,12 +284,12 @@ if __name__ == '__main__':
 
     assert_eq(paginate_str('hello world', 20), ['hello world'])
     assert_eq(paginate_str('hello\nworld', 20), ['hello', 'world'])
-    assert_eq(paginate_str('hello\nworld\n', 20), ['hello', 'world', ''])
+    assert_eq(paginate_str('hello\nworld\n', 20), ['hello', 'world'])
     assert_eq(paginate_str('hello world', 10), ['hello', 'world'])
     assert_eq(paginate_str('hello world this is a long message', 15), ['hello world', 'this is a long', 'message'])
     assert_eq(paginate_str('hello world this is a long message', 16), ['hello world this', 'is a long', 'message'])
     assert_eq(paginate_str('hello world this is a long message', 17), ['hello world this', 'is a long message'])
-    assert_eq(paginate_str('empty                     space', 10), ['empty', '', '', 'space'])
+    assert_eq(paginate_str('empty                     space', 10), ['empty', 'space'])
     assert_eq(paginate_str('hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh', 10), ['hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh'])
     assert_eq(paginate_str('h hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh', 10), ['h', 'hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh'])
 
@@ -322,9 +326,27 @@ if __name__ == '__main__':
     assert_eq(foo1 in ps, False)
     assert_eq(foo2 in ps, False)
 
+    def test_roundtrip(a: str):
+        b = lossless_split(a, '\n')
+        c = lossless_join(b, '\n')
+        assert_eq(a, c)
+    test_roundtrip('')
+    test_roundtrip(' ')
+    test_roundtrip('  ')
+    test_roundtrip('   ')
+    test_roundtrip('\n')
+    test_roundtrip('\n\n')
+    test_roundtrip('\n\n\n')
+    test_roundtrip('hello world')
+    test_roundtrip('hello world\n')
+    test_roundtrip('hello world\n\n')
+    test_roundtrip('\nhello world\n\nf')
+    test_roundtrip('\nhello world\n\nf\n ')
+    test_roundtrip('\nhello world\n\nf\n \t\r\n')
+    test_roundtrip(' \nhello world\n\nf\n \t\r\n')
+    test_roundtrip('\n\n\n\t\n \nhello world\n\nf\n \t\r\n\n\n')
+
     if failures[0] != 0:
         print(f'FAILED TESTS: {failures[0]}', file = sys.stderr)
         sys.exit(1)
     print(f'passed all {total[0]} tests')
-
-
