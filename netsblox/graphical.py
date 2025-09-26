@@ -2010,3 +2010,12 @@ def setup_stdio():
         with _print_lock:
             old_print(*args, **kwargs)
     _builtins.print = new_print
+
+def render_reporter(text: str, bg: Tuple[int, int, int], fg: Tuple[int, int, int] = (255, 255, 255), scale: float = 1.0):
+    padding = (round(40 * scale), round(25 * scale))
+    text_img = _render_text(text, 48 * scale, fg)
+    back_img = Image.new('RGBA', (text_img.width + 2 * padding[0], text_img.height + 2 * padding[1]))
+    draw = ImageDraw.Draw(back_img)
+    draw.rounded_rectangle((0, 0, back_img.width - 1, back_img.height - 1), fill = bg, outline = bg, width = 0, radius = min(back_img.height, back_img.width) // 2)
+    back_img.alpha_composite(text_img, padding)
+    return back_img.resize((back_img.width // 4, back_img.height // 4), Image.LANCZOS)

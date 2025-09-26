@@ -103,6 +103,7 @@
         "isinstance",
         "keylogger",
         "KEYSYM",
+        "LANCZOS",
         "lineend",
         "linestart",
         "lineswap",
