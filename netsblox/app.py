@@ -838,11 +838,19 @@ class BlocksList(tk.Frame):
             selected_category = self.category_selector.selected
 
             dynamic_blocks = []
+            dynamic_block_scale = 0.65
             if selected_category == 'looks':
                 for name in sorted(list(content.project.imports.images.keys())):
                     replace = f'images.{name}'
                     docs = f'The {name} image you imported.'
-                    dynamic_blocks.append(render_reporter_cached(f'image {name}', (143, 86, 227), (255, 255, 255), 0.65, kind = 'reporter', globals = replace, stage = replace, sprite = replace, docs = docs))
+                    dynamic_blocks.append(render_reporter_cached(f'image {name}', (143, 86, 227), (255, 255, 255), dynamic_block_scale,
+                        kind = 'reporter', globals = replace, stage = replace, sprite = replace, docs = docs))
+            elif selected_category == 'sound':
+                for name in sorted(list(content.project.imports.sounds.keys())):
+                    replace = f'sounds.{name}'
+                    docs = f'The {name} sound you imported.'
+                    dynamic_blocks.append(render_reporter_cached(f'sound {name}', (207, 74, 217), (255, 255, 255), dynamic_block_scale,
+                        kind = 'reporter', globals = replace, stage = replace, sprite = replace, docs = docs))
 
             for block in dynamic_blocks + [block for block in content.project.blocks if block['category'] == selected_category]:
                 replace = block[blocks_type]
@@ -2617,6 +2625,7 @@ class MainMenu(tk.Menu):
 
         content.project.imports.sounds[name] = { 'snd': snd }
         content.project.imports.batch_update()
+        content.project.on_tab_change(log_event = False)
 
         log({ 'type': 'sound::import', 'name': name, 'duration': snd.duration })
 
@@ -2692,6 +2701,7 @@ class MainMenu(tk.Menu):
                     if messagebox.askyesno(title, msg, icon = 'warning', default = 'no'):
                         del content.project.imports.sounds[name]
                         content.project.imports.batch_update()
+                        content.project.on_tab_change(log_event = False)
 
                         log({ 'type': 'sound::delete', 'name': name })
                 return deleter
